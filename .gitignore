@@ -1,0 +1,17 @@
+# Internal files
+.internal/
+memory.md
+plan.md
+spec.md
+CLAUDE.md
+AGENTS.md
+
+# Local files
+.claude/
+
+# Node / Astro
+node_modules/
+dist/
+.astro/
+.env
+.env.*
