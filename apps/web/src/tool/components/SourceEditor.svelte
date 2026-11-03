@@ -24,6 +24,14 @@
     }
   }
 
+  /** Inserts text at the caret, as if typed (used by the phone symbol bar). */
+  export function insert(text: string) {
+    if (!textarea) return;
+    textarea.focus();
+    textarea.setRangeText(text, textarea.selectionStart, textarea.selectionEnd, 'end');
+    tool.setText(textarea.value, true);
+  }
+
   /** Moves the caret to a diagnostic's position. */
   export function reveal(d: Diagnostic) {
     if (!textarea || d.line === undefined) return;

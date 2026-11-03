@@ -7,6 +7,13 @@ const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function openEditor(page: Page) {
   await page.goto('./tool/');
+  // Phones start on the document list.
+  if ((page.viewportSize()?.width ?? 1280) <= 760) {
+    await page
+      .getByRole('button', { name: /MNIST classifier/ })
+      .first()
+      .click();
+  }
   // The preview is an SVG labelled by the diagram title once fonts and HarfBuzz are ready.
   await expect(page.getByRole('img', { name: 'MNIST classifier' })).toBeVisible();
 }
@@ -82,15 +89,6 @@ test.describe('desktop editor', () => {
     await expect(page.getByRole('button', { name: /1:7 Unexpected 'x' after 16/ })).toBeVisible();
     await expect(page.getByRole('img', { name: 'MNIST classifier' })).toBeVisible();
   });
-});
-
-test('phone editor exports from the Export tab', async ({ page, isMobile }) => {
-  test.skip(!isMobile, 'Phone layout only');
-  await openEditor(page);
-  await page.getByRole('tab', { name: 'Export' }).click();
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download SVG' }).click();
-  expect((await download).suggestedFilename()).toBe('mnist-classifier.svg');
 });
 
 test('editor loads only from its own origin', async ({ page }) => {

@@ -45,7 +45,7 @@
           onclick={() => tool.select({ kind: 'layer', index: i })}
           onkeydown={onKey}
         >
-          <span class={`dot ${roleOf(i, layers.length)}`} aria-hidden="true"></span>
+          <span class={`dot role-${roleOf(i, layers.length)}`} aria-hidden="true"></span>
           <span class="name">{tool.layerName(i)}</span>
           <span class="units">{layer.units}</span>
         </button>
@@ -120,12 +120,12 @@
     flex: none;
   }
 
-  .dot.input {
+  .dot.role-input {
     border-color: #0072b2;
     background: #d4e8f5;
   }
 
-  .dot.output {
+  .dot.role-output {
     border-color: #b97800;
     background: #fbe8c4;
   }

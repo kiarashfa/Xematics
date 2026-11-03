@@ -75,6 +75,8 @@ export class ToolState {
   /** True once the workspace is loaded; nothing is saved before that. */
   ready = $state(false);
   saveStatus = $state<SaveStatus>('saved');
+  /** True when the editor was opened from a share link (the phone then skips the file list). */
+  openedFromLink = $state(false);
 
   #past: string[] = [];
   #future: string[] = [];
@@ -246,6 +248,7 @@ export class ToolState {
       const shared = await decodeShare(fragment);
       if (shared.ok) {
         this.newDocument(shared.text);
+        this.openedFromLink = true;
         this.flash('Opened a shared diagram as a new document.');
       } else {
         this.flash(shared.error);
