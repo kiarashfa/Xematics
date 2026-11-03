@@ -1,0 +1,187 @@
+---
+// Slim consent bar for Google Analytics. Nothing from Google loads until the visitor accepts.
+import { SITE } from '../site.config.ts';
+
+const base = import.meta.env.BASE_URL;
+const enabled = SITE.analytics.enabled;
+---
+
+{enabled && (
+  <div
+    class="consent"
+    data-consent
+    data-ga-id={SITE.analytics.ga4MeasurementId}
+    role="region"
+    aria-label="Cookie consent"
+    hidden
+  >
+    <p>
+      <strong>Analytics cookie?</strong> We would like to count visits with Google Analytics. It
+      sets a cookie only if you accept, and your diagrams are never sent.{' '}
+      <a href={`${base}privacy/`}>Privacy and cookies</a>
+    </p>
+    <div class="choices">
+      <button type="button" data-consent-choice="denied">
+        Decline
+      </button>
+      <button type="button" data-consent-choice="granted">
+        Accept
+      </button>
+    </div>
+  </div>
+)}
+
+<script>
+  type Choice = 'granted' | 'denied';
+  const KEY = 'xm-consent';
+  const bar = document.querySelector<HTMLElement>('[data-consent]');
+  const id = bar?.dataset['gaId'] ?? '';
+
+  const read = (): Choice | null => {
+    try {
+      const value = localStorage.getItem(KEY);
+      return value === 'granted' || value === 'denied' ? value : null;
+    } catch {
+      return null;
+    }
+  };
+
+  declare global {
+    interface Window {
+      dataLayer?: unknown[];
+      [key: `ga-disable-${string}`]: boolean | undefined;
+    }
+  }
+
+  function startAnalytics() {
+    if (!id || window.dataLayer) return;
+    window.dataLayer = [];
+    window[`ga-disable-${id}`] = false;
+    // gtag expects the arguments object itself.
+    function gtag(..._args: unknown[]) {
+      // eslint-disable-next-line prefer-rest-params
+      window.dataLayer?.push(arguments);
+    }
+    gtag('js', new Date());
+    // Only origin and path: the fragment (share links carry the diagram there) and query stay private.
+    gtag('config', id, { page_location: location.origin + location.pathname });
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(id)}`;
+    document.head.append(script);
+  }
+
+  function stopAnalytics() {
+    if (id) window[`ga-disable-${id}`] = true;
+    for (const cookie of document.cookie.split(';')) {
+      const name = cookie.split('=')[0]?.trim() ?? '';
+      if (name === '_ga' || name.startsWith('_ga_')) {
+        for (const domain of [
+          '',
+          `; domain=${location.hostname}`,
+          `; domain=.${location.hostname}`,
+        ]) {
+          document.cookie = `${name}=; Max-Age=0; path=/${domain}`;
+        }
+      }
+    }
+  }
+
+  function choose(choice: Choice) {
+    try {
+      localStorage.setItem(KEY, choice);
+    } catch {
+      // Without storage the choice lasts for this page view.
+    }
+    if (choice === 'granted') startAnalytics();
+    else stopAnalytics();
+    if (bar) bar.hidden = true;
+  }
+
+  if (bar) {
+    const choice = read();
+    if (choice === 'granted') startAnalytics();
+    else if (choice === null) bar.hidden = false;
+    bar.addEventListener('click', (event) => {
+      const button = (event.target as Element).closest<HTMLElement>('[data-consent-choice]');
+      if (button) choose(button.dataset['consentChoice'] as Choice);
+    });
+    // "Cookie settings" links and buttons anywhere on the page reopen the bar.
+    const open = () => {
+      bar.hidden = false;
+      bar.querySelector('button')?.focus();
+    };
+    document.addEventListener('click', (event) => {
+      if ((event.target as Element).closest('[data-consent-open]')) {
+        event.preventDefault();
+        open();
+      }
+    });
+    document.addEventListener('xm:consent-open', open);
+  }
+</script>
+
+<style>
+  .consent {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 6px max(16px, calc((100% - 1180px) / 2));
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 0.8rem;
+    box-shadow: 0 -4px 16px rgb(0 0 0 / 0.06);
+  }
+
+  .consent[hidden] {
+    display: none;
+  }
+
+  p {
+    flex: 1;
+    margin: 0;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .choices {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* Both choices look exactly the same: declining is as easy as accepting. */
+  button {
+    min-width: 92px;
+    min-height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--surface-2);
+    color: var(--ink);
+    font: 600 0.8rem var(--font-sans);
+    cursor: pointer;
+  }
+
+  @media (max-width: 640px) {
+    .consent {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      padding: 10px 16px;
+    }
+
+    button {
+      flex: 1;
+      min-height: 40px;
+    }
+  }
+</style>

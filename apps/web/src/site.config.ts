@@ -11,7 +11,7 @@ export const SITE = {
   repoUrl: 'https://github.com/kiarashfa/Xematics',
   analytics: {
     ga4MeasurementId: 'G-LW5F9VRHYL',
-    /** Stays false until the consent banner ships; GA must never load without consent. */
-    enabled: false,
+    /** GA loads only after the visitor accepts in the consent bar (components/ConsentBar.astro). */
+    enabled: true,
   },
 } as const;

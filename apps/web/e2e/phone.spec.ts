@@ -108,3 +108,17 @@ test('command sheet: labels toggle and SVG export', async ({ page }) => {
   expect((await download).suggestedFilename()).toBe('mnist-classifier.svg');
   await expect(await sourceText(page)).toHaveValue(/labels: \{ sizes: false \}/);
 });
+
+test('command sheet: preset strip switches the look', async ({ page }) => {
+  await openDocument(page);
+  await page.getByRole('button', { name: 'All commands' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Commands' });
+  await sheet
+    .getByRole('group', { name: 'Preset' })
+    .getByRole('button', { name: 'Print mono' })
+    .click();
+  await shot(page, '8-presets');
+  await expectAccessible(page);
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(await sourceText(page)).toHaveValue(/preset: mono/);
+});

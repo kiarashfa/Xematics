@@ -12,7 +12,9 @@
   } from '../actions.ts';
   import { currentTheme, setTheme } from '../browser.ts';
   import { EXAMPLES, tool } from '../state.svelte.ts';
+  import { PRESET_IDS, PRESET_NAMES } from '@xematics/core';
   import Icon, { type IconName } from './Icon.svelte';
+  import PresetThumb from './PresetThumb.svelte';
 
   const TABS = ['File', 'Home', 'View', 'Help'] as const;
   type Tab = (typeof TABS)[number];
@@ -202,26 +204,19 @@
       </div>
       <div class="group" role="group" aria-label="Style">
         <div class="body">
-          <div class="thumb" aria-label="Classic style (selected)" role="img">
-            <svg viewBox="0 0 44 30" aria-hidden="true">
-              <path d="M8 9 22 15M8 21 22 15M22 15 36 9M22 15 36 21" stroke="#b8c0cc" />
-              <circle cx="8" cy="9" r="3.4" fill="#d4e8f5" stroke="#0072b2" /><circle
-                cx="8"
-                cy="21"
-                r="3.4"
-                fill="#d4e8f5"
-                stroke="#0072b2"
-              />
-              <circle cx="22" cy="15" r="3.4" fill="#f1f2f4" stroke="#4b5563" />
-              <circle cx="36" cy="9" r="3.4" fill="#fbe8c4" stroke="#b97800" /><circle
-                cx="36"
-                cy="21"
-                r="3.4"
-                fill="#fbe8c4"
-                stroke="#b97800"
-              />
-            </svg>
-            <span>Classic</span>
+          <div class="gallery" role="group" aria-label="Preset">
+            {#each PRESET_IDS as id (id)}
+              <button
+                type="button"
+                class="thumb"
+                aria-pressed={tool.preset === id}
+                title={PRESET_NAMES[id]}
+                onclick={() => tool.setPreset(id)}
+              >
+                <PresetThumb {id} />
+                <span>{PRESET_NAMES[id]}</span>
+              </button>
+            {/each}
           </div>
           <div class="stack">
             {@render toggle('Transparent background', tool.transparent, (on) =>
@@ -245,6 +240,7 @@
               type="number"
               min="1"
               value={tool.collapse.above}
+              disabled={tool.preset === 'boxes'}
               onchange={(e) => setNumber('above', e)}
             /></label
           >
@@ -254,6 +250,7 @@
               min="0"
               max="100"
               value={tool.collapse.first}
+              disabled={tool.preset === 'boxes'}
               onchange={(e) => setNumber('first', e)}
             /></label
           >
@@ -263,6 +260,7 @@
               min="0"
               max="100"
               value={tool.collapse.last}
+              disabled={tool.preset === 'boxes'}
               onchange={(e) => setNumber('last', e)}
             /></label
           >
@@ -343,6 +341,18 @@
           >
         </div>
         <div class="caption">Feedback</div>
+      </div>
+      <div class="group" role="group" aria-label="Privacy">
+        <div class="body stack">
+          <a class="small" href={`${import.meta.env.BASE_URL}privacy/`}>Privacy and cookies</a>
+          <button
+            type="button"
+            class="small"
+            onclick={() => document.dispatchEvent(new CustomEvent('xm:consent-open'))}
+            >Cookie settings</button
+          >
+        </div>
+        <div class="caption">Privacy</div>
       </div>
     {/if}
   </div>
@@ -440,6 +450,10 @@
     background: color-mix(in srgb, var(--accent) 10%, transparent);
   }
 
+  a.small {
+    text-decoration: none;
+  }
+
   .small {
     display: flex;
     align-items: center;
@@ -489,21 +503,35 @@
     gap: 2px 4px;
   }
 
+  .gallery {
+    display: flex;
+    gap: 4px;
+  }
+
   .thumb {
     display: grid;
     place-items: center;
-    width: 66px;
-    height: 56px;
+    align-content: center;
+    gap: 2px;
+    width: 62px;
+    height: 58px;
+    padding: 2px;
+    border: 1px solid var(--line);
     border-radius: 3px;
-    background: #fff;
-    outline: 2px solid var(--accent);
-    color: #333;
-    font-size: 0.62rem;
+    background: var(--bg);
+    color: var(--ink);
+    font: 0.62rem var(--font-sans);
+    white-space: nowrap;
+    cursor: pointer;
   }
 
-  .thumb svg {
-    width: 46px;
-    height: 32px;
+  .thumb:hover {
+    border-color: var(--muted);
+  }
+
+  .thumb[aria-pressed='true'] {
+    border-color: var(--accent);
+    outline: 1px solid var(--accent);
   }
 
   .switch {

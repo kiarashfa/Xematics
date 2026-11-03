@@ -14,6 +14,7 @@ import {
 } from '../style/theme.ts';
 import type { ShapedText, TextEngine } from '../text/engine.ts';
 import { stripInvalidXml } from '../util/xml.ts';
+import { layoutBoxes } from './boxes.ts';
 
 /** Layers with more neurons than this are always collapsed, even when collapse is turned off. */
 export const MAX_DRAWN_NEURONS = 500;
@@ -49,7 +50,7 @@ export function autoName(index: number, count: number): string {
 }
 
 /** Cleans a user label for single-line display; empty means "no label". */
-function cleanLabel(text: string): string {
+export function cleanLabel(text: string): string {
   return stripInvalidXml(text).replace(/\s+/g, ' ').trim();
 }
 
@@ -58,6 +59,7 @@ const range = (from: number, to: number) =>
 
 export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
   const theme = resolveTheme(model.style);
+  if (theme.mode === 'boxes') return layoutBoxes(model, theme, engine);
   const diagnostics: Diagnostic[] = [];
   const count = model.layers.length;
   const r = theme.nodeRadius;
@@ -289,24 +291,7 @@ function buildColumn(
     ? [...range(0, collapse.first), 'ellipsis', ...range(layer.units - collapse.last, layer.units)]
     : range(0, layer.units);
 
-  const shapeLabel = (text: string, style: TextStyle, what: string) => {
-    const shaped = engine.shape(text, style, style.size);
-    if (shaped.missing.length > 0) {
-      diagnostics.push(
-        diagnostic(
-          'warning',
-          'text.missing-glyphs',
-          `Layer ${index + 1} ${what} uses characters the bundled font cannot draw yet: ${shaped.missing.join(' ')}`,
-          { path: ['layers', index, 'name'] },
-        ),
-      );
-    }
-    return shaped;
-  };
-
-  const nameText = layer.name === undefined ? autoName(index, count) : cleanLabel(layer.name);
-  const name =
-    theme.labels.names && nameText ? shapeLabel(nameText, theme.nameText, 'name') : undefined;
+  const name = layerName(layer, index, count, theme, engine, diagnostics);
   const sizeAbove = !theme.labels.sizes && collapse !== undefined;
   const size =
     theme.labels.sizes || sizeAbove
@@ -325,7 +310,32 @@ function buildColumn(
   };
 }
 
-function textItem(
+/** The layer's name label, shaped, or undefined when names are off or the name is empty. */
+export function layerName(
+  layer: Layer,
+  index: number,
+  count: number,
+  theme: Theme,
+  engine: TextEngine,
+  diagnostics: Diagnostic[],
+): ShapedText | undefined {
+  const text = layer.name === undefined ? autoName(index, count) : cleanLabel(layer.name);
+  if (!theme.labels.names || !text) return undefined;
+  const shaped = engine.shape(text, theme.nameText, theme.nameText.size);
+  if (shaped.missing.length > 0) {
+    diagnostics.push(
+      diagnostic(
+        'warning',
+        'text.missing-glyphs',
+        `Layer ${index + 1} name uses characters the bundled font cannot draw yet: ${shaped.missing.join(' ')}`,
+        { path: ['layers', index, 'name'] },
+      ),
+    );
+  }
+  return shaped;
+}
+
+export function textItem(
   id: string,
   classes: readonly string[],
   shaped: ShapedText,

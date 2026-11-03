@@ -13,9 +13,11 @@
     openWorkspaceFile,
     saveWorkspace,
   } from '../../actions.ts';
+  import { PRESET_IDS, PRESET_NAMES } from '@xematics/core';
   import { currentTheme, setTheme } from '../../browser.ts';
   import { tool } from '../../state.svelte.ts';
   import Icon, { type IconName } from '../Icon.svelte';
+  import PresetThumb from '../PresetThumb.svelte';
 
   // The desktop ribbon as large touch rows, one tab at a time (like Office on phones).
   let {
@@ -83,6 +85,7 @@
         type="button"
         class="ph-ib"
         aria-label={`Decrease ${label.toLowerCase()}`}
+        disabled={tool.preset === 'boxes'}
         onclick={() => step(key, -1)}><Icon name="minus" /></button
       >
       <span class="ph-value value" aria-live="polite">{tool.collapse[key]}</span>
@@ -90,6 +93,7 @@
         type="button"
         class="ph-ib"
         aria-label={`Increase ${label.toLowerCase()}`}
+        disabled={tool.preset === 'boxes'}
         onclick={() => step(key, 1)}><Icon name="plus" /></button
       >
     </span>
@@ -108,14 +112,14 @@
     {#if tab === 'File'}
       {@render row('file', 'New diagram', () => tool.newDocument())}
       {@render row('cards', 'All documents', onFiles)}
-      <li class="ph-rule" role="presentation"></li>
+      <li class="ph-rule" aria-hidden="true"></li>
       <li>
         <button type="button" class="ph-row" onclick={() => sourceInput?.click()}
           ><Icon name="open" /><span class="ph-label">Open a diagram file</span></button
         >
       </li>
       {@render row('download', 'Save source', downloadSource)}
-      <li class="ph-rule" role="presentation"></li>
+      <li class="ph-rule" aria-hidden="true"></li>
       <li>
         <button type="button" class="ph-row" onclick={() => workspaceInput?.click()}
           ><Icon name="open" /><span class="ph-label">Open workspace</span></button
@@ -137,7 +141,22 @@
         () => tool.moveSelectedLayer(1),
         index < 0 || index >= count - 1,
       )}
-      <li class="ph-rule" role="presentation"></li>
+      <li class="ph-rule" aria-hidden="true"></li>
+      <li>
+        <div class="presets" role="group" aria-label="Preset">
+          {#each PRESET_IDS as id (id)}
+            <button
+              type="button"
+              class="preset"
+              aria-pressed={tool.preset === id}
+              onclick={() => tool.setPreset(id)}
+            >
+              <PresetThumb {id} />
+              <span>{PRESET_NAMES[id]}</span>
+            </button>
+          {/each}
+        </div>
+      </li>
       {@render toggle('tag', 'Layer names', tool.labels.names, (on) => tool.setLabel('names', on))}
       {@render toggle('tag', 'Neuron counts', tool.labels.sizes, (on) =>
         tool.setLabel('sizes', on),
@@ -145,7 +164,7 @@
       {@render toggle('canvas', 'Transparent background', tool.transparent, (on) =>
         tool.setTransparent(on),
       )}
-      <li class="ph-rule" role="presentation"></li>
+      <li class="ph-rule" aria-hidden="true"></li>
       {@render stepper('Collapse above', 'above')}
       {@render stepper('Show first', 'first')}
       {@render stepper('Show last', 'last')}
@@ -208,6 +227,34 @@
     border-color: var(--accent);
     background: var(--accent);
     color: var(--accent-ink);
+  }
+
+  .presets {
+    display: flex;
+    gap: 8px;
+    padding: 4px 2px 8px;
+    overflow-x: auto;
+  }
+
+  .preset {
+    display: grid;
+    flex: none;
+    place-items: center;
+    gap: 4px;
+    width: 84px;
+    min-height: 72px;
+    padding: 6px 4px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 0.72rem var(--font-sans);
+  }
+
+  .preset[aria-pressed='true'] {
+    border-color: var(--accent);
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
   }
 
   .static {

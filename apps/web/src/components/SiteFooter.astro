@@ -11,6 +11,12 @@ import { SITE } from '../site.config.ts';
       you create are yours to use for any purpose.
     </p>
     <nav aria-label="Footer">
+      <a class="label-caps" href={`${import.meta.env.BASE_URL}privacy/`}>
+        Privacy and cookies
+      </a>
+      <button type="button" class="label-caps settings" data-consent-open>
+        Cookie settings
+      </button>
       <a class="label-caps" href={SITE.repoUrl}>
         Source on GitHub
       </a>
@@ -53,7 +59,17 @@ import { SITE } from '../site.config.ts';
     text-decoration: none;
   }
 
-  nav a:hover {
+  .settings {
+    min-height: 24px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  nav a:hover,
+  .settings:hover {
     color: var(--ink);
   }
 </style>

@@ -1,5 +1,6 @@
 ---
 // Full-window layout for the editor: no site header or footer, no page scrolling.
+import ConsentBar from '../components/ConsentBar.astro';
 import Head, { type Props as HeadProps } from '../components/Head.astro';
 
 type Props = HeadProps;
@@ -12,6 +13,7 @@ type Props = HeadProps;
   </head>
   <body>
     <slot />
+    <ConsentBar />
   </body>
 </html>
 

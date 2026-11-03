@@ -82,6 +82,37 @@ test.describe('desktop editor', () => {
     await expect(source(page)).not.toHaveValue(/style:/);
   });
 
+  test('preset gallery switches the look and writes only the preset', async ({ page }) => {
+    await openEditor(page);
+    const style = page.getByRole('group', { name: 'Preset' });
+    await style.getByRole('button', { name: 'Layer boxes' }).click();
+    await expect(style.getByRole('button', { name: 'Layer boxes' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(source(page)).toHaveValue(/style:\n {2}preset: boxes/);
+    await expect(page.locator('#pv-box-0')).toBeAttached();
+    await expect(page.locator('footer.status')).toContainText('Layer boxes');
+    await style.getByRole('button', { name: 'Classic' }).click();
+    await expect(source(page)).not.toHaveValue(/style:/);
+    await expect(page.locator('#pv-node-1-0')).toBeAttached();
+  });
+
+  test('layer boxes export is byte-identical to the Node golden file', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill(
+      await readFile(
+        new URL('../../../packages/core/test/fixtures/boxes.yaml', import.meta.url),
+        'utf8',
+      ),
+    );
+    await expect(page.locator('#pv-box-3')).toBeAttached();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export SVG' }).click();
+    const file = await (await download).path();
+    expect(await readFile(file, 'utf8')).toBe(await readFile(new URL('boxes.svg', GOLDEN), 'utf8'));
+  });
+
   test('errors show their position and keep the last figure', async ({ page }) => {
     await openEditor(page);
     await source(page).fill('784-16x');

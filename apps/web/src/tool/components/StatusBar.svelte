@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PRESET_NAMES } from '@xematics/core';
   import { tool } from '../state.svelte.ts';
   import Icon from './Icon.svelte';
 
@@ -17,11 +18,13 @@
     </button>
   {/if}
   <span
-    >{tool.stats.layers} layers · {tool.stats.neurons} neurons · {tool.stats.edges} lines drawn</span
+    >{tool.stats.layers} layers · {tool.stats.neurons} neurons{tool.preset === 'boxes'
+      ? ''
+      : ` · ${tool.stats.edges} lines drawn`}</span
   >
   <span class="notice" role="status" aria-live="polite">{tool.notice}</span>
   <span class="grow"></span>
-  <span>Classic</span>
+  <span>{PRESET_NAMES[tool.preset]}</span>
   <span class="zoom">
     <button type="button" aria-label="Zoom out" onclick={() => tool.zoomBy(0.8)}
       ><Icon name="minus" size={14} /></button

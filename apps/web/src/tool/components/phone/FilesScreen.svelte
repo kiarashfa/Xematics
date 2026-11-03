@@ -153,6 +153,21 @@
             }}><Icon name="download" /><span class="ph-label">Save workspace</span></button
           >
         </li>
+        <li>
+          <button
+            type="button"
+            class="ph-row"
+            onclick={() => {
+              menu = false;
+              document.dispatchEvent(new CustomEvent('xm:consent-open'));
+            }}><Icon name="help" /><span class="ph-label">Cookie settings</span></button
+          >
+        </li>
+        <li>
+          <a class="ph-row" href={`${home}privacy/`}
+            ><Icon name="external" /><span class="ph-label">Privacy and cookies</span></a
+          >
+        </li>
       </ul>
       <p class="hint">
         Your work is saved in this browser. Clearing site data removes it, so save the workspace to

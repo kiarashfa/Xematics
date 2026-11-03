@@ -1,0 +1,6 @@
+layers:
+  - { units: 784, name: Pixels }
+  - 16
+  - 16
+  - { units: 10, name: Digits }
+style: { preset: colorblind }

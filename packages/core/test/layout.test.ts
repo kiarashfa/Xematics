@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'vitest';
+import { barHeight, log10 } from '../src/layout/boxes.ts';
 import {
   layoutModel,
   parseModel,
+  PRESETS,
   type CircleItem,
   type LineItem,
   type Model,
+  type RectItem,
   type Scene,
 } from '../src/index.ts';
 import { getEngine } from './helpers.ts';
@@ -140,5 +143,42 @@ describe('MLP layout', () => {
     const a = await layout('784-16-16-10');
     const b = await layout('784-16-16-10');
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+});
+
+describe('layer boxes layout', () => {
+  const rects = (scene: Scene) => scene.items.filter((i): i is RectItem => i.kind === 'rect');
+
+  test('draws one bar per layer, taller for more neurons, with arrows between', async () => {
+    const { scene, diagnostics } = await layout('layers: [784, 16, 10]\nstyle: { preset: boxes }');
+    expect(diagnostics).toEqual([]);
+    const bars = rects(scene);
+    expect(bars.map((r) => r.id)).toEqual(['box-0', 'box-1', 'box-2']);
+    expect(bars[0]!.height).toBeGreaterThan(bars[1]!.height);
+    expect(bars[1]!.height).toBeGreaterThan(bars[2]!.height);
+    // All bars share one center line.
+    const centers = bars.map((r) => r.y + r.height / 2);
+    expect(new Set(centers).size).toBe(1);
+    expect(scene.items.filter((i) => i.classes?.includes('arrow')).map((i) => i.id)).toEqual([
+      'arrow-0',
+      'arrow-1',
+    ]);
+    expect(scene.items.some((i) => i.kind === 'circle')).toBe(false);
+    expect(scene.items.some((i) => i.id === 'layer-1')).toBe(true);
+  });
+
+  test('bar height follows the log of the neuron count', async () => {
+    const { box } = PRESETS.boxes;
+    expect(barHeight(1, PRESETS.boxes)).toBe(box.minHeight);
+    expect(barHeight(1000, PRESETS.boxes)).toBeCloseTo(box.minHeight + 3 * box.perDecade, 5);
+    for (const n of [2, 7, 16, 784, 99_999, 1_000_000]) {
+      expect(log10(n)).toBeCloseTo(Math.log10(n), 6);
+    }
+  });
+
+  test('keeps arrows visible when layers are packed tight', async () => {
+    const { scene } = await layout('layers: [3, 3]\nstyle: { preset: boxes, layerSpacing: 20 }');
+    const arrow = scene.items.find((i): i is LineItem => i.id === 'arrow-0')!;
+    expect(arrow.x2 - arrow.x1).toBeGreaterThanOrEqual(16);
   });
 });

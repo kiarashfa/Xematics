@@ -25,6 +25,7 @@ import {
   updateText,
   type Diagnostic,
   type Model,
+  type PresetId,
   type TextEngine,
   type Workspace,
   type WorkspaceDocument,
@@ -109,7 +110,7 @@ export class ToolState {
     return {
       layers: layers.length,
       neurons: layers.reduce((sum, layer) => sum + layer.units, 0),
-      edges: items.filter((item) => item.kind === 'line').length,
+      edges: items.filter((item) => item.kind === 'line' && item.classes?.includes('edge')).length,
     };
   });
 
@@ -208,6 +209,7 @@ export class ToolState {
     last: this.model?.style?.collapse?.last ?? DEFAULTS.collapse.last,
   });
   transparent = $derived(this.model?.style?.background === 'transparent');
+  preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');
 
   // Settings equal to the preset default are removed, so the source stays short.
   setLabel(key: 'names' | 'sizes', on: boolean): void {
@@ -222,6 +224,10 @@ export class ToolState {
         collapse: { [key]: value === DEFAULTS.collapse[key] ? undefined : value },
       }),
     );
+  }
+
+  setPreset(id: PresetId): void {
+    this.edit((model) => patchStyle(model, { preset: id === 'classic' ? undefined : id }));
   }
 
   setTransparent(on: boolean): void {

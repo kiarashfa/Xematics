@@ -168,7 +168,8 @@
     display: block;
   }
 
-  .paper :global([data-selected] circle) {
+  .paper :global([data-selected] circle),
+  .paper :global([data-selected] rect) {
     stroke: #0b6bcb;
     stroke-width: 3;
   }

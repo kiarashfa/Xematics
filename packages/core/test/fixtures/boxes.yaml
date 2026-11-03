@@ -1,0 +1,7 @@
+title: MNIST classifier
+layers:
+  - { units: 784, name: Pixels }
+  - { units: 16, activation: relu }
+  - { units: 16, activation: relu }
+  - { units: 10, name: Digits }
+style: { preset: boxes }

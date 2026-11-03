@@ -54,7 +54,14 @@ export {
   type SceneItem,
   type TextItem,
 } from './scene.ts';
-export { PRESETS, resolveTheme, type CollapseRule, type Role, type Theme } from './style/theme.ts';
+export {
+  PRESET_NAMES,
+  PRESETS,
+  resolveTheme,
+  type CollapseRule,
+  type Role,
+  type Theme,
+} from './style/theme.ts';
 export {
   createTextEngine,
   type FontFaceData,

@@ -96,7 +96,11 @@
     </label>
     <label class="field">
       <span>Large layer</span>
-      <select value={collapseMode} onchange={(e) => setCollapseMode(e.currentTarget.value)}>
+      <select
+        value={collapseMode}
+        disabled={tool.preset === 'boxes'}
+        onchange={(e) => setCollapseMode(e.currentTarget.value)}
+      >
         <option value="default">Collapse above {tool.collapse.above} (diagram setting)</option>
         <option value="never">Never collapse</option>
         <option value="custom">Custom for this layer</option>
@@ -110,6 +114,7 @@
             min="0"
             max="100"
             value={layer.collapse.first ?? tool.collapse.first}
+            disabled={tool.preset === 'boxes'}
             onchange={(e) => setCollapseValue('first', e)}
           /></label
         >
@@ -119,6 +124,7 @@
             min="0"
             max="100"
             value={layer.collapse.last ?? tool.collapse.last}
+            disabled={tool.preset === 'boxes'}
             onchange={(e) => setCollapseValue('last', e)}
           /></label
         >

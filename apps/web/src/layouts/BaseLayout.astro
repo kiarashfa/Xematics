@@ -1,4 +1,5 @@
 ---
+import ConsentBar from '../components/ConsentBar.astro';
 import Head, { type Props as HeadProps } from '../components/Head.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
@@ -20,5 +21,6 @@ type Props = HeadProps;
       <slot />
     </main>
     <SiteFooter />
+    <ConsentBar />
   </body>
 </html>

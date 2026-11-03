@@ -1,0 +1,2 @@
+layers: [1, 1000000, 3]
+style: { preset: boxes, labels: { sizes: false } }

@@ -16,7 +16,7 @@ export const LIMITS = {
   activation: 40,
 } as const;
 
-export const PRESET_IDS = ['classic'] as const;
+export const PRESET_IDS = ['classic', 'boxes', 'mono', 'colorblind', 'colorblind-dark'] as const;
 export const LAYER_TYPES = ['dense'] as const;
 
 /** Activation names are identifiers so they stay valid in the shorthand: relu, leaky_relu, softmax. */

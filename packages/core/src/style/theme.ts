@@ -47,36 +47,103 @@ export interface Theme {
   readonly collapse: CollapseRule;
   /** Above this many connections between two layers, they are drawn as one band. */
   readonly edgeLimit: number;
+  /** 'nodes' draws every neuron; 'boxes' draws one bar per layer, sized by its neuron count. */
+  readonly mode: 'nodes' | 'boxes';
+  readonly box: {
+    readonly width: number;
+    readonly radius: number;
+    /** Bar height is minHeight + perDecade * log10(neurons). */
+    readonly minHeight: number;
+    readonly perDecade: number;
+    readonly arrow: { readonly color: string; readonly width: number };
+  };
 }
 
 const INK = '#1f2937';
 const MUTED = '#6b7280';
 
+const CLASSIC: Theme = {
+  nodeRadius: 12,
+  nodeSpacing: 9,
+  nodeStrokeWidth: 1.5,
+  layerSpacing: 110,
+  margin: 22,
+  roles: {
+    input: { fill: '#d4e8f5', stroke: '#0072b2' },
+    hidden: { fill: '#f1f2f4', stroke: '#4b5563' },
+    output: { fill: '#fbe8c4', stroke: '#b97800' },
+  },
+  edge: { color: '#b8c0cc', width: 0.8, bundleOpacity: 0.35 },
+  ellipsis: { color: '#4b5563', radius: 2, spacing: 7 },
+  nameText: { family: 'Inter', weight: 500, size: 13, color: INK },
+  sizeText: { family: 'Inter', weight: 400, size: 12, color: MUTED },
+  labelGap: 13,
+  lineGap: 2,
+  labelPadding: 12,
+  background: '#ffffff',
+  labels: { names: true, sizes: true },
+  collapse: { above: 10, first: 3, last: 3 },
+  edgeLimit: 2500,
+  mode: 'nodes',
+  box: { width: 30, radius: 6, minHeight: 28, perDecade: 34, arrow: { color: MUTED, width: 1.4 } },
+};
+
+/** Okabe-Ito fills, shared by the light and dark colorblind-safe presets. */
+const OKABE_INPUT = '#56b4e9';
+const OKABE_OUTPUT = '#e69f00';
+
 export const PRESETS: Readonly<Record<PresetId, Theme>> = {
   // "Role tint": light role fills with outlines; input blue and output orange (Okabe-Ito based).
-  classic: {
-    nodeRadius: 12,
-    nodeSpacing: 9,
-    nodeStrokeWidth: 1.5,
-    layerSpacing: 110,
-    margin: 22,
+  classic: CLASSIC,
+  // One bar per layer whose height grows with the log of its size; arrows show the flow.
+  boxes: { ...CLASSIC, mode: 'boxes', layerSpacing: 96 },
+  // Print-safe: gray levels encode the role (light input, white hidden, dark output).
+  mono: {
+    ...CLASSIC,
     roles: {
-      input: { fill: '#d4e8f5', stroke: '#0072b2' },
-      hidden: { fill: '#f1f2f4', stroke: '#4b5563' },
-      output: { fill: '#fbe8c4', stroke: '#b97800' },
+      input: { fill: '#d9d9d9', stroke: '#000000' },
+      hidden: { fill: '#ffffff', stroke: '#000000' },
+      output: { fill: '#595959', stroke: '#000000' },
     },
-    edge: { color: '#b8c0cc', width: 0.8, bundleOpacity: 0.35 },
-    ellipsis: { color: '#4b5563', radius: 2, spacing: 7 },
-    nameText: { family: 'Inter', weight: 500, size: 13, color: INK },
-    sizeText: { family: 'Inter', weight: 400, size: 12, color: MUTED },
-    labelGap: 13,
-    lineGap: 2,
-    labelPadding: 12,
-    background: '#ffffff',
-    labels: { names: true, sizes: true },
-    collapse: { above: 10, first: 3, last: 3 },
-    edgeLimit: 2500,
+    nodeStrokeWidth: 1.3,
+    edge: { ...CLASSIC.edge, color: '#a6a6a6', width: 0.6 },
+    ellipsis: { ...CLASSIC.ellipsis, color: '#000000' },
+    nameText: { ...CLASSIC.nameText, color: '#000000' },
+    sizeText: { ...CLASSIC.sizeText, color: '#4d4d4d' },
+    box: { ...CLASSIC.box, arrow: { color: '#000000', width: 1.2 } },
   },
+  colorblind: {
+    ...CLASSIC,
+    roles: {
+      input: { fill: OKABE_INPUT, stroke: '#0072b2' },
+      hidden: { fill: '#e5e7eb', stroke: '#6b7280' },
+      output: { fill: OKABE_OUTPUT, stroke: '#d55e00' },
+    },
+    edge: { ...CLASSIC.edge, color: '#c3c8cf' },
+  },
+  'colorblind-dark': {
+    ...CLASSIC,
+    background: '#15191f',
+    roles: {
+      input: { fill: OKABE_INPUT, stroke: '#9fd4f3' },
+      hidden: { fill: '#2b313b', stroke: '#9aa3ae' },
+      output: { fill: OKABE_OUTPUT, stroke: '#f3c45c' },
+    },
+    edge: { ...CLASSIC.edge, color: '#4a515c' },
+    ellipsis: { ...CLASSIC.ellipsis, color: '#9aa3ae' },
+    nameText: { ...CLASSIC.nameText, color: '#e8eaed' },
+    sizeText: { ...CLASSIC.sizeText, color: '#9aa3ae' },
+    box: { ...CLASSIC.box, arrow: { color: '#9aa3ae', width: 1.4 } },
+  },
+};
+
+/** Display names for presets, in menu order. */
+export const PRESET_NAMES: Readonly<Record<PresetId, string>> = {
+  classic: 'Classic',
+  boxes: 'Layer boxes',
+  mono: 'Print mono',
+  colorblind: 'Colorblind',
+  'colorblind-dark': 'Colorblind dark',
 };
 
 export function mergeCollapse(
