@@ -1,5 +1,6 @@
 // Scans the production build for things that must never ship: source maps, references to
-// private working files, local filesystem paths, and em-dashes in rendered HTML.
+// private working files, local filesystem paths, third-party font hosts (fonts are self-hosted,
+// so visitors' browsers never contact a font CDN), and em-dashes in rendered HTML.
 
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
@@ -14,6 +15,7 @@ const FORBIDDEN: [RegExp, string][] = [
   [/sourceMappingURL/, 'source map reference'],
   [/[A-Za-z]:[\\/]Users[\\/]/, 'local Windows path'],
   [/\/home\/runner\//, 'CI runner path'],
+  [/fonts\.googleapis\.com|fonts\.gstatic\.com|use\.typekit\.net|fonts\.bunny\.net/, 'font CDN'],
 ];
 const TEXT_EXT = new Set(['.html', '.js', '.mjs', '.css', '.json', '.xml', '.txt', '.svg']);
 

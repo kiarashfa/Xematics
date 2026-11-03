@@ -1,0 +1,120 @@
+---
+import { SITE } from '../site.config.ts';
+import ThemeToggle from './ThemeToggle.astro';
+import Wordmark from './Wordmark.astro';
+
+const base = import.meta.env.BASE_URL;
+const links = [
+  { href: base, label: 'Home' },
+  { href: `${base}#examples`, label: 'Examples' },
+  { href: `${base}#status`, label: 'Status' },
+];
+---
+
+<header class="masthead">
+  <div class="page top">
+    <p class="meta">Neural network diagrams · Free and private</p>
+    <a class="brand" href={base} aria-label={`${SITE.name} home`}>
+      <Wordmark aria-hidden="true" />
+    </a>
+    <div class="actions">
+      <ThemeToggle />
+      <a class="source label-caps" href={SITE.repoUrl}>
+        GitHub
+      </a>
+    </div>
+  </div>
+  <nav class="page links" aria-label="Main">
+    {links.map((link) => (
+      <a
+        class="label-caps"
+        href={link.href}
+        aria-current={link.href === Astro.url.pathname ? 'page' : undefined}
+      >
+        {link.label}
+      </a>
+    ))}
+  </nav>
+</header>
+
+<style>
+  .top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding-block: 20px 14px;
+  }
+
+  .meta {
+    margin: 0;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--muted);
+  }
+
+  .brand {
+    justify-self: center;
+    display: inline-flex;
+    color: var(--ink);
+  }
+
+  .brand :global(.wordmark) {
+    height: 34px;
+    width: auto;
+  }
+
+  .actions {
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .source {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .links {
+    display: flex;
+    justify-content: center;
+    gap: 34px;
+    padding-block: 8px;
+    border-top: 1px solid var(--ink);
+    border-bottom: 3px double var(--ink);
+  }
+
+  .links a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .links a:hover,
+  .links a[aria-current='page'],
+  .source:hover {
+    color: var(--ink);
+  }
+
+  @media (max-width: 720px) {
+    .top {
+      grid-template-columns: 1fr auto;
+    }
+
+    .meta {
+      display: none;
+    }
+
+    .brand {
+      justify-self: start;
+    }
+
+    .brand :global(.wordmark) {
+      height: 28px;
+    }
+
+    .links {
+      justify-content: flex-start;
+      gap: 22px;
+    }
+  }
+</style>

@@ -1,0 +1,59 @@
+---
+import { SITE } from '../site.config.ts';
+---
+
+<footer class="colophon">
+  <div class="page">
+    <p class="set-in">Set in Archivo and IBM Plex Mono. Wordmark in EB Garamond.</p>
+    <p>
+      © 2026 Kiarash Farajzadehahary. Source-available under the{' '}
+      <a href={`${SITE.repoUrl}/blob/main/LICENSE`}>KFA Source-Available License 1.0</a>. Diagrams
+      you create are yours to use for any purpose.
+    </p>
+    <nav aria-label="Footer">
+      <a class="label-caps" href={SITE.repoUrl}>
+        Source on GitHub
+      </a>
+      <a class="label-caps" href={`${SITE.repoUrl}/blob/main/THIRD_PARTY.md`}>
+        Third-party notices
+      </a>
+    </nav>
+  </div>
+</footer>
+
+<style>
+  .colophon {
+    margin-top: 72px;
+    padding-block: 26px 40px;
+    border-top: 3px double var(--ink);
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  p {
+    margin: 0 auto 8px;
+    max-width: 60em;
+  }
+
+  .set-in {
+    font-style: italic;
+  }
+
+  nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px 26px;
+    margin-top: 14px;
+  }
+
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  nav a:hover {
+    color: var(--ink);
+  }
+</style>

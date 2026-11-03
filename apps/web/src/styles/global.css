@@ -1,1 +1,161 @@
 @import 'tailwindcss';
+
+/*
+ * Journal design tokens. light-dark() follows color-scheme: the system preference by default,
+ * or the visitor's choice from the theme toggle (data-theme on <html>).
+ */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#f6f2ea, #141210);
+  --surface: light-dark(#fffdf8, #1b1916);
+  --surface-2: light-dark(#ede6d9, #26221d);
+  --ink: light-dark(#1d1a16, #ece5d8);
+  --muted: light-dark(#675f54, #a69d8e);
+  --line: light-dark(#d3c9b8, #3b352d);
+  --accent: light-dark(#1f4e79, #9cc3e6);
+  --accent-ink: light-dark(#ffffff, #0f1d2b);
+  --mark-accent: var(--accent);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --font-sans: 'Archivo Variable', Archivo, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    background: var(--bg);
+    color: var(--ink);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: inherit;
+    text-underline-offset: 0.18em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--surface-2);
+    padding: 0.08em 0.35em;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  .page {
+    width: min(1180px, 100% - 48px);
+    margin-inline: auto;
+  }
+
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 12px;
+    z-index: 20;
+    padding: 8px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+
+  .skip-link:focus {
+    left: 12px;
+  }
+
+  /* Small uppercase labels: the sans stand-in for small caps. */
+  .label-caps {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .kicker {
+    margin: 0 0 14px;
+    font-style: italic;
+    color: var(--muted);
+  }
+
+  .lead {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 34em;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* Figures always sit on white paper: exports never follow the site theme. */
+  .paper {
+    display: grid;
+    place-items: center;
+    background: #fff;
+    box-shadow: 0 0 0 1px var(--line);
+  }
+
+  .paper svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+}

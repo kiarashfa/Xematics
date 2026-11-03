@@ -1,24 +1,239 @@
 ---
-import '../styles/global.css';
+import { renderDiagram } from '@xematics/core';
+import { createNodeTextEngine } from '@xematics/core/node';
+import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE } from '../site.config.ts';
 
-const canonical = new URL(import.meta.env.BASE_URL, SITE.url).href;
+// Figures are rendered at build time by the same engine the editor will use.
+const engine = await createNodeTextEngine();
+const figure = (source: string, prefix: string) =>
+  renderDiagram(source, engine, { prefix }).svg ?? '';
+
+const hero = figure('784-16-16-10', 'hero-');
+const plates = [
+  { title: 'Perceptron', source: '3-1' },
+  { title: 'Two-layer MLP', source: '3-5-4-2' },
+  { title: 'MNIST classifier', source: '784-16-16-10' },
+  { title: 'Autoencoder', source: '8-4-2-4-8' },
+].map((plate, i) => ({
+  ...plate,
+  numeral: ['I', 'II', 'III', 'IV'][i],
+  svg: figure(plate.source, `plate${i + 1}-`),
+}));
+
+const highlights = [
+  {
+    title: 'Text in, figure out',
+    text: 'Type a shorthand like 784-16-10, or YAML with layer names and options.',
+  },
+  {
+    title: 'Made for print',
+    text: 'Text is converted to outlines, so figures look identical in every viewer and editor.',
+  },
+  {
+    title: 'Private by design',
+    text: 'No account and no server storage. Everything runs in your browser.',
+  },
+];
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{SITE.name}</title>
-    <meta name="description" content={SITE.description} />
-    <link rel="canonical" href={canonical} />
-  </head>
-  <body>
-    <main class="mx-auto max-w-prose p-6">
-      <h1 class="text-2xl font-semibold">{SITE.name}</h1>
-      <p class="mt-2">{SITE.description}</p>
-      <p class="mt-2">Work in progress. The diagram tool is coming soon.</p>
-    </main>
-  </body>
-</html>
+<BaseLayout>
+  <section class="page hero">
+    <div class="copy">
+      <p class="kicker">A diagram tool for researchers</p>
+      <h1>
+        Neural network figures, <em>typeset</em> for print.
+      </h1>
+      <p class="lead">
+        Write the architecture as text, choose a style, and export vector figures that drop straight
+        into your paper, thesis or slides. No account, nothing uploaded.
+      </p>
+      <div class="status" id="status">
+        <p>
+          <strong>In development.</strong> The engine already turns <code>784-16-16-10</code> into
+          the figure on this page. The editor comes next.
+        </p>
+        <a class="btn btn-primary" href={SITE.repoUrl}>
+          Follow on GitHub
+        </a>
+      </div>
+    </div>
+    <figure class="hero-figure">
+      <div class="paper" set:html={hero} />
+      <figcaption>
+        <strong>Figure 1.</strong> A 784-16-16-10 multilayer perceptron, rendered by Xematics in the
+        Classic style.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section class="page highlights" aria-labelledby="highlights-title">
+    <h2 id="highlights-title" class="sr-only">
+      Highlights
+    </h2>
+    {highlights.map((item, i) => (
+      <div class="highlight">
+        <span class="section-mark">§ {i + 1}</span>
+        <h3>{item.title}</h3>
+        <p>{item.text}</p>
+      </div>
+    ))}
+  </section>
+
+  <section class="page plates" id="examples" aria-labelledby="plates-title">
+    <h2 id="plates-title" class="label-caps">
+      Plates
+    </h2>
+    <div class="plate-grid">
+      {plates.map((plate) => (
+        <figure class="plate">
+          <div class="paper" set:html={plate.svg} />
+          <figcaption>
+            <em>Plate {plate.numeral}.</em> {plate.title} <code>{plate.source}</code>
+          </figcaption>
+        </figure>
+      ))}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 56px;
+    align-items: center;
+    padding-block: 56px 44px;
+  }
+
+  h1 {
+    margin: 0 0 18px;
+    font-size: clamp(2.3rem, 4.6vw, 3.5rem);
+    font-weight: 600;
+    line-height: 1.06;
+    letter-spacing: -0.02em;
+  }
+
+  h1 em {
+    color: var(--accent);
+  }
+
+  .status {
+    margin-top: 26px;
+    padding: 14px 18px;
+    border-left: 2px solid var(--accent);
+    background: var(--surface);
+  }
+
+  .status p {
+    margin: 0 0 12px;
+  }
+
+  .hero-figure {
+    margin: 0;
+  }
+
+  .hero-figure .paper {
+    padding: 22px;
+  }
+
+  figcaption {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .hero-figure figcaption {
+    padding-left: 10px;
+    border-left: 2px solid var(--accent);
+  }
+
+  .highlights {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+  }
+
+  .highlight {
+    padding: 0 26px;
+    border-left: 1px solid var(--line);
+  }
+
+  .highlight:first-of-type {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .section-mark {
+    font-size: 1.3rem;
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .highlight h3 {
+    margin: 6px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .highlight p {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .plates {
+    padding-top: 52px;
+  }
+
+  .plates h2 {
+    margin: 0 0 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    font-size: 0.85rem;
+  }
+
+  .plate-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
+  }
+
+  .plate {
+    margin: 0;
+  }
+
+  .plate .paper {
+    height: 150px;
+    padding: 10px;
+  }
+
+  .plate .paper :global(svg) {
+    max-height: 130px;
+    width: auto;
+  }
+
+  @media (max-width: 900px) {
+    .hero {
+      grid-template-columns: 1fr;
+      gap: 32px;
+      padding-block: 32px;
+    }
+
+    .highlights {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .highlight,
+    .highlight:first-of-type {
+      padding: 14px 0 0;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .plate-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

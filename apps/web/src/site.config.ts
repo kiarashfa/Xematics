@@ -2,6 +2,7 @@
 
 export const SITE = {
   name: 'Xematics',
+  tagline: 'Neural network diagrams for papers',
   description: 'Publication-quality neural network diagrams from simple input.',
   /** Origin the site is served from (no trailing slash). */
   url: 'https://kiarashfa.github.io',

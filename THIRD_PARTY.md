@@ -4,13 +4,16 @@ Xematics includes and uses the third-party software and fonts listed below. Each
 
 ## Included in the website and in generated diagrams
 
-| Component                                     | Version          | License   | Source                                   |
-| --------------------------------------------- | ---------------- | --------- | ---------------------------------------- |
-| Inter font (packaged by Fontsource)           | 5.3.0            | OFL-1.1   | <https://github.com/rsms/inter>          |
-| harfbuzzjs (HarfBuzz compiled to WebAssembly) | 1.6.4            | MIT       | <https://github.com/harfbuzz/harfbuzzjs> |
-| HarfBuzz text shaping engine                  | bundled in above | "Old MIT" | <https://github.com/harfbuzz/harfbuzz>   |
-| Valibot                                       | 1.5.0            | MIT       | <https://valibot.dev>                    |
-| yaml                                          | 2.9.1            | ISC       | <https://eemeli.org/yaml/>               |
+| Component                                     | Version          | License   | Source                                         |
+| --------------------------------------------- | ---------------- | --------- | ---------------------------------------------- |
+| Inter font (packaged by Fontsource)           | 5.3.0            | OFL-1.1   | <https://github.com/rsms/inter>                |
+| Archivo font (site text)                      | 5.3.0            | OFL-1.1   | <https://github.com/Omnibus-Type/Archivo>      |
+| IBM Plex Mono font (site code text)           | 5.3.0            | OFL-1.1   | <https://github.com/IBM/plex>                  |
+| EB Garamond font (outlines in the wordmark)   | 5.3.0            | OFL-1.1   | <https://github.com/octaviopardo/EBGaramond12> |
+| harfbuzzjs (HarfBuzz compiled to WebAssembly) | 1.6.4            | MIT       | <https://github.com/harfbuzz/harfbuzzjs>       |
+| HarfBuzz text shaping engine                  | bundled in above | "Old MIT" | <https://github.com/harfbuzz/harfbuzz>         |
+| Valibot                                       | 1.5.0            | MIT       | <https://valibot.dev>                          |
+| yaml                                          | 2.9.1            | ISC       | <https://eemeli.org/yaml/>                     |
 
 ## Used to build the website
 
@@ -28,6 +31,10 @@ Development tools (TypeScript, ESLint, Prettier, Vitest, Playwright, axe-core, f
 ### Inter
 
 Copyright 2016 The Inter Project Authors (<https://github.com/rsms/inter>). Licensed under the SIL Open Font License, Version 1.1 (<https://openfontlicense.org>). Diagrams made with Xematics contain glyph outlines from Inter, which the license permits.
+
+### Archivo, IBM Plex Mono and EB Garamond
+
+Archivo: Copyright 2020 The Archivo Project Authors (<https://github.com/Omnibus-Type/Archivo>). IBM Plex Mono: Copyright 2017 IBM Corp. EB Garamond: Copyright 2017 The EB Garamond Project Authors (<https://github.com/octaviopardo/EBGaramond12>). All three are licensed under the SIL Open Font License, Version 1.1 and are served from the Xematics website itself (no font services are contacted). The Xematics wordmark contains glyph outlines from EB Garamond.
 
 ### harfbuzzjs and HarfBuzz
 
