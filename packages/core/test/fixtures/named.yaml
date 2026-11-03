@@ -1,0 +1,8 @@
+# Custom names (accented and Greek), asymmetric collapse, size labels off.
+title: Asymmetric collapse
+layers:
+  - { units: 64, name: Entrée, collapse: { first: 2, last: 4 } }
+  - { units: 32, name: σ-layer, activation: relu }
+  - { units: 5, name: Classes }
+style:
+  labels: { sizes: false }

@@ -1,0 +1,24 @@
+---
+import '../styles/global.css';
+import { SITE } from '../site.config.ts';
+
+const canonical = new URL(import.meta.env.BASE_URL, SITE.url).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{SITE.name}</title>
+    <meta name="description" content={SITE.description} />
+    <link rel="canonical" href={canonical} />
+  </head>
+  <body>
+    <main class="mx-auto max-w-prose p-6">
+      <h1 class="text-2xl font-semibold">{SITE.name}</h1>
+      <p class="mt-2">{SITE.description}</p>
+      <p class="mt-2">Work in progress. The diagram tool is coming soon.</p>
+    </main>
+  </body>
+</html>

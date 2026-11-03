@@ -1,0 +1,5 @@
+# 60 x 60 = 3600 connections exceed the edge limit, so they are drawn as one band.
+layers:
+  - { units: 60, collapse: false }
+  - { units: 60, collapse: false }
+  - 2

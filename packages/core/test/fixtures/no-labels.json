@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "layers": [128, 8, 1],
+  "style": { "labels": { "names": false, "sizes": false } }
+}

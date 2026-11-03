@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="288" height="326.52" viewBox="0 0 288 326.52" role="img" aria-labelledby="xm-title xm-desc">
+  <title id="xm-title">Neural network diagram</title>
+  <desc id="xm-desc">Fully connected neural network with 3 layers: Input (128 neurons), Hidden (8 neurons), Output (1 neuron).</desc>
+  <rect id="xm-background" width="288" height="326.52" fill="#ffffff"/>
+  <g id="xm-edges-0" class="xm-edges" stroke="#b8c0cc" stroke-width="0.8">
+    <line id="xm-edge-0-0-1-0" class="xm-edge" x1="45.87" y1="76.24" x2="132.13" y2="63.3"/>
+    <line id="xm-edge-0-0-1-1" class="xm-edge" x1="45.87" y1="79.8" x2="132.13" y2="92.74"/>
+    <line id="xm-edge-0-0-1-2" class="xm-edge" x1="44.94" y1="82.94" x2="133.06" y2="122.6"/>
+    <line id="xm-edge-0-0-1-3" class="xm-edge" x1="43.6" y1="85.22" x2="134.4" y2="153.32"/>
+    <line id="xm-edge-0-0-1-4" class="xm-edge" x1="42.28" y1="86.71" x2="135.72" y2="184.83"/>
+    <line id="xm-edge-0-0-1-5" class="xm-edge" x1="41.14" y1="87.66" x2="136.86" y2="216.88"/>
+    <line id="xm-edge-0-0-1-6" class="xm-edge" x1="40.22" y1="88.28" x2="137.78" y2="249.26"/>
+    <line id="xm-edge-0-0-1-7" class="xm-edge" x1="39.48" y1="88.7" x2="138.52" y2="281.84"/>
+    <line id="xm-edge-0-1-1-0" class="xm-edge" x1="44.94" y1="106.1" x2="133.06" y2="66.44"/>
+    <line id="xm-edge-0-1-1-1" class="xm-edge" x1="45.87" y1="109.24" x2="132.13" y2="96.3"/>
+    <line id="xm-edge-0-1-1-2" class="xm-edge" x1="45.87" y1="112.8" x2="132.13" y2="125.74"/>
+    <line id="xm-edge-0-1-1-3" class="xm-edge" x1="44.94" y1="115.94" x2="133.06" y2="155.6"/>
+    <line id="xm-edge-0-1-1-4" class="xm-edge" x1="43.6" y1="118.22" x2="134.4" y2="186.32"/>
+    <line id="xm-edge-0-1-1-5" class="xm-edge" x1="42.28" y1="119.71" x2="135.72" y2="217.83"/>
+    <line id="xm-edge-0-1-1-6" class="xm-edge" x1="41.14" y1="120.66" x2="136.86" y2="249.88"/>
+    <line id="xm-edge-0-1-1-7" class="xm-edge" x1="40.22" y1="121.28" x2="137.78" y2="282.26"/>
+    <line id="xm-edge-0-2-1-0" class="xm-edge" x1="43.6" y1="136.82" x2="134.4" y2="68.72"/>
+    <line id="xm-edge-0-2-1-1" class="xm-edge" x1="44.94" y1="139.1" x2="133.06" y2="99.44"/>
+    <line id="xm-edge-0-2-1-2" class="xm-edge" x1="45.87" y1="142.24" x2="132.13" y2="129.3"/>
+    <line id="xm-edge-0-2-1-3" class="xm-edge" x1="45.87" y1="145.8" x2="132.13" y2="158.74"/>
+    <line id="xm-edge-0-2-1-4" class="xm-edge" x1="44.94" y1="148.94" x2="133.06" y2="188.6"/>
+    <line id="xm-edge-0-2-1-5" class="xm-edge" x1="43.6" y1="151.22" x2="134.4" y2="219.32"/>
+    <line id="xm-edge-0-2-1-6" class="xm-edge" x1="42.28" y1="152.71" x2="135.72" y2="250.83"/>
+    <line id="xm-edge-0-2-1-7" class="xm-edge" x1="41.14" y1="153.66" x2="136.86" y2="282.88"/>
+    <line id="xm-edge-0-125-1-0" class="xm-edge" x1="41.14" y1="200.38" x2="136.86" y2="71.16"/>
+    <line id="xm-edge-0-125-1-1" class="xm-edge" x1="42.28" y1="201.33" x2="135.72" y2="103.21"/>
+    <line id="xm-edge-0-125-1-2" class="xm-edge" x1="43.6" y1="202.82" x2="134.4" y2="134.72"/>
+    <line id="xm-edge-0-125-1-3" class="xm-edge" x1="44.94" y1="205.1" x2="133.06" y2="165.44"/>
+    <line id="xm-edge-0-125-1-4" class="xm-edge" x1="45.87" y1="208.24" x2="132.13" y2="195.3"/>
+    <line id="xm-edge-0-125-1-5" class="xm-edge" x1="45.87" y1="211.8" x2="132.13" y2="224.74"/>
+    <line id="xm-edge-0-125-1-6" class="xm-edge" x1="44.94" y1="214.94" x2="133.06" y2="254.6"/>
+    <line id="xm-edge-0-125-1-7" class="xm-edge" x1="43.6" y1="217.22" x2="134.4" y2="285.32"/>
+    <line id="xm-edge-0-126-1-0" class="xm-edge" x1="40.22" y1="232.76" x2="137.78" y2="71.78"/>
+    <line id="xm-edge-0-126-1-1" class="xm-edge" x1="41.14" y1="233.38" x2="136.86" y2="104.16"/>
+    <line id="xm-edge-0-126-1-2" class="xm-edge" x1="42.28" y1="234.33" x2="135.72" y2="136.21"/>
+    <line id="xm-edge-0-126-1-3" class="xm-edge" x1="43.6" y1="235.82" x2="134.4" y2="167.72"/>
+    <line id="xm-edge-0-126-1-4" class="xm-edge" x1="44.94" y1="238.1" x2="133.06" y2="198.44"/>
+    <line id="xm-edge-0-126-1-5" class="xm-edge" x1="45.87" y1="241.24" x2="132.13" y2="228.3"/>
+    <line id="xm-edge-0-126-1-6" class="xm-edge" x1="45.87" y1="244.8" x2="132.13" y2="257.74"/>
+    <line id="xm-edge-0-126-1-7" class="xm-edge" x1="44.94" y1="247.94" x2="133.06" y2="287.6"/>
+    <line id="xm-edge-0-127-1-0" class="xm-edge" x1="39.48" y1="265.34" x2="138.52" y2="72.2"/>
+    <line id="xm-edge-0-127-1-1" class="xm-edge" x1="40.22" y1="265.76" x2="137.78" y2="104.78"/>
+    <line id="xm-edge-0-127-1-2" class="xm-edge" x1="41.14" y1="266.38" x2="136.86" y2="137.16"/>
+    <line id="xm-edge-0-127-1-3" class="xm-edge" x1="42.28" y1="267.33" x2="135.72" y2="169.21"/>
+    <line id="xm-edge-0-127-1-4" class="xm-edge" x1="43.6" y1="268.82" x2="134.4" y2="200.72"/>
+    <line id="xm-edge-0-127-1-5" class="xm-edge" x1="44.94" y1="271.1" x2="133.06" y2="231.44"/>
+    <line id="xm-edge-0-127-1-6" class="xm-edge" x1="45.87" y1="274.24" x2="132.13" y2="261.3"/>
+    <line id="xm-edge-0-127-1-7" class="xm-edge" x1="45.87" y1="277.8" x2="132.13" y2="290.74"/>
+  </g>
+  <g id="xm-edges-1" class="xm-edges" stroke="#b8c0cc" stroke-width="0.8">
+    <line id="xm-edge-1-0-2-0" class="xm-edge" x1="152.28" y1="70.21" x2="245.72" y2="168.33"/>
+    <line id="xm-edge-1-1-2-0" class="xm-edge" x1="153.6" y1="101.72" x2="244.4" y2="169.82"/>
+    <line id="xm-edge-1-2-2-0" class="xm-edge" x1="154.94" y1="132.44" x2="243.06" y2="172.1"/>
+    <line id="xm-edge-1-3-2-0" class="xm-edge" x1="155.87" y1="162.3" x2="242.13" y2="175.24"/>
+    <line id="xm-edge-1-4-2-0" class="xm-edge" x1="155.87" y1="191.74" x2="242.13" y2="178.8"/>
+    <line id="xm-edge-1-5-2-0" class="xm-edge" x1="154.94" y1="221.6" x2="243.06" y2="181.94"/>
+    <line id="xm-edge-1-6-2-0" class="xm-edge" x1="153.6" y1="252.32" x2="244.4" y2="184.22"/>
+    <line id="xm-edge-1-7-2-0" class="xm-edge" x1="152.28" y1="283.83" x2="245.72" y2="185.71"/>
+  </g>
+  <g id="xm-layer-0" class="xm-layer xm-layer-input">
+    <circle id="xm-node-0-0" class="xm-node xm-node-input" cx="34" cy="78.02" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-1" class="xm-node xm-node-input" cx="34" cy="111.02" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-2" class="xm-node xm-node-input" cx="34" cy="144.02" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <g id="xm-ellipsis-0" class="xm-ellipsis" fill="#4b5563">
+      <circle id="xm-ellipsis-0-0" cx="34" cy="170.02" r="2"/>
+      <circle id="xm-ellipsis-0-1" cx="34" cy="177.02" r="2"/>
+      <circle id="xm-ellipsis-0-2" cx="34" cy="184.02" r="2"/>
+    </g>
+    <circle id="xm-node-0-125" class="xm-node xm-node-input" cx="34" cy="210.02" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-126" class="xm-node xm-node-input" cx="34" cy="243.02" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-127" class="xm-node xm-node-input" cx="34" cy="276.02" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+  </g>
+  <g id="xm-layer-1" class="xm-layer xm-layer-hidden" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5">
+    <circle id="xm-node-1-0" class="xm-node xm-node-hidden" cx="144" cy="61.52" r="12"/>
+    <circle id="xm-node-1-1" class="xm-node xm-node-hidden" cx="144" cy="94.52" r="12"/>
+    <circle id="xm-node-1-2" class="xm-node xm-node-hidden" cx="144" cy="127.52" r="12"/>
+    <circle id="xm-node-1-3" class="xm-node xm-node-hidden" cx="144" cy="160.52" r="12"/>
+    <circle id="xm-node-1-4" class="xm-node xm-node-hidden" cx="144" cy="193.52" r="12"/>
+    <circle id="xm-node-1-5" class="xm-node xm-node-hidden" cx="144" cy="226.52" r="12"/>
+    <circle id="xm-node-1-6" class="xm-node xm-node-hidden" cx="144" cy="259.52" r="12"/>
+    <circle id="xm-node-1-7" class="xm-node xm-node-hidden" cx="144" cy="292.52" r="12"/>
+  </g>
+  <g id="xm-layer-2" class="xm-layer xm-layer-output" fill="#fbe8c4" stroke="#b97800" stroke-width="1.5">
+    <circle id="xm-node-2-0" class="xm-node xm-node-output" cx="254" cy="177.02" r="12"/>
+  </g>
+  <g id="xm-labels" class="xm-labels" fill="#6b7280">
+    <path id="xm-size-0" class="xm-label xm-label-size" d="M28.01 24.89L28.01 33.63L26.92 33.63L26.92 25.93L26.86 25.93L24.75 27.49L24.75 26.29L26.65 24.89L28.01 24.89ZM29.97 33.63L29.97 32.82L32.87 29.68Q33.36 29.15 33.68 28.75Q34 28.35 34.17 27.99Q34.33 27.63 34.33 27.23Q34.33 26.77 34.11 26.44Q33.9 26.1 33.53 25.92Q33.16 25.74 32.69 25.74Q32.19 25.74 31.83 25.95Q31.46 26.15 31.26 26.51Q31.06 26.88 31.06 27.37L30 27.37Q30 26.6 30.35 26.01Q30.71 25.43 31.33 25.1Q31.94 24.78 32.72 24.78Q33.5 24.78 34.1 25.1Q34.7 25.43 35.04 25.98Q35.39 26.53 35.39 27.21Q35.39 27.69 35.22 28.14Q35.05 28.59 34.62 29.15Q34.19 29.72 33.42 30.54L31.51 32.58L31.51 32.65L35.53 32.65L35.53 33.63L29.97 33.63ZM40.1 33.74Q39.21 33.74 38.54 33.43Q37.86 33.12 37.48 32.56Q37.1 32.01 37.1 31.3Q37.1 30.75 37.33 30.28Q37.55 29.81 37.93 29.49Q38.32 29.18 38.81 29.09L38.81 29.04Q38.17 28.88 37.79 28.33Q37.42 27.79 37.42 27.1Q37.42 26.43 37.76 25.91Q38.11 25.38 38.71 25.08Q39.32 24.78 40.1 24.78Q40.86 24.78 41.47 25.08Q42.07 25.38 42.42 25.91Q42.77 26.43 42.77 27.1Q42.77 27.79 42.39 28.33Q42.01 28.88 41.39 29.04L41.39 29.09Q41.87 29.18 42.25 29.49Q42.64 29.81 42.87 30.28Q43.1 30.75 43.1 31.3Q43.1 32.01 42.71 32.56Q42.33 33.12 41.65 33.43Q40.98 33.74 40.1 33.74ZM40.1 32.78Q40.68 32.78 41.1 32.58Q41.52 32.39 41.75 32.05Q41.98 31.71 41.98 31.25Q41.98 30.76 41.74 30.39Q41.49 30.02 41.06 29.8Q40.64 29.59 40.1 29.59Q39.55 29.59 39.12 29.8Q38.69 30.02 38.44 30.39Q38.2 30.76 38.2 31.25Q38.2 31.71 38.43 32.05Q38.66 32.39 39.08 32.58Q39.51 32.78 40.1 32.78ZM40.1 28.66Q40.56 28.66 40.92 28.47Q41.27 28.29 41.48 27.95Q41.69 27.62 41.69 27.18Q41.69 26.74 41.49 26.42Q41.29 26.1 40.93 25.92Q40.57 25.74 40.1 25.74Q39.62 25.74 39.26 25.92Q38.9 26.1 38.7 26.42Q38.5 26.74 38.5 27.18Q38.5 27.62 38.7 27.95Q38.9 28.29 39.26 28.47Q39.63 28.66 40.1 28.66Z"/>
+  </g>
+</svg>

@@ -15,3 +15,16 @@ dist/
 .astro/
 .env
 .env.*
+
+# Test and tool output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+*.tsbuildinfo
+.eslintcache
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

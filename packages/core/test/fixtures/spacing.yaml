@@ -1,0 +1,10 @@
+# Long labels widen the layer spacing; custom geometry; transparent background.
+layers:
+  - { units: 3, name: Embedding projection }
+  - { units: 4, name: Attention-free mixer }
+  - { units: 2 }
+style:
+  background: transparent
+  nodeRadius: 8
+  nodeSpacing: 6
+  layerSpacing: 80

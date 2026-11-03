@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="308.48" height="324.25" viewBox="0 0 308.48 324.25" role="img" aria-labelledby="xm-title xm-desc">
+  <title id="xm-title">Asymmetric collapse</title>
+  <desc id="xm-desc">Fully connected neural network with 3 layers: Entrée (64 neurons), σ-layer (32 neurons), Classes (5 neurons).</desc>
+  <rect id="xm-background" width="308.48" height="324.25" fill="#ffffff"/>
+  <g id="xm-edges-0" class="xm-edges" stroke="#b8c0cc" stroke-width="0.8">
+    <line id="xm-edge-0-0-1-0" class="xm-edge" x1="54.07" y1="61.52" x2="140.07" y2="61.52"/>
+    <line id="xm-edge-0-0-1-1" class="xm-edge" x1="53.56" y1="64.97" x2="140.57" y2="91.07"/>
+    <line id="xm-edge-0-0-1-2" class="xm-edge" x1="52.36" y1="67.69" x2="141.78" y2="121.35"/>
+    <line id="xm-edge-0-0-1-29" class="xm-edge" x1="49.75" y1="70.74" x2="144.39" y2="184.3"/>
+    <line id="xm-edge-0-0-1-30" class="xm-edge" x1="48.72" y1="71.5" x2="145.41" y2="216.53"/>
+    <line id="xm-edge-0-0-1-31" class="xm-edge" x1="47.9" y1="72.01" x2="146.24" y2="249.03"/>
+    <line id="xm-edge-0-1-1-0" class="xm-edge" x1="53.56" y1="91.07" x2="140.57" y2="64.97"/>
+    <line id="xm-edge-0-1-1-1" class="xm-edge" x1="54.07" y1="94.52" x2="140.07" y2="94.52"/>
+    <line id="xm-edge-0-1-1-2" class="xm-edge" x1="53.56" y1="97.97" x2="140.57" y2="124.07"/>
+    <line id="xm-edge-0-1-1-29" class="xm-edge" x1="50.99" y1="102.55" x2="143.15" y2="185.49"/>
+    <line id="xm-edge-0-1-1-30" class="xm-edge" x1="49.75" y1="103.74" x2="144.39" y2="217.3"/>
+    <line id="xm-edge-0-1-1-31" class="xm-edge" x1="48.72" y1="104.5" x2="145.41" y2="249.53"/>
+    <line id="xm-edge-0-60-1-0" class="xm-edge" x1="50.99" y1="152.49" x2="143.15" y2="69.55"/>
+    <line id="xm-edge-0-60-1-1" class="xm-edge" x1="52.36" y1="154.35" x2="141.78" y2="100.69"/>
+    <line id="xm-edge-0-60-1-2" class="xm-edge" x1="53.56" y1="157.07" x2="140.57" y2="130.97"/>
+    <line id="xm-edge-0-60-1-29" class="xm-edge" x1="53.56" y1="163.97" x2="140.57" y2="190.07"/>
+    <line id="xm-edge-0-60-1-30" class="xm-edge" x1="52.36" y1="166.69" x2="141.78" y2="220.35"/>
+    <line id="xm-edge-0-60-1-31" class="xm-edge" x1="50.99" y1="168.55" x2="143.15" y2="251.49"/>
+    <line id="xm-edge-0-61-1-0" class="xm-edge" x1="49.75" y1="184.3" x2="144.39" y2="70.74"/>
+    <line id="xm-edge-0-61-1-1" class="xm-edge" x1="50.99" y1="185.49" x2="143.15" y2="102.55"/>
+    <line id="xm-edge-0-61-1-2" class="xm-edge" x1="52.36" y1="187.35" x2="141.78" y2="133.69"/>
+    <line id="xm-edge-0-61-1-29" class="xm-edge" x1="54.07" y1="193.52" x2="140.07" y2="193.52"/>
+    <line id="xm-edge-0-61-1-30" class="xm-edge" x1="53.56" y1="196.97" x2="140.57" y2="223.07"/>
+    <line id="xm-edge-0-61-1-31" class="xm-edge" x1="52.36" y1="199.69" x2="141.78" y2="253.35"/>
+    <line id="xm-edge-0-62-1-0" class="xm-edge" x1="48.72" y1="216.53" x2="145.41" y2="71.5"/>
+    <line id="xm-edge-0-62-1-1" class="xm-edge" x1="49.75" y1="217.3" x2="144.39" y2="103.74"/>
+    <line id="xm-edge-0-62-1-2" class="xm-edge" x1="50.99" y1="218.49" x2="143.15" y2="135.55"/>
+    <line id="xm-edge-0-62-1-29" class="xm-edge" x1="53.56" y1="223.07" x2="140.57" y2="196.97"/>
+    <line id="xm-edge-0-62-1-30" class="xm-edge" x1="54.07" y1="226.52" x2="140.07" y2="226.52"/>
+    <line id="xm-edge-0-62-1-31" class="xm-edge" x1="53.56" y1="229.97" x2="140.57" y2="256.07"/>
+    <line id="xm-edge-0-63-1-0" class="xm-edge" x1="47.9" y1="249.03" x2="146.24" y2="72.01"/>
+    <line id="xm-edge-0-63-1-1" class="xm-edge" x1="48.72" y1="249.53" x2="145.41" y2="104.5"/>
+    <line id="xm-edge-0-63-1-2" class="xm-edge" x1="49.75" y1="250.3" x2="144.39" y2="136.74"/>
+    <line id="xm-edge-0-63-1-29" class="xm-edge" x1="52.36" y1="253.35" x2="141.78" y2="199.69"/>
+    <line id="xm-edge-0-63-1-30" class="xm-edge" x1="53.56" y1="256.07" x2="140.57" y2="229.97"/>
+    <line id="xm-edge-0-63-1-31" class="xm-edge" x1="54.07" y1="259.52" x2="140.07" y2="259.52"/>
+  </g>
+  <g id="xm-edges-1" class="xm-edges" stroke="#b8c0cc" stroke-width="0.8">
+    <line id="xm-edge-1-0-2-0" class="xm-edge" x1="163.56" y1="64.97" x2="250.57" y2="91.07"/>
+    <line id="xm-edge-1-0-2-1" class="xm-edge" x1="162.36" y1="67.69" x2="251.78" y2="121.35"/>
+    <line id="xm-edge-1-0-2-2" class="xm-edge" x1="160.99" y1="69.55" x2="253.15" y2="152.49"/>
+    <line id="xm-edge-1-0-2-3" class="xm-edge" x1="159.75" y1="70.74" x2="254.39" y2="184.3"/>
+    <line id="xm-edge-1-0-2-4" class="xm-edge" x1="158.72" y1="71.5" x2="255.41" y2="216.53"/>
+    <line id="xm-edge-1-1-2-0" class="xm-edge" x1="164.07" y1="94.52" x2="250.07" y2="94.52"/>
+    <line id="xm-edge-1-1-2-1" class="xm-edge" x1="163.56" y1="97.97" x2="250.57" y2="124.07"/>
+    <line id="xm-edge-1-1-2-2" class="xm-edge" x1="162.36" y1="100.69" x2="251.78" y2="154.35"/>
+    <line id="xm-edge-1-1-2-3" class="xm-edge" x1="160.99" y1="102.55" x2="253.15" y2="185.49"/>
+    <line id="xm-edge-1-1-2-4" class="xm-edge" x1="159.75" y1="103.74" x2="254.39" y2="217.3"/>
+    <line id="xm-edge-1-2-2-0" class="xm-edge" x1="163.56" y1="124.07" x2="250.57" y2="97.97"/>
+    <line id="xm-edge-1-2-2-1" class="xm-edge" x1="164.07" y1="127.52" x2="250.07" y2="127.52"/>
+    <line id="xm-edge-1-2-2-2" class="xm-edge" x1="163.56" y1="130.97" x2="250.57" y2="157.07"/>
+    <line id="xm-edge-1-2-2-3" class="xm-edge" x1="162.36" y1="133.69" x2="251.78" y2="187.35"/>
+    <line id="xm-edge-1-2-2-4" class="xm-edge" x1="160.99" y1="135.55" x2="253.15" y2="218.49"/>
+    <line id="xm-edge-1-29-2-0" class="xm-edge" x1="160.99" y1="185.49" x2="253.15" y2="102.55"/>
+    <line id="xm-edge-1-29-2-1" class="xm-edge" x1="162.36" y1="187.35" x2="251.78" y2="133.69"/>
+    <line id="xm-edge-1-29-2-2" class="xm-edge" x1="163.56" y1="190.07" x2="250.57" y2="163.97"/>
+    <line id="xm-edge-1-29-2-3" class="xm-edge" x1="164.07" y1="193.52" x2="250.07" y2="193.52"/>
+    <line id="xm-edge-1-29-2-4" class="xm-edge" x1="163.56" y1="196.97" x2="250.57" y2="223.07"/>
+    <line id="xm-edge-1-30-2-0" class="xm-edge" x1="159.75" y1="217.3" x2="254.39" y2="103.74"/>
+    <line id="xm-edge-1-30-2-1" class="xm-edge" x1="160.99" y1="218.49" x2="253.15" y2="135.55"/>
+    <line id="xm-edge-1-30-2-2" class="xm-edge" x1="162.36" y1="220.35" x2="251.78" y2="166.69"/>
+    <line id="xm-edge-1-30-2-3" class="xm-edge" x1="163.56" y1="223.07" x2="250.57" y2="196.97"/>
+    <line id="xm-edge-1-30-2-4" class="xm-edge" x1="164.07" y1="226.52" x2="250.07" y2="226.52"/>
+    <line id="xm-edge-1-31-2-0" class="xm-edge" x1="158.72" y1="249.53" x2="255.41" y2="104.5"/>
+    <line id="xm-edge-1-31-2-1" class="xm-edge" x1="159.75" y1="250.3" x2="254.39" y2="136.74"/>
+    <line id="xm-edge-1-31-2-2" class="xm-edge" x1="160.99" y1="251.49" x2="253.15" y2="168.55"/>
+    <line id="xm-edge-1-31-2-3" class="xm-edge" x1="162.36" y1="253.35" x2="251.78" y2="199.69"/>
+    <line id="xm-edge-1-31-2-4" class="xm-edge" x1="163.56" y1="256.07" x2="250.57" y2="229.97"/>
+  </g>
+  <g id="xm-layer-0" class="xm-layer xm-layer-input">
+    <circle id="xm-node-0-0" class="xm-node xm-node-input" cx="42.07" cy="61.52" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-1" class="xm-node xm-node-input" cx="42.07" cy="94.52" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <g id="xm-ellipsis-0" class="xm-ellipsis" fill="#4b5563">
+      <circle id="xm-ellipsis-0-0" cx="42.07" cy="120.52" r="2"/>
+      <circle id="xm-ellipsis-0-1" cx="42.07" cy="127.52" r="2"/>
+      <circle id="xm-ellipsis-0-2" cx="42.07" cy="134.52" r="2"/>
+    </g>
+    <circle id="xm-node-0-60" class="xm-node xm-node-input" cx="42.07" cy="160.52" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-61" class="xm-node xm-node-input" cx="42.07" cy="193.52" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-62" class="xm-node xm-node-input" cx="42.07" cy="226.52" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-63" class="xm-node xm-node-input" cx="42.07" cy="259.52" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+  </g>
+  <g id="xm-layer-1" class="xm-layer xm-layer-hidden">
+    <circle id="xm-node-1-0" class="xm-node xm-node-hidden" cx="152.07" cy="61.52" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-1" class="xm-node xm-node-hidden" cx="152.07" cy="94.52" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-2" class="xm-node xm-node-hidden" cx="152.07" cy="127.52" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <g id="xm-ellipsis-1" class="xm-ellipsis" fill="#4b5563">
+      <circle id="xm-ellipsis-1-0" cx="152.07" cy="153.52" r="2"/>
+      <circle id="xm-ellipsis-1-1" cx="152.07" cy="160.52" r="2"/>
+      <circle id="xm-ellipsis-1-2" cx="152.07" cy="167.52" r="2"/>
+    </g>
+    <circle id="xm-node-1-29" class="xm-node xm-node-hidden" cx="152.07" cy="193.52" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-30" class="xm-node xm-node-hidden" cx="152.07" cy="226.52" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-31" class="xm-node xm-node-hidden" cx="152.07" cy="259.52" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+  </g>
+  <g id="xm-layer-2" class="xm-layer xm-layer-output" fill="#fbe8c4" stroke="#b97800" stroke-width="1.5">
+    <circle id="xm-node-2-0" class="xm-node xm-node-output" cx="262.07" cy="94.52" r="12"/>
+    <circle id="xm-node-2-1" class="xm-node xm-node-output" cx="262.07" cy="127.52" r="12"/>
+    <circle id="xm-node-2-2" class="xm-node xm-node-output" cx="262.07" cy="160.52" r="12"/>
+    <circle id="xm-node-2-3" class="xm-node xm-node-output" cx="262.07" cy="193.52" r="12"/>
+    <circle id="xm-node-2-4" class="xm-node xm-node-output" cx="262.07" cy="226.52" r="12"/>
+  </g>
+  <g id="xm-labels" class="xm-labels">
+    <text id="xm-name-0" class="xm-label xm-label-name" x="42.07" y="297.11" text-anchor="middle" font-family="Inter, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">Entrée</text>
+    <text id="xm-size-0" class="xm-label xm-label-size" x="42.07" y="33.63" text-anchor="middle" font-family="Inter, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="12" font-weight="400" fill="#6b7280">64</text>
+    <text id="xm-name-1" class="xm-label xm-label-name" x="152.07" y="297.11" text-anchor="middle" font-family="Inter, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">σ-layer</text>
+    <text id="xm-size-1" class="xm-label xm-label-size" x="152.07" y="33.63" text-anchor="middle" font-family="Inter, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="12" font-weight="400" fill="#6b7280">32</text>
+    <text id="xm-name-2" class="xm-label xm-label-name" x="262.07" y="297.11" text-anchor="middle" font-family="Inter, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">Classes</text>
+  </g>
+</svg>
