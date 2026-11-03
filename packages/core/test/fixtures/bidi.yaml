@@ -1,0 +1,6 @@
+# Mixed-direction names: base direction comes from the first strong letter.
+layers:
+  - { units: 3, name: ورودی (x) }
+  - { units: 5, name: ReLU لایه 2 }
+  - { units: 4, name: שכבה נסתרת }
+  - { units: 2, name: المخرجات }

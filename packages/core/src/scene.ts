@@ -74,7 +74,22 @@ export interface TextItem extends ItemBase {
   readonly paint: Paint;
 }
 
-export type SceneItem = GroupItem | CircleItem | RectItem | LineItem | PathItem | TextItem;
+/** A typeset formula (from TeX). Always drawn as outlines; `tex` keeps the source for other exporters. */
+export interface MathItem extends ItemBase {
+  readonly kind: 'math';
+  readonly tex: string;
+  /** Left end of the baseline. */
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  /** Font size the formula is set at, in px. */
+  readonly size: number;
+  readonly outline: string;
+  readonly paint: Paint;
+}
+
+export type SceneItem =
+  GroupItem | CircleItem | RectItem | LineItem | PathItem | TextItem | MathItem;
 
 export interface Scene {
   readonly version: typeof SCENE_VERSION;

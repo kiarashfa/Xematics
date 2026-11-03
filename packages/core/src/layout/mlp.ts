@@ -3,18 +3,18 @@
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
 import type { Layer, Model } from '../model/schema.ts';
-import { SCENE_VERSION, type Paint, type Scene, type SceneItem, type TextItem } from '../scene.ts';
+import { SCENE_VERSION, type Paint, type Scene, type SceneItem } from '../scene.ts';
 import {
   mergeCollapse,
   resolveTheme,
   type CollapseRule,
   type Role,
-  type TextStyle,
   type Theme,
 } from '../style/theme.ts';
-import type { ShapedText, TextEngine } from '../text/engine.ts';
+import type { TextEngine } from '../text/engine.ts';
 import { stripInvalidXml } from '../util/xml.ts';
 import { layoutBoxes } from './boxes.ts';
+import { buildLabel, labelItems, nodeLabelText, type Label, type LabelIssue } from './label.ts';
 
 /** Layers with more neurons than this are always collapsed, even when collapse is turned off. */
 export const MAX_DRAWN_NEURONS = 500;
@@ -24,15 +24,15 @@ export interface LayoutResult {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-type Slot = number | 'ellipsis';
+export type Slot = number | 'ellipsis';
 
 interface Column {
   readonly index: number;
   readonly role: Role;
   readonly units: number;
   readonly slots: readonly Slot[];
-  readonly name: ShapedText | undefined;
-  readonly size: ShapedText | undefined;
+  readonly name: Label | undefined;
+  readonly size: Label | undefined;
   /** Size label drawn above the column (collapsed layer while size labels are off). */
   readonly sizeAbove: boolean;
   readonly halfWidth: number;
@@ -57,6 +57,68 @@ export function cleanLabel(text: string): string {
 const range = (from: number, to: number) =>
   Array.from({ length: Math.max(0, to - from) }, (_, i) => from + i);
 
+/** Which neurons a layer draws: all, or first and last around an ellipsis. */
+export function slotsOf(layer: Layer, theme: Theme): { slots: Slot[]; forced: boolean } {
+  const rule = layer.collapse === false ? undefined : mergeCollapse(theme.collapse, layer.collapse);
+  let collapse: CollapseRule | undefined =
+    rule && layer.units > rule.above && rule.first + rule.last < layer.units ? rule : undefined;
+  let forced = false;
+  if (!collapse && layer.units > MAX_DRAWN_NEURONS) {
+    const base = rule ?? theme.collapse;
+    collapse = { above: MAX_DRAWN_NEURONS, first: base.first, last: base.last };
+    forced = true;
+  }
+  const slots: Slot[] = collapse
+    ? [...range(0, collapse.first), 'ellipsis', ...range(layer.units - collapse.last, layer.units)]
+    : range(0, layer.units);
+  return { slots, forced };
+}
+
+/** The text of a layer's name label ('' hides it). */
+export function nameText(layer: Layer, index: number, count: number): string {
+  return layer.name === undefined ? autoName(index, count) : cleanLabel(layer.name);
+}
+
+/** Turns label problems into diagnostics that point at the layer field they came from. */
+export function labelReporter(
+  index: number,
+  field: 'name' | 'nodeLabel',
+  diagnostics: Diagnostic[],
+): (issue: LabelIssue) => void {
+  const what = field === 'name' ? 'name' : 'node labels';
+  const seen = new Set<string>();
+  return (issue) => {
+    const message =
+      issue.kind === 'missing'
+        ? `Layer ${index + 1} ${what} uses characters the bundled fonts cannot draw yet: ${issue.chars.join(' ')}`
+        : `Layer ${index + 1} ${what}: the formula $${issue.tex}$ could not be read. ${issue.error}`;
+    if (seen.has(message)) return;
+    seen.add(message);
+    diagnostics.push(
+      diagnostic(
+        'warning',
+        issue.kind === 'missing' ? 'text.missing-glyphs' : 'text.math-invalid',
+        message,
+        { path: ['layers', index, field] },
+      ),
+    );
+  };
+}
+
+/** The layer's name label, or undefined when names are off or the name is empty. */
+export function layerLabel(
+  layer: Layer,
+  index: number,
+  count: number,
+  theme: Theme,
+  engine: TextEngine,
+  diagnostics: Diagnostic[],
+): Label | undefined {
+  const text = nameText(layer, index, count);
+  if (!theme.labels.names || !text) return undefined;
+  return buildLabel(text, theme.nameText, engine, labelReporter(index, 'name', diagnostics));
+}
+
 export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
   const theme = resolveTheme(model.style);
   if (theme.mode === 'boxes') return layoutBoxes(model, theme, engine);
@@ -69,13 +131,16 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
     buildColumn(layer, index, count, theme, engine, diagnostics),
   );
 
-  // Vertical metrics. Line metrics come from the fonts, so they do not depend on label text.
+  // Vertical metrics. Line metrics come from the fonts; a tall formula makes its row taller.
   const nameLine = engine.shape('', theme.nameText, theme.nameText.size);
   const sizeLine = engine.shape('', theme.sizeText, theme.sizeText.size);
+  const names = columns.flatMap((c) => (c.name ? [c.name] : []));
+  const nameAscent = Math.max(nameLine.ascent, ...names.map((l) => l.ascent));
+  const nameDescent = Math.max(nameLine.descent, ...names.map((l) => l.descent));
   const maxSlots = Math.max(...columns.map((c) => c.slots.length));
   const span = (maxSlots - 1) * pitch;
   const anyAbove = columns.some((c) => c.sizeAbove);
-  const anyName = columns.some((c) => c.name);
+  const anyName = names.length > 0;
   const anySizeBelow = columns.some((c) => c.size && !c.sizeAbove);
 
   const aboveBaseline = theme.margin + sizeLine.ascent;
@@ -86,8 +151,8 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
   let nameBaseline = 0;
   let sizeBaseline = 0;
   if (anyName) {
-    nameBaseline = cursor + nameLine.ascent;
-    cursor = nameBaseline + nameLine.descent + theme.lineGap;
+    nameBaseline = cursor + nameAscent;
+    cursor = nameBaseline + nameDescent + theme.lineGap;
   }
   if (anySizeBelow) {
     sizeBaseline = cursor + sizeLine.ascent;
@@ -96,20 +161,22 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
   const height = (anyName || anySizeBelow ? cursor : nodesBottom) + theme.margin;
 
   // Horizontal positions: at least layerSpacing apart, wider when labels would touch.
-  const xs: number[] = [];
+  const forward: number[] = [];
   columns.forEach((column, i) => {
     const previous = columns[i - 1];
-    xs.push(
+    forward.push(
       previous === undefined
         ? theme.margin + column.halfWidth
-        : xs[i - 1]! +
+        : forward[i - 1]! +
             Math.max(
               theme.layerSpacing,
               previous.halfWidth + column.halfWidth + theme.labelPadding,
             ),
     );
   });
-  const width = xs.at(-1)! + columns.at(-1)!.halfWidth + theme.margin;
+  const width = forward.at(-1)! + columns.at(-1)!.halfWidth + theme.margin;
+  // Right to left flow mirrors the columns; everything below works in either direction.
+  const xs = theme.direction === 'rtl' ? forward.map((x) => width - x) : forward;
 
   const slotY = (slot: number, slots: number) => centerY + (slot - (slots - 1) / 2) * pitch;
   const visible = (column: Column) =>
@@ -127,6 +194,7 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
     if (from.length === 0 || to.length === 0) continue;
     const x1 = xs[i]!;
     const x2 = xs[i + 1]!;
+    const s = x2 > x1 ? r : -r;
     const group = `edges-${i}`;
     items.push({ kind: 'group', id: group, classes: ['edges'] });
     if (from.length * to.length > theme.edgeLimit) {
@@ -137,7 +205,7 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
         id: `bundle-${i}`,
         parent: group,
         classes: ['edge-bundle'],
-        d: `M${x1 + r} ${a0}L${x2 - r} ${b0}L${x2 - r} ${b1}L${x1 + r} ${a1}Z`,
+        d: `M${x1 + s} ${a0}L${x2 - s} ${b0}L${x2 - s} ${b1}L${x1 + s} ${a1}Z`,
         paint: { fill: theme.edge.color, opacity: theme.edge.bundleOpacity },
       });
       diagnostics.push(
@@ -212,6 +280,9 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
         });
       });
     });
+    items.push(
+      ...nodeLabels(model.layers[column.index]!, column, x, slotY, theme, engine, diagnostics),
+    );
   }
 
   if (columns.some((c) => c.name || c.size)) {
@@ -220,7 +291,7 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
       const x = xs[column.index]!;
       if (column.name) {
         items.push(
-          textItem(
+          ...labelItems(
             `name-${column.index}`,
             ['label', 'label-name'],
             column.name,
@@ -228,13 +299,14 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
             nameBaseline,
             theme.nameText,
             engine,
+            'labels',
           ),
         );
       }
       if (column.size) {
         const y = column.sizeAbove ? aboveBaseline : sizeBaseline;
         items.push(
-          textItem(
+          ...labelItems(
             `size-${column.index}`,
             ['label', 'label-size'],
             column.size,
@@ -242,6 +314,7 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
             y,
             theme.sizeText,
             engine,
+            'labels',
           ),
         );
       }
@@ -264,6 +337,47 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
   };
 }
 
+/** Labels inside the drawn nodes of one layer (`nodeLabel`), centered on each node. */
+function nodeLabels(
+  layer: Layer,
+  column: Column,
+  x: number,
+  slotY: (slot: number, slots: number) => number,
+  theme: Theme,
+  engine: TextEngine,
+  diagnostics: Diagnostic[],
+): SceneItem[] {
+  const template = layer.nodeLabel === undefined ? '' : cleanLabel(layer.nodeLabel);
+  if (!template) return [];
+  const style = { ...theme.nodeText, color: theme.roles[column.role].text };
+  const report = labelReporter(column.index, 'nodeLabel', diagnostics);
+  const items: SceneItem[] = [];
+  let tooWide = false;
+  column.slots.forEach((slot, j) => {
+    if (slot === 'ellipsis') return;
+    const label = buildLabel(nodeLabelText(template, slot + 1), style, engine, report);
+    if (label.width > 2 * theme.nodeRadius) tooWide = true;
+    const cy = slotY(j, column.slots.length);
+    // Center the label's ink box (ascent above, descent below) on the node.
+    const baseline = cy + (label.ascent - label.descent) / 2;
+    const id = `nodelabel-${column.index}-${slot}`;
+    items.push(
+      ...labelItems(id, ['node-label'], label, x, baseline, style, engine, `layer-${column.index}`),
+    );
+  });
+  if (tooWide) {
+    diagnostics.push(
+      diagnostic(
+        'warning',
+        'layout.node-label-wide',
+        `Layer ${column.index + 1} node labels are wider than the nodes. Use shorter labels or a larger nodeRadius.`,
+        { path: ['layers', column.index, 'nodeLabel'] },
+      ),
+    );
+  }
+  return items;
+}
+
 function buildColumn(
   layer: Layer,
   index: number,
@@ -272,12 +386,8 @@ function buildColumn(
   engine: TextEngine,
   diagnostics: Diagnostic[],
 ): Column {
-  const rule = layer.collapse === false ? undefined : mergeCollapse(theme.collapse, layer.collapse);
-  let collapse: CollapseRule | undefined =
-    rule && layer.units > rule.above && rule.first + rule.last < layer.units ? rule : undefined;
-  if (!collapse && layer.units > MAX_DRAWN_NEURONS) {
-    const base = rule ?? theme.collapse;
-    collapse = { above: MAX_DRAWN_NEURONS, first: base.first, last: base.last };
+  const { slots, forced } = slotsOf(layer, theme);
+  if (forced) {
     diagnostics.push(
       diagnostic(
         'warning',
@@ -287,15 +397,12 @@ function buildColumn(
       ),
     );
   }
-  const slots: Slot[] = collapse
-    ? [...range(0, collapse.first), 'ellipsis', ...range(layer.units - collapse.last, layer.units)]
-    : range(0, layer.units);
-
-  const name = layerName(layer, index, count, theme, engine, diagnostics);
-  const sizeAbove = !theme.labels.sizes && collapse !== undefined;
+  const collapsed = slots.includes('ellipsis');
+  const name = layerLabel(layer, index, count, theme, engine, diagnostics);
+  const sizeAbove = !theme.labels.sizes && collapsed;
   const size =
     theme.labels.sizes || sizeAbove
-      ? engine.shape(String(layer.units), theme.sizeText, theme.sizeText.size)
+      ? buildLabel(String(layer.units), theme.sizeText, engine, () => {})
       : undefined;
 
   return {
@@ -307,57 +414,6 @@ function buildColumn(
     size,
     sizeAbove,
     halfWidth: Math.max(theme.nodeRadius, (name?.width ?? 0) / 2, (size?.width ?? 0) / 2),
-  };
-}
-
-/** The layer's name label, shaped, or undefined when names are off or the name is empty. */
-export function layerName(
-  layer: Layer,
-  index: number,
-  count: number,
-  theme: Theme,
-  engine: TextEngine,
-  diagnostics: Diagnostic[],
-): ShapedText | undefined {
-  const text = layer.name === undefined ? autoName(index, count) : cleanLabel(layer.name);
-  if (!theme.labels.names || !text) return undefined;
-  const shaped = engine.shape(text, theme.nameText, theme.nameText.size);
-  if (shaped.missing.length > 0) {
-    diagnostics.push(
-      diagnostic(
-        'warning',
-        'text.missing-glyphs',
-        `Layer ${index + 1} name uses characters the bundled font cannot draw yet: ${shaped.missing.join(' ')}`,
-        { path: ['layers', index, 'name'] },
-      ),
-    );
-  }
-  return shaped;
-}
-
-export function textItem(
-  id: string,
-  classes: readonly string[],
-  shaped: ShapedText,
-  x: number,
-  y: number,
-  style: TextStyle,
-  engine: TextEngine,
-): TextItem {
-  return {
-    kind: 'text',
-    id,
-    parent: 'labels',
-    classes,
-    text: shaped.text,
-    x,
-    y,
-    anchor: 'middle',
-    direction: 'ltr',
-    font: { family: style.family, weight: style.weight, size: style.size },
-    width: shaped.width,
-    outline: engine.outline(shaped, x - shaped.width / 2, y),
-    paint: { fill: style.color },
   };
 }
 

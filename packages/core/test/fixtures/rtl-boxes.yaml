@@ -1,0 +1,5 @@
+# Layer boxes with right-to-left flow: arrows point left.
+layers: [784, 64, 10]
+style:
+  preset: boxes
+  direction: rtl

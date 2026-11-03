@@ -18,6 +18,7 @@ export const LIMITS = {
 
 export const PRESET_IDS = ['classic', 'boxes', 'mono', 'colorblind', 'colorblind-dark'] as const;
 export const LAYER_TYPES = ['dense'] as const;
+export const DIRECTIONS = ['ltr', 'rtl'] as const;
 
 /** Activation names are identifiers so they stay valid in the shorthand: relu, leaky_relu, softmax. */
 export const ACTIVATION_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -70,6 +71,8 @@ export const LayerSchema = v.strictObject(
     ),
     units: wholeNumber(1, LIMITS.units),
     name: v.optional(text(LIMITS.label)),
+    /** Label drawn inside every node; `{i}` is the neuron number, e.g. '$x_{i}$'. */
+    nodeLabel: v.optional(text(LIMITS.label)),
     activation: v.optional(
       v.pipe(
         text(LIMITS.activation),
@@ -107,6 +110,8 @@ export const StyleSchema = v.strictObject(
     nodeRadius: v.optional(decimal(2, 100)),
     nodeSpacing: v.optional(decimal(0, 200)),
     layerSpacing: v.optional(decimal(20, 2000)),
+    /** Flow direction: 'rtl' puts the input layer on the right. */
+    direction: v.optional(v.picklist(DIRECTIONS, `must be one of: ${DIRECTIONS.join(', ')}.`)),
   },
   'must be an object like { preset: classic }.',
 );

@@ -164,6 +164,9 @@
       {@render toggle('canvas', 'Transparent background', tool.transparent, (on) =>
         tool.setTransparent(on),
       )}
+      {@render toggle('left', 'Flow right to left', tool.rightToLeft, (on) =>
+        tool.setRightToLeft(on),
+      )}
       <li class="ph-rule" aria-hidden="true"></li>
       {@render stepper('Collapse above', 'above')}
       {@render stepper('Show first', 'first')}

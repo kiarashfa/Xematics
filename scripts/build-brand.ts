@@ -36,7 +36,7 @@ async function loadEngine(): Promise<TextEngine> {
       ),
     })),
   );
-  return createTextEngine(faces);
+  return createTextEngine({ faces });
 }
 
 /** Ink bounds of an outline path (coordinates only; good enough for glyph boxes). */

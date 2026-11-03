@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="410.28" height="410.25" viewBox="0 0 410.28 410.25" role="img" aria-labelledby="xm-title xm-desc">
+  <title id="xm-title">شبکه عصبی</title>
+  <desc id="xm-desc">Fully connected neural network with 4 layers: پیکسل‌ها (784 neurons), لایه پنهان ۱ (16 neurons), لایه پنهان ۲ (16 neurons), ارقام (10 neurons).</desc>
+  <defs><style>@font-face{font-family:'xm-font-0';src:url(data:font/ttf;base64,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)}@font-face{font-family:'xm-font-1';src:url(data:font/ttf;base64,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AGUAZABpAHUAbQBWAGUAcgBzAGkAbwBuACAAMwAzAC4AMAAwADMAMwAzAC4AMAAwADMAOwBWAGEAegBpAHIAbQBhAHQAbgAtAE0AZQBkAGkAdQBtAFIAZQBnAHUAbABhAHIAVgBhAHoAaQByAG0AYQB0AG4AIABNAGUAZABpAHUAbQBDAG8AcAB5AHIAaQBnAGgAdAAgADIAMAAxADUAIABUAGgAZQAgAFYAYQB6AGkAcgBtAGEAdABuACAAUAByAG8AagBlAGMAdAAgAEEAdQB0AGgAbwByAHMAIAAoAGgAdAB0AHAAcwA6AC8ALwBnAGkAdABoAHUAYgAuAGMAbwBtAC8AcgBhAHMAdABpAGsAZQByAGQAYQByAC8AdgBhAHoAaQByAG0AYQB0AG4AKQABAAAACgBEAI4ABURGTFQAJGFyYWIAJGN5cmwAIGdyZWsAIGxhdG4AIAAAAAAABAAAAAD//wAGAAAAAQACAAMABAAFAAZjYWx0AERmaW5hAD5pbml0ADhsaWdhADJtZWRpACxybGlnACYAAAABAAMAAAABAAEAAAABAAkAAAABAAIAAAABAAAAAAABAAUACgGoAXIBUgEkAQoAdgBWAEgAOgAWAAQAAQABAAgAAQAWAAEACAABAAQAOQAEAEUARgBPAAEAAQAGAAEACQABAAgAAQDWAAMAAQAJAAEACAABAMgAAgABAAkAAQAIAAEABgABAAEABwAgACUALwA0AEgASgBRAAYACQAFAHIAUgBAACgAEAADAAAAAQCSAAEAEgABAAAACAABAAEAPwADAAAAAQB6AAEAEgABAAAABwABAAEAUQADAAAAAQBiAAEARAABAAAABAADAAAAAQBQAAEAEgABAAAABgABAAUAJQA0ADsARABMAAMAAAABABgAAQASAAEAAAAGAAEAAQAuAAEAAwBIAEoAUQABAAkAAQAIAAEABgAEAAEABAAgACUALwA0AAQACQABAAgAAQAeAAIAFAAKAAEABABXAAIAOgABAAQAVgACADoAAQACAEUARgABAAkAAQAIAAIAOAAJAD0AQABFAEgATQBQACAAKwAvAAEACQABAAgAAgAYAAkAPgBBAEYASgBOAFEAJQAsADQAAQAJAAgACQAKAAsADAANABcAGgAcAAEACQABAAgAAgAcAAsAOgA7ADwAPwBEAEcATABP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)}</style></defs>
+  <rect id="xm-background" width="410.28" height="410.25" fill="#ffffff"/>
+  <g id="xm-edges-0" class="xm-edges" stroke="#b8c0cc" stroke-width="0.8">
+    <line id="xm-edge-0-0-1-0" class="xm-edge" x1="58.14" y1="83.5" x2="144.14" y2="83.5"/>
+    <line id="xm-edge-0-0-1-1" class="xm-edge" x1="57.63" y1="86.95" x2="144.64" y2="113.05"/>
+    <line id="xm-edge-0-0-1-2" class="xm-edge" x1="56.43" y1="89.67" x2="145.85" y2="143.33"/>
+    <line id="xm-edge-0-0-1-13" class="xm-edge" x1="53.82" y1="92.72" x2="148.45" y2="206.28"/>
+    <line id="xm-edge-0-0-1-14" class="xm-edge" x1="52.79" y1="93.48" x2="149.48" y2="238.52"/>
+    <line id="xm-edge-0-0-1-15" class="xm-edge" x1="51.96" y1="93.99" x2="150.31" y2="271.01"/>
+    <line id="xm-edge-0-1-1-0" class="xm-edge" x1="57.63" y1="113.05" x2="144.64" y2="86.95"/>
+    <line id="xm-edge-0-1-1-1" class="xm-edge" x1="58.14" y1="116.5" x2="144.14" y2="116.5"/>
+    <line id="xm-edge-0-1-1-2" class="xm-edge" x1="57.63" y1="119.95" x2="144.64" y2="146.05"/>
+    <line id="xm-edge-0-1-1-13" class="xm-edge" x1="55.06" y1="124.53" x2="147.22" y2="207.47"/>
+    <line id="xm-edge-0-1-1-14" class="xm-edge" x1="53.82" y1="125.72" x2="148.45" y2="239.28"/>
+    <line id="xm-edge-0-1-1-15" class="xm-edge" x1="52.79" y1="126.48" x2="149.48" y2="271.52"/>
+    <line id="xm-edge-0-2-1-0" class="xm-edge" x1="56.43" y1="143.33" x2="145.85" y2="89.67"/>
+    <line id="xm-edge-0-2-1-1" class="xm-edge" x1="57.63" y1="146.05" x2="144.64" y2="119.95"/>
+    <line id="xm-edge-0-2-1-2" class="xm-edge" x1="58.14" y1="149.5" x2="144.14" y2="149.5"/>
+    <line id="xm-edge-0-2-1-13" class="xm-edge" x1="56.43" y1="155.67" x2="145.85" y2="209.33"/>
+    <line id="xm-edge-0-2-1-14" class="xm-edge" x1="55.06" y1="157.53" x2="147.22" y2="240.47"/>
+    <line id="xm-edge-0-2-1-15" class="xm-edge" x1="53.82" y1="158.72" x2="148.45" y2="272.28"/>
+    <line id="xm-edge-0-781-1-0" class="xm-edge" x1="53.82" y1="206.28" x2="148.45" y2="92.72"/>
+    <line id="xm-edge-0-781-1-1" class="xm-edge" x1="55.06" y1="207.47" x2="147.22" y2="124.53"/>
+    <line id="xm-edge-0-781-1-2" class="xm-edge" x1="56.43" y1="209.33" x2="145.85" y2="155.67"/>
+    <line id="xm-edge-0-781-1-13" class="xm-edge" x1="58.14" y1="215.5" x2="144.14" y2="215.5"/>
+    <line id="xm-edge-0-781-1-14" class="xm-edge" x1="57.63" y1="218.95" x2="144.64" y2="245.05"/>
+    <line id="xm-edge-0-781-1-15" class="xm-edge" x1="56.43" y1="221.67" x2="145.85" y2="275.33"/>
+    <line id="xm-edge-0-782-1-0" class="xm-edge" x1="52.79" y1="238.52" x2="149.48" y2="93.48"/>
+    <line id="xm-edge-0-782-1-1" class="xm-edge" x1="53.82" y1="239.28" x2="148.45" y2="125.72"/>
+    <line id="xm-edge-0-782-1-2" class="xm-edge" x1="55.06" y1="240.47" x2="147.22" y2="157.53"/>
+    <line id="xm-edge-0-782-1-13" class="xm-edge" x1="57.63" y1="245.05" x2="144.64" y2="218.95"/>
+    <line id="xm-edge-0-782-1-14" class="xm-edge" x1="58.14" y1="248.5" x2="144.14" y2="248.5"/>
+    <line id="xm-edge-0-782-1-15" class="xm-edge" x1="57.63" y1="251.95" x2="144.64" y2="278.05"/>
+    <line id="xm-edge-0-783-1-0" class="xm-edge" x1="51.96" y1="271.01" x2="150.31" y2="93.99"/>
+    <line id="xm-edge-0-783-1-1" class="xm-edge" x1="52.79" y1="271.52" x2="149.48" y2="126.48"/>
+    <line id="xm-edge-0-783-1-2" class="xm-edge" x1="53.82" y1="272.28" x2="148.45" y2="158.72"/>
+    <line id="xm-edge-0-783-1-13" class="xm-edge" x1="56.43" y1="275.33" x2="145.85" y2="221.67"/>
+    <line id="xm-edge-0-783-1-14" class="xm-edge" x1="57.63" y1="278.05" x2="144.64" y2="251.95"/>
+    <line id="xm-edge-0-783-1-15" class="xm-edge" x1="58.14" y1="281.5" x2="144.14" y2="281.5"/>
+  </g>
+  <g id="xm-edges-1" class="xm-edges" stroke="#b8c0cc" stroke-width="0.8">
+    <line id="xm-edge-1-0-2-0" class="xm-edge" x1="168.14" y1="83.5" x2="254.14" y2="83.5"/>
+    <line id="xm-edge-1-0-2-1" class="xm-edge" x1="167.63" y1="86.95" x2="254.64" y2="113.05"/>
+    <line id="xm-edge-1-0-2-2" class="xm-edge" x1="166.43" y1="89.67" x2="255.85" y2="143.33"/>
+    <line id="xm-edge-1-0-2-13" class="xm-edge" x1="163.82" y1="92.72" x2="258.45" y2="206.28"/>
+    <line id="xm-edge-1-0-2-14" class="xm-edge" x1="162.79" y1="93.48" x2="259.48" y2="238.52"/>
+    <line id="xm-edge-1-0-2-15" class="xm-edge" x1="161.96" y1="93.99" x2="260.31" y2="271.01"/>
+    <line id="xm-edge-1-1-2-0" class="xm-edge" x1="167.63" y1="113.05" x2="254.64" y2="86.95"/>
+    <line id="xm-edge-1-1-2-1" class="xm-edge" x1="168.14" y1="116.5" x2="254.14" y2="116.5"/>
+    <line id="xm-edge-1-1-2-2" class="xm-edge" x1="167.63" y1="119.95" x2="254.64" y2="146.05"/>
+    <line id="xm-edge-1-1-2-13" class="xm-edge" x1="165.06" y1="124.53" x2="257.22" y2="207.47"/>
+    <line id="xm-edge-1-1-2-14" class="xm-edge" x1="163.82" y1="125.72" x2="258.45" y2="239.28"/>
+    <line id="xm-edge-1-1-2-15" class="xm-edge" x1="162.79" y1="126.48" x2="259.48" y2="271.52"/>
+    <line id="xm-edge-1-2-2-0" class="xm-edge" x1="166.43" y1="143.33" x2="255.85" y2="89.67"/>
+    <line id="xm-edge-1-2-2-1" class="xm-edge" x1="167.63" y1="146.05" x2="254.64" y2="119.95"/>
+    <line id="xm-edge-1-2-2-2" class="xm-edge" x1="168.14" y1="149.5" x2="254.14" y2="149.5"/>
+    <line id="xm-edge-1-2-2-13" class="xm-edge" x1="166.43" y1="155.67" x2="255.85" y2="209.33"/>
+    <line id="xm-edge-1-2-2-14" class="xm-edge" x1="165.06" y1="157.53" x2="257.22" y2="240.47"/>
+    <line id="xm-edge-1-2-2-15" class="xm-edge" x1="163.82" y1="158.72" x2="258.45" y2="272.28"/>
+    <line id="xm-edge-1-13-2-0" class="xm-edge" x1="163.82" y1="206.28" x2="258.45" y2="92.72"/>
+    <line id="xm-edge-1-13-2-1" class="xm-edge" x1="165.06" y1="207.47" x2="257.22" y2="124.53"/>
+    <line id="xm-edge-1-13-2-2" class="xm-edge" x1="166.43" y1="209.33" x2="255.85" y2="155.67"/>
+    <line id="xm-edge-1-13-2-13" class="xm-edge" x1="168.14" y1="215.5" x2="254.14" y2="215.5"/>
+    <line id="xm-edge-1-13-2-14" class="xm-edge" x1="167.63" y1="218.95" x2="254.64" y2="245.05"/>
+    <line id="xm-edge-1-13-2-15" class="xm-edge" x1="166.43" y1="221.67" x2="255.85" y2="275.33"/>
+    <line id="xm-edge-1-14-2-0" class="xm-edge" x1="162.79" y1="238.52" x2="259.48" y2="93.48"/>
+    <line id="xm-edge-1-14-2-1" class="xm-edge" x1="163.82" y1="239.28" x2="258.45" y2="125.72"/>
+    <line id="xm-edge-1-14-2-2" class="xm-edge" x1="165.06" y1="240.47" x2="257.22" y2="157.53"/>
+    <line id="xm-edge-1-14-2-13" class="xm-edge" x1="167.63" y1="245.05" x2="254.64" y2="218.95"/>
+    <line id="xm-edge-1-14-2-14" class="xm-edge" x1="168.14" y1="248.5" x2="254.14" y2="248.5"/>
+    <line id="xm-edge-1-14-2-15" class="xm-edge" x1="167.63" y1="251.95" x2="254.64" y2="278.05"/>
+    <line id="xm-edge-1-15-2-0" class="xm-edge" x1="161.96" y1="271.01" x2="260.31" y2="93.99"/>
+    <line id="xm-edge-1-15-2-1" class="xm-edge" x1="162.79" y1="271.52" x2="259.48" y2="126.48"/>
+    <line id="xm-edge-1-15-2-2" class="xm-edge" x1="163.82" y1="272.28" x2="258.45" y2="158.72"/>
+    <line id="xm-edge-1-15-2-13" class="xm-edge" x1="166.43" y1="275.33" x2="255.85" y2="221.67"/>
+    <line id="xm-edge-1-15-2-14" class="xm-edge" x1="167.63" y1="278.05" x2="254.64" y2="251.95"/>
+    <line id="xm-edge-1-15-2-15" class="xm-edge" x1="168.14" y1="281.5" x2="254.14" y2="281.5"/>
+  </g>
+  <g id="xm-edges-2" class="xm-edges" stroke="#b8c0cc" stroke-width="0.8">
+    <line id="xm-edge-2-0-3-0" class="xm-edge" x1="277.08" y1="78.58" x2="365.19" y2="38.92"/>
+    <line id="xm-edge-2-0-3-1" class="xm-edge" x1="278" y1="81.72" x2="364.27" y2="68.78"/>
+    <line id="xm-edge-2-0-3-2" class="xm-edge" x1="278" y1="85.28" x2="364.27" y2="98.22"/>
+    <line id="xm-edge-2-0-3-3" class="xm-edge" x1="277.08" y1="88.42" x2="365.19" y2="128.08"/>
+    <line id="xm-edge-2-0-3-4" class="xm-edge" x1="275.74" y1="90.7" x2="366.54" y2="158.8"/>
+    <line id="xm-edge-2-0-3-5" class="xm-edge" x1="274.41" y1="92.19" x2="367.86" y2="190.31"/>
+    <line id="xm-edge-2-0-3-6" class="xm-edge" x1="273.28" y1="93.14" x2="368.99" y2="222.36"/>
+    <line id="xm-edge-2-0-3-7" class="xm-edge" x1="272.36" y1="93.76" x2="369.92" y2="254.74"/>
+    <line id="xm-edge-2-0-3-8" class="xm-edge" x1="271.61" y1="94.18" x2="370.66" y2="287.32"/>
+    <line id="xm-edge-2-0-3-9" class="xm-edge" x1="271.01" y1="94.47" x2="371.26" y2="320.03"/>
+    <line id="xm-edge-2-1-3-0" class="xm-edge" x1="275.74" y1="109.3" x2="366.54" y2="41.2"/>
+    <line id="xm-edge-2-1-3-1" class="xm-edge" x1="277.08" y1="111.58" x2="365.19" y2="71.92"/>
+    <line id="xm-edge-2-1-3-2" class="xm-edge" x1="278" y1="114.72" x2="364.27" y2="101.78"/>
+    <line id="xm-edge-2-1-3-3" class="xm-edge" x1="278" y1="118.28" x2="364.27" y2="131.22"/>
+    <line id="xm-edge-2-1-3-4" class="xm-edge" x1="277.08" y1="121.42" x2="365.19" y2="161.08"/>
+    <line id="xm-edge-2-1-3-5" class="xm-edge" x1="275.74" y1="123.7" x2="366.54" y2="191.8"/>
+    <line id="xm-edge-2-1-3-6" class="xm-edge" x1="274.41" y1="125.19" x2="367.86" y2="223.31"/>
+    <line id="xm-edge-2-1-3-7" class="xm-edge" x1="273.28" y1="126.14" x2="368.99" y2="255.36"/>
+    <line id="xm-edge-2-1-3-8" class="xm-edge" x1="272.36" y1="126.76" x2="369.92" y2="287.74"/>
+    <line id="xm-edge-2-1-3-9" class="xm-edge" x1="271.61" y1="127.18" x2="370.66" y2="320.32"/>
+    <line id="xm-edge-2-2-3-0" class="xm-edge" x1="274.41" y1="140.81" x2="367.86" y2="42.69"/>
+    <line id="xm-edge-2-2-3-1" class="xm-edge" x1="275.74" y1="142.3" x2="366.54" y2="74.2"/>
+    <line id="xm-edge-2-2-3-2" class="xm-edge" x1="277.08" y1="144.58" x2="365.19" y2="104.92"/>
+    <line id="xm-edge-2-2-3-3" class="xm-edge" x1="278" y1="147.72" x2="364.27" y2="134.78"/>
+    <line id="xm-edge-2-2-3-4" class="xm-edge" x1="278" y1="151.28" x2="364.27" y2="164.22"/>
+    <line id="xm-edge-2-2-3-5" class="xm-edge" x1="277.08" y1="154.42" x2="365.19" y2="194.08"/>
+    <line id="xm-edge-2-2-3-6" class="xm-edge" x1="275.74" y1="156.7" x2="366.54" y2="224.8"/>
+    <line id="xm-edge-2-2-3-7" class="xm-edge" x1="274.41" y1="158.19" x2="367.86" y2="256.31"/>
+    <line id="xm-edge-2-2-3-8" class="xm-edge" x1="273.28" y1="159.14" x2="368.99" y2="288.36"/>
+    <line id="xm-edge-2-2-3-9" class="xm-edge" x1="272.36" y1="159.76" x2="369.92" y2="320.74"/>
+    <line id="xm-edge-2-13-3-0" class="xm-edge" x1="272.36" y1="205.24" x2="369.92" y2="44.26"/>
+    <line id="xm-edge-2-13-3-1" class="xm-edge" x1="273.28" y1="205.86" x2="368.99" y2="76.64"/>
+    <line id="xm-edge-2-13-3-2" class="xm-edge" x1="274.41" y1="206.81" x2="367.86" y2="108.69"/>
+    <line id="xm-edge-2-13-3-3" class="xm-edge" x1="275.74" y1="208.3" x2="366.54" y2="140.2"/>
+    <line id="xm-edge-2-13-3-4" class="xm-edge" x1="277.08" y1="210.58" x2="365.19" y2="170.92"/>
+    <line id="xm-edge-2-13-3-5" class="xm-edge" x1="278" y1="213.72" x2="364.27" y2="200.78"/>
+    <line id="xm-edge-2-13-3-6" class="xm-edge" x1="278" y1="217.28" x2="364.27" y2="230.22"/>
+    <line id="xm-edge-2-13-3-7" class="xm-edge" x1="277.08" y1="220.42" x2="365.19" y2="260.08"/>
+    <line id="xm-edge-2-13-3-8" class="xm-edge" x1="275.74" y1="222.7" x2="366.54" y2="290.8"/>
+    <line id="xm-edge-2-13-3-9" class="xm-edge" x1="274.41" y1="224.19" x2="367.86" y2="322.31"/>
+    <line id="xm-edge-2-14-3-0" class="xm-edge" x1="271.61" y1="237.82" x2="370.66" y2="44.68"/>
+    <line id="xm-edge-2-14-3-1" class="xm-edge" x1="272.36" y1="238.24" x2="369.92" y2="77.26"/>
+    <line id="xm-edge-2-14-3-2" class="xm-edge" x1="273.28" y1="238.86" x2="368.99" y2="109.64"/>
+    <line id="xm-edge-2-14-3-3" class="xm-edge" x1="274.41" y1="239.81" x2="367.86" y2="141.69"/>
+    <line id="xm-edge-2-14-3-4" class="xm-edge" x1="275.74" y1="241.3" x2="366.54" y2="173.2"/>
+    <line id="xm-edge-2-14-3-5" class="xm-edge" x1="277.08" y1="243.58" x2="365.19" y2="203.92"/>
+    <line id="xm-edge-2-14-3-6" class="xm-edge" x1="278" y1="246.72" x2="364.27" y2="233.78"/>
+    <line id="xm-edge-2-14-3-7" class="xm-edge" x1="278" y1="250.28" x2="364.27" y2="263.22"/>
+    <line id="xm-edge-2-14-3-8" class="xm-edge" x1="277.08" y1="253.42" x2="365.19" y2="293.08"/>
+    <line id="xm-edge-2-14-3-9" class="xm-edge" x1="275.74" y1="255.7" x2="366.54" y2="323.8"/>
+    <line id="xm-edge-2-15-3-0" class="xm-edge" x1="271.01" y1="270.53" x2="371.26" y2="44.97"/>
+    <line id="xm-edge-2-15-3-1" class="xm-edge" x1="271.61" y1="270.82" x2="370.66" y2="77.68"/>
+    <line id="xm-edge-2-15-3-2" class="xm-edge" x1="272.36" y1="271.24" x2="369.92" y2="110.26"/>
+    <line id="xm-edge-2-15-3-3" class="xm-edge" x1="273.28" y1="271.86" x2="368.99" y2="142.64"/>
+    <line id="xm-edge-2-15-3-4" class="xm-edge" x1="274.41" y1="272.81" x2="367.86" y2="174.69"/>
+    <line id="xm-edge-2-15-3-5" class="xm-edge" x1="275.74" y1="274.3" x2="366.54" y2="206.2"/>
+    <line id="xm-edge-2-15-3-6" class="xm-edge" x1="277.08" y1="276.58" x2="365.19" y2="236.92"/>
+    <line id="xm-edge-2-15-3-7" class="xm-edge" x1="278" y1="279.72" x2="364.27" y2="266.78"/>
+    <line id="xm-edge-2-15-3-8" class="xm-edge" x1="278" y1="283.28" x2="364.27" y2="296.22"/>
+    <line id="xm-edge-2-15-3-9" class="xm-edge" x1="277.08" y1="286.42" x2="365.19" y2="326.08"/>
+  </g>
+  <g id="xm-layer-0" class="xm-layer xm-layer-input">
+    <circle id="xm-node-0-0" class="xm-node xm-node-input" cx="46.14" cy="83.5" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-1" class="xm-node xm-node-input" cx="46.14" cy="116.5" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-2" class="xm-node xm-node-input" cx="46.14" cy="149.5" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <g id="xm-ellipsis-0" class="xm-ellipsis" fill="#4b5563">
+      <circle id="xm-ellipsis-0-0" cx="46.14" cy="175.5" r="2"/>
+      <circle id="xm-ellipsis-0-1" cx="46.14" cy="182.5" r="2"/>
+      <circle id="xm-ellipsis-0-2" cx="46.14" cy="189.5" r="2"/>
+    </g>
+    <circle id="xm-node-0-781" class="xm-node xm-node-input" cx="46.14" cy="215.5" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-782" class="xm-node xm-node-input" cx="46.14" cy="248.5" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+    <circle id="xm-node-0-783" class="xm-node xm-node-input" cx="46.14" cy="281.5" r="12" fill="#d4e8f5" stroke="#0072b2" stroke-width="1.5"/>
+  </g>
+  <g id="xm-layer-1" class="xm-layer xm-layer-hidden">
+    <circle id="xm-node-1-0" class="xm-node xm-node-hidden" cx="156.14" cy="83.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-1" class="xm-node xm-node-hidden" cx="156.14" cy="116.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-2" class="xm-node xm-node-hidden" cx="156.14" cy="149.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <g id="xm-ellipsis-1" class="xm-ellipsis" fill="#4b5563">
+      <circle id="xm-ellipsis-1-0" cx="156.14" cy="175.5" r="2"/>
+      <circle id="xm-ellipsis-1-1" cx="156.14" cy="182.5" r="2"/>
+      <circle id="xm-ellipsis-1-2" cx="156.14" cy="189.5" r="2"/>
+    </g>
+    <circle id="xm-node-1-13" class="xm-node xm-node-hidden" cx="156.14" cy="215.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-14" class="xm-node xm-node-hidden" cx="156.14" cy="248.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-1-15" class="xm-node xm-node-hidden" cx="156.14" cy="281.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+  </g>
+  <g id="xm-layer-2" class="xm-layer xm-layer-hidden">
+    <circle id="xm-node-2-0" class="xm-node xm-node-hidden" cx="266.14" cy="83.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-2-1" class="xm-node xm-node-hidden" cx="266.14" cy="116.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-2-2" class="xm-node xm-node-hidden" cx="266.14" cy="149.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <g id="xm-ellipsis-2" class="xm-ellipsis" fill="#4b5563">
+      <circle id="xm-ellipsis-2-0" cx="266.14" cy="175.5" r="2"/>
+      <circle id="xm-ellipsis-2-1" cx="266.14" cy="182.5" r="2"/>
+      <circle id="xm-ellipsis-2-2" cx="266.14" cy="189.5" r="2"/>
+    </g>
+    <circle id="xm-node-2-13" class="xm-node xm-node-hidden" cx="266.14" cy="215.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-2-14" class="xm-node xm-node-hidden" cx="266.14" cy="248.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+    <circle id="xm-node-2-15" class="xm-node xm-node-hidden" cx="266.14" cy="281.5" r="12" fill="#f1f2f4" stroke="#4b5563" stroke-width="1.5"/>
+  </g>
+  <g id="xm-layer-3" class="xm-layer xm-layer-output" fill="#fbe8c4" stroke="#b97800" stroke-width="1.5">
+    <circle id="xm-node-3-0" class="xm-node xm-node-output" cx="376.14" cy="34" r="12"/>
+    <circle id="xm-node-3-1" class="xm-node xm-node-output" cx="376.14" cy="67" r="12"/>
+    <circle id="xm-node-3-2" class="xm-node xm-node-output" cx="376.14" cy="100" r="12"/>
+    <circle id="xm-node-3-3" class="xm-node xm-node-output" cx="376.14" cy="133" r="12"/>
+    <circle id="xm-node-3-4" class="xm-node xm-node-output" cx="376.14" cy="166" r="12"/>
+    <circle id="xm-node-3-5" class="xm-node xm-node-output" cx="376.14" cy="199" r="12"/>
+    <circle id="xm-node-3-6" class="xm-node xm-node-output" cx="376.14" cy="232" r="12"/>
+    <circle id="xm-node-3-7" class="xm-node xm-node-output" cx="376.14" cy="265" r="12"/>
+    <circle id="xm-node-3-8" class="xm-node xm-node-output" cx="376.14" cy="298" r="12"/>
+    <circle id="xm-node-3-9" class="xm-node xm-node-output" cx="376.14" cy="331" r="12"/>
+  </g>
+  <g id="xm-labels" class="xm-labels">
+    <text id="xm-name-0" class="xm-label xm-label-name" x="46.14" y="368.59" text-anchor="middle" direction="rtl" font-family="&#39;xm-font-1&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">پیکسل‌ها</text>
+    <text id="xm-size-0" class="xm-label xm-label-size" x="46.14" y="385.35" text-anchor="middle" font-family="&#39;xm-font-0&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="12" font-weight="400" fill="#6b7280">784</text>
+    <text id="xm-name-1" class="xm-label xm-label-name" x="156.14" y="368.59" text-anchor="middle" direction="rtl" font-family="&#39;xm-font-1&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">لایه پنهان ۱</text>
+    <text id="xm-size-1" class="xm-label xm-label-size" x="156.14" y="385.35" text-anchor="middle" font-family="&#39;xm-font-0&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="12" font-weight="400" fill="#6b7280">16</text>
+    <text id="xm-name-2" class="xm-label xm-label-name" x="266.14" y="368.59" text-anchor="middle" direction="rtl" font-family="&#39;xm-font-1&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">لایه پنهان ۲</text>
+    <text id="xm-size-2" class="xm-label xm-label-size" x="266.14" y="385.35" text-anchor="middle" font-family="&#39;xm-font-0&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="12" font-weight="400" fill="#6b7280">16</text>
+    <text id="xm-name-3" class="xm-label xm-label-name" x="376.14" y="368.59" text-anchor="middle" direction="rtl" font-family="&#39;xm-font-1&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">ارقام</text>
+    <text id="xm-size-3" class="xm-label xm-label-size" x="376.14" y="385.35" text-anchor="middle" font-family="&#39;xm-font-0&#39;, Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="12" font-weight="400" fill="#6b7280">10</text>
+  </g>
+</svg>

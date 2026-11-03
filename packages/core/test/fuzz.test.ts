@@ -30,9 +30,9 @@ describe('parser robustness', () => {
 
   test('never throws on arbitrary JSON, and whatever parses also renders', async () => {
     const engine = await getEngine();
-    fc.assert(
-      fc.property(fc.jsonValue({ maxDepth: 4 }), (value) => {
-        renderDiagram(JSON.stringify(value), engine);
+    await fc.assert(
+      fc.asyncProperty(fc.jsonValue({ maxDepth: 4 }), async (value) => {
+        await renderDiagram(JSON.stringify(value), engine);
       }),
       { numRuns: 300 },
     );

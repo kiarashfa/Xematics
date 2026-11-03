@@ -1,0 +1,7 @@
+# Math in names (MathJax, New Computer Modern), alone and mixed with text.
+title: Math labels
+layers:
+  - { units: 784, name: '$\mathbf{x} \in \mathbb{R}^{784}$' }
+  - { units: 16, name: 'Hidden $h^{(1)}$' }
+  - { units: 16, name: '$\sigma(W h^{(1)} + b)$' }
+  - { units: 10, name: '$\hat{\mathbf{y}}$ costs \$5' }

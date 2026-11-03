@@ -28,11 +28,16 @@ describe('text engine', () => {
 
   test('falls back across subsets and reports missing characters', async () => {
     const engine = await getEngine();
-    const greek = engine.shape('σ(z) Ελλάδα', regular, 13);
-    expect(greek.missing).toEqual([]);
+    const text = 'σ(z) Ελλάδα';
+    expect(engine.shape(text, regular, 13).pending.length).toBeGreaterThan(0);
+    expect(await engine.load([{ text, font: regular }])).toBe(true);
+    const greek = engine.shape(text, regular, 13);
+    expect([greek.missing, greek.pending]).toEqual([[], []]);
     expect(new Set(greek.glyphs.map((g) => g.face)).size).toBe(2);
     expect(greek.glyphs.every((g) => g.glyph !== 0)).toBe(true);
-    expect(engine.shape('لایه', regular, 13).missing).toEqual(['ل', 'ا', 'ی', 'ه']);
+    // No bundled font has these: Ethiopic.
+    await engine.load([{ text: 'ሰላም', font: regular }]);
+    expect(engine.shape('ሰላም', regular, 13).missing).toEqual(['ሰ', 'ላ', 'ም']);
   });
 
   test('picks the nearest weight and unknown families fall back to Inter', async () => {

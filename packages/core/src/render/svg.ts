@@ -1,4 +1,5 @@
 import type { Paint, Scene, SceneItem } from '../scene.ts';
+import type { EmbeddedFonts } from '../text/engine.ts';
 import { CSS_FONT_STACKS } from '../text/fonts.ts';
 import { num } from '../util/format.ts';
 import { escapeXml } from '../util/xml.ts';
@@ -8,6 +9,8 @@ export interface SvgOptions {
   readonly text?: 'outline' | 'live';
   /** Prefix for every id and class, so several diagrams can share one HTML page. Default 'xm-'. */
   readonly prefix?: string;
+  /** Font subsets to embed for live text (from TextEngine.embed). */
+  readonly fonts?: EmbeddedFonts;
 }
 
 const PREFIX_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]*$/;
@@ -36,6 +39,14 @@ export function renderSvg(scene: Scene, options: SvgOptions = {}): string {
     `  <title id="${prefix}title">${escapeXml(scene.title)}</title>`,
     `  <desc id="${prefix}desc">${escapeXml(scene.description)}</desc>`,
   ];
+  const fonts = mode === 'live' ? options.fonts : undefined;
+  if (fonts && fonts.faces.length > 0) {
+    const rules = fonts.faces.map(
+      (face) =>
+        `@font-face{font-family:'${prefix}${face.key}';src:url(data:${face.type};base64,${face.data})}`,
+    );
+    out.push(`  <defs><style>${rules.join('')}</style></defs>`);
+  }
   if (scene.background !== null) {
     out.push(
       `  <rect id="${prefix}background" width="${w}" height="${h}" fill="${escapeXml(scene.background)}"/>`,
@@ -82,6 +93,12 @@ export function renderSvg(scene: Scene, options: SvgOptions = {}): string {
           `${pad}<line ${[...attrs, `x1="${num(item.x1)}"`, `y1="${num(item.y1)}"`, `x2="${num(item.x2)}"`, `y2="${num(item.y2)}"`, ...paint].join(' ')}/>`,
         );
         return;
+      case 'math':
+        // Formulas are always outlines; the TeX source stays in the scene for other exporters.
+        out.push(
+          `${pad}<path ${[...attrs, `d="${escapeXml(item.outline)}"`, ...paint].join(' ')}/>`,
+        );
+        return;
       case 'path':
         out.push(
           `${pad}<path ${[...attrs, `d="${escapeXml(roundPath(item.d))}"`, ...paint].join(' ')}/>`,
@@ -95,7 +112,7 @@ export function renderSvg(scene: Scene, options: SvgOptions = {}): string {
           return;
         }
         const font = [
-          `font-family="${escapeXml(CSS_FONT_STACKS[item.font.family] ?? item.font.family)}"`,
+          `font-family="${escapeXml(fontFamily(item.font, prefix, fonts))}"`,
           `font-size="${num(item.font.size)}"`,
           `font-weight="${item.font.weight}"`,
         ];
@@ -112,6 +129,17 @@ export function renderSvg(scene: Scene, options: SvgOptions = {}): string {
   for (const item of children.get(undefined) ?? []) emit(item, 1, false);
   out.push('</svg>');
   return `${out.join('\n')}\n`;
+}
+
+function fontFamily(
+  font: { readonly family: string; readonly weight: number },
+  prefix: string,
+  fonts: EmbeddedFonts | undefined,
+): string {
+  const fallback = CSS_FONT_STACKS[font.family] ?? font.family;
+  const embedded = fonts?.stacks[`${font.family} ${font.weight}`];
+  if (!embedded || embedded.length === 0) return fallback;
+  return [...embedded.map((key) => `'${prefix}${key}'`), fallback].join(', ');
 }
 
 function paintAttrs(paint: Paint): string[] {

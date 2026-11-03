@@ -222,6 +222,7 @@
             {@render toggle('Transparent background', tool.transparent, (on) =>
               tool.setTransparent(on),
             )}
+            {@render toggle('Right to left', tool.rightToLeft, (on) => tool.setRightToLeft(on))}
           </div>
         </div>
         <div class="caption">Style</div>

@@ -7,13 +7,13 @@ import { tool } from './state.svelte.ts';
 const MAX_SOURCE_BYTES = 400_000;
 const MAX_WORKSPACE_BYTES = 60_000_000;
 
-export function exportSvg(): void {
-  const svg = tool.exportSvg();
+export async function exportSvg(): Promise<void> {
+  const svg = await tool.exportSvg();
   if (svg) downloadText(tool.fileName('svg'), svg, 'image/svg+xml');
 }
 
 export async function copySvg(): Promise<void> {
-  const svg = tool.exportSvg();
+  const svg = await tool.exportSvg();
   if (svg)
     tool.flash(
       (await copyText(svg))

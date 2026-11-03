@@ -3,7 +3,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
-import { formatDiagnostic, hasErrors, renderDiagram, type SvgOptions } from '@xematics/core';
+import { formatDiagnostic, hasErrors, renderDiagram, type RenderOptions } from '@xematics/core';
 import { createNodeTextEngine } from '@xematics/core/node';
 
 const USAGE = `Usage: xematics render <file|-> [options]
@@ -57,12 +57,12 @@ export async function main(argv: readonly string[]): Promise<number> {
     process.stderr.write('--text must be outline or live.\n');
     return 2;
   }
-  const options: SvgOptions =
+  const options: RenderOptions =
     values.prefix === undefined ? { text } : { text, prefix: values.prefix };
 
   try {
     const source = await readInput(input);
-    const result = renderDiagram(source, await createNodeTextEngine(), options);
+    const result = await renderDiagram(source, await createNodeTextEngine(), options);
     const name = input === '-' ? 'stdin' : input;
     for (const d of result.diagnostics) process.stderr.write(`${formatDiagnostic(d, name)}\n`);
     if (hasErrors(result.diagnostics) || result.svg === undefined) return 1;

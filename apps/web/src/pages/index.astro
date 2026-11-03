@@ -6,20 +6,23 @@ import { SITE } from '../site.config.ts';
 
 // Figures are rendered at build time by the same engine the editor will use.
 const engine = await createNodeTextEngine();
-const figure = (source: string, prefix: string) =>
-  renderDiagram(source, engine, { prefix }).svg ?? '';
+const figure = async (source: string, prefix: string) =>
+  (await renderDiagram(source, engine, { prefix })).svg ?? '';
 
-const hero = figure('784-16-16-10', 'hero-');
-const plates = [
+const hero = await figure('784-16-16-10', 'hero-');
+const plateSources = [
   { title: 'Perceptron', source: '3-1' },
   { title: 'Two-layer MLP', source: '3-5-4-2' },
   { title: 'MNIST classifier', source: '784-16-16-10' },
   { title: 'Autoencoder', source: '8-4-2-4-8' },
-].map((plate, i) => ({
-  ...plate,
-  numeral: ['I', 'II', 'III', 'IV'][i],
-  svg: figure(plate.source, `plate${i + 1}-`),
-}));
+];
+const plates = await Promise.all(
+  plateSources.map(async (plate, i) => ({
+    ...plate,
+    numeral: ['I', 'II', 'III', 'IV'][i],
+    svg: await figure(plate.source, `plate${i + 1}-`),
+  })),
+);
 
 const highlights = [
   {

@@ -1,0 +1,7 @@
+# Labels inside nodes: {i} is the neuron number, kept correct around the ellipsis.
+layers:
+  - { units: 12, nodeLabel: '$x_{i}$' }
+  - { units: 4, nodeLabel: 'h{i}' }
+  - { units: 2, nodeLabel: '$\hat{y}_{i}$' }
+style:
+  preset: mono

@@ -186,3 +186,64 @@ test.describe('saving and sharing', () => {
     await fresh.close();
   });
 });
+
+test.describe('text and math', () => {
+  test.skip(({ isMobile }) => isMobile, 'Ribbon layout is desktop only');
+  const FIXTURES = new URL('../../../packages/core/test/fixtures/', import.meta.url);
+
+  async function exportSvg(page: Page) {
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Export SVG' }).click();
+    return readFile(await (await download).path(), 'utf8');
+  }
+
+  // Fonts (Vazirmatn, Hebrew, CJK slices) and MathJax load on demand in the browser too, and the
+  // result must match Node byte for byte.
+  for (const [name, file, live] of [
+    ['persian', 'persian.yaml', true],
+    ['bidi', 'bidi.yaml', false],
+    ['cjk', 'cjk.yaml', false],
+    ['math', 'math.yaml', true],
+    ['node-labels', 'node-labels.yaml', false],
+    ['rtl-flow', 'rtl-flow.yaml', false],
+    ['rtl-boxes', 'rtl-boxes.yaml', false],
+  ] as const) {
+    test(`${name} export is byte-identical to the Node golden file`, async ({ page }) => {
+      await openEditor(page);
+      await source(page).fill(await readFile(new URL(file, FIXTURES), 'utf8'));
+      expect(await exportSvg(page)).toBe(await readFile(new URL(`${name}.svg`, GOLDEN), 'utf8'));
+      if (live) {
+        await page.getByRole('switch', { name: 'Editable text' }).check();
+        expect(await exportSvg(page)).toBe(
+          await readFile(new URL(`${name}.live.svg`, GOLDEN), 'utf8'),
+        );
+      }
+    });
+  }
+
+  test('the preview loads fonts and math by itself, without an export', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill(
+      'layers:\n  - { units: 2, name: سلام }\n  - { units: 2, name: "$h_1$" }\n',
+    );
+    await expect(page.locator('#pv-name-1-0')).toBeAttached();
+    await expect(page.getByText(/cannot draw yet/)).toHaveCount(0);
+  });
+
+  test('right to left flow and node labels write minimal YAML', async ({ page }) => {
+    await openEditor(page);
+    await page.getByRole('switch', { name: 'Right to left' }).check();
+    await expect(source(page)).toHaveValue(/style:\n {2}direction: rtl/);
+    await page
+      .getByRole('navigation', { name: 'Layers' })
+      .getByRole('button', { name: /Pixels/ })
+      .click();
+    await page.getByRole('textbox', { name: 'Node labels' }).fill('$x_{i}$');
+    await expect(source(page)).toHaveValue(
+      /nodeLabel: \$x_\{i\}\$|nodeLabel: "\$x_\{i\}\$"|nodeLabel: '\$x_\{i\}\$'/,
+    );
+    await expect(page.locator('#pv-nodelabel-0-0')).toBeAttached();
+    await page.getByRole('switch', { name: 'Right to left' }).uncheck();
+    await expect(source(page)).not.toHaveValue(/direction/);
+  });
+});

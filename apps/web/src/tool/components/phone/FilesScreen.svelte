@@ -28,11 +28,18 @@
 
   /** Renders a small preview with its own id prefix and mounts it safely. */
   const thumbnail = (text: string, key: string) => (node: HTMLElement) => {
-    const svg = tool.engine
-      ? renderDiagram(text, tool.engine, { prefix: `th-${key}-` }).svg
-      : undefined;
-    const element = svg ? parseSafeSvg(svg) : undefined;
-    node.replaceChildren(...(element ? [element] : []));
+    let current = true;
+    const engine = tool.engine;
+    if (engine) {
+      // Rendering waits for any fonts or formulas the document needs.
+      void renderDiagram(text, engine, { prefix: `th-${key}-` }).then(({ svg }) => {
+        const element = current && svg ? parseSafeSvg(svg) : undefined;
+        if (current) node.replaceChildren(...(element ? [element] : []));
+      });
+    }
+    return () => {
+      current = false;
+    };
   };
 
   function open(id: string) {

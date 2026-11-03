@@ -1,0 +1,6 @@
+# Chinese, Japanese and Korean names (Noto Sans SC, JP and KR slices, loaded on demand).
+layers:
+  - { units: 4, name: 输入层 }
+  - { units: 6, name: 隠れ層 }
+  - { units: 6, name: 은닉층 }
+  - { units: 3, name: 输出 }

@@ -7,6 +7,8 @@ export type Role = 'input' | 'hidden' | 'output';
 export interface RolePaint {
   readonly fill: string;
   readonly stroke: string;
+  /** Color of node labels drawn on this fill. */
+  readonly text: string;
 }
 
 export interface TextStyle {
@@ -36,6 +38,8 @@ export interface Theme {
   readonly ellipsis: { readonly color: string; readonly radius: number; readonly spacing: number };
   readonly nameText: TextStyle;
   readonly sizeText: TextStyle;
+  /** Labels inside nodes; the color comes from the role. */
+  readonly nodeText: Omit<TextStyle, 'color'>;
   /** Gap between the lowest node and the top of the first label line. */
   readonly labelGap: number;
   readonly lineGap: number;
@@ -49,6 +53,8 @@ export interface Theme {
   readonly edgeLimit: number;
   /** 'nodes' draws every neuron; 'boxes' draws one bar per layer, sized by its neuron count. */
   readonly mode: 'nodes' | 'boxes';
+  /** 'rtl' mirrors the flow: input on the right. */
+  readonly direction: 'ltr' | 'rtl';
   readonly box: {
     readonly width: number;
     readonly radius: number;
@@ -69,14 +75,15 @@ const CLASSIC: Theme = {
   layerSpacing: 110,
   margin: 22,
   roles: {
-    input: { fill: '#d4e8f5', stroke: '#0072b2' },
-    hidden: { fill: '#f1f2f4', stroke: '#4b5563' },
-    output: { fill: '#fbe8c4', stroke: '#b97800' },
+    input: { fill: '#d4e8f5', stroke: '#0072b2', text: INK },
+    hidden: { fill: '#f1f2f4', stroke: '#4b5563', text: INK },
+    output: { fill: '#fbe8c4', stroke: '#b97800', text: INK },
   },
   edge: { color: '#b8c0cc', width: 0.8, bundleOpacity: 0.35 },
   ellipsis: { color: '#4b5563', radius: 2, spacing: 7 },
   nameText: { family: 'Inter', weight: 500, size: 13, color: INK },
   sizeText: { family: 'Inter', weight: 400, size: 12, color: MUTED },
+  nodeText: { family: 'Inter', weight: 400, size: 10 },
   labelGap: 13,
   lineGap: 2,
   labelPadding: 12,
@@ -85,6 +92,7 @@ const CLASSIC: Theme = {
   collapse: { above: 10, first: 3, last: 3 },
   edgeLimit: 2500,
   mode: 'nodes',
+  direction: 'ltr',
   box: { width: 30, radius: 6, minHeight: 28, perDecade: 34, arrow: { color: MUTED, width: 1.4 } },
 };
 
@@ -101,9 +109,9 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
   mono: {
     ...CLASSIC,
     roles: {
-      input: { fill: '#d9d9d9', stroke: '#000000' },
-      hidden: { fill: '#ffffff', stroke: '#000000' },
-      output: { fill: '#595959', stroke: '#000000' },
+      input: { fill: '#d9d9d9', stroke: '#000000', text: '#000000' },
+      hidden: { fill: '#ffffff', stroke: '#000000', text: '#000000' },
+      output: { fill: '#595959', stroke: '#000000', text: '#ffffff' },
     },
     nodeStrokeWidth: 1.3,
     edge: { ...CLASSIC.edge, color: '#a6a6a6', width: 0.6 },
@@ -115,9 +123,9 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
   colorblind: {
     ...CLASSIC,
     roles: {
-      input: { fill: OKABE_INPUT, stroke: '#0072b2' },
-      hidden: { fill: '#e5e7eb', stroke: '#6b7280' },
-      output: { fill: OKABE_OUTPUT, stroke: '#d55e00' },
+      input: { fill: OKABE_INPUT, stroke: '#0072b2', text: INK },
+      hidden: { fill: '#e5e7eb', stroke: '#6b7280', text: INK },
+      output: { fill: OKABE_OUTPUT, stroke: '#d55e00', text: INK },
     },
     edge: { ...CLASSIC.edge, color: '#c3c8cf' },
   },
@@ -125,9 +133,9 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
     ...CLASSIC,
     background: '#15191f',
     roles: {
-      input: { fill: OKABE_INPUT, stroke: '#9fd4f3' },
-      hidden: { fill: '#2b313b', stroke: '#9aa3ae' },
-      output: { fill: OKABE_OUTPUT, stroke: '#f3c45c' },
+      input: { fill: OKABE_INPUT, stroke: '#9fd4f3', text: '#15191f' },
+      hidden: { fill: '#2b313b', stroke: '#9aa3ae', text: '#e8eaed' },
+      output: { fill: OKABE_OUTPUT, stroke: '#f3c45c', text: '#15191f' },
     },
     edge: { ...CLASSIC.edge, color: '#4a515c' },
     ellipsis: { ...CLASSIC.ellipsis, color: '#9aa3ae' },
@@ -169,6 +177,7 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
     nodeRadius: style.nodeRadius ?? base.nodeRadius,
     nodeSpacing: style.nodeSpacing ?? base.nodeSpacing,
     layerSpacing: style.layerSpacing ?? base.layerSpacing,
+    direction: style.direction ?? base.direction,
     background,
     labels: {
       names: style.labels?.names ?? base.labels.names,

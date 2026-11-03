@@ -7,7 +7,8 @@ import type { Model } from '../model/schema.ts';
 import { SCENE_VERSION, type Paint, type SceneItem } from '../scene.ts';
 import type { Theme } from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
-import { cleanLabel, describe, layerName, roleOf, textItem, type LayoutResult } from './mlp.ts';
+import { buildLabel, labelItems } from './label.ts';
+import { cleanLabel, describe, layerLabel, roleOf, type LayoutResult } from './mlp.ts';
 
 /** Space between a bar and the arrows next to it. */
 const ARROW_GAP = 8;
@@ -52,9 +53,9 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
   const w = theme.box.width;
 
   const bars = model.layers.map((layer, index) => {
-    const name = layerName(layer, index, count, theme, engine, diagnostics);
+    const name = layerLabel(layer, index, count, theme, engine, diagnostics);
     const size = theme.labels.sizes
-      ? engine.shape(String(layer.units), theme.sizeText, theme.sizeText.size)
+      ? buildLabel(String(layer.units), theme.sizeText, engine, () => {})
       : undefined;
     return {
       index,
@@ -78,8 +79,10 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
   let nameBaseline = 0;
   let sizeBaseline = 0;
   if (anyName) {
-    nameBaseline = cursor + nameLine.ascent;
-    cursor = nameBaseline + nameLine.descent + theme.lineGap;
+    const names = bars.flatMap((b) => (b.name ? [b.name] : []));
+    nameBaseline = cursor + Math.max(nameLine.ascent, ...names.map((l) => l.ascent));
+    cursor =
+      nameBaseline + Math.max(nameLine.descent, ...names.map((l) => l.descent)) + theme.lineGap;
   }
   if (anySize) {
     sizeBaseline = cursor + sizeLine.ascent;
@@ -89,13 +92,13 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
 
   // Horizontal positions: at least layerSpacing apart, wider for labels or a too short arrow.
   const minDistance = w + 2 * ARROW_GAP + HEAD_LENGTH + MIN_SHAFT;
-  const xs: number[] = [];
+  const forward: number[] = [];
   bars.forEach((bar, i) => {
     const previous = bars[i - 1];
-    xs.push(
+    forward.push(
       previous === undefined
         ? theme.margin + bar.halfWidth
-        : xs[i - 1]! +
+        : forward[i - 1]! +
             Math.max(
               theme.layerSpacing,
               minDistance,
@@ -103,14 +106,18 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
             ),
     );
   });
-  const width = xs.at(-1)! + bars.at(-1)!.halfWidth + theme.margin;
+  const width = forward.at(-1)! + bars.at(-1)!.halfWidth + theme.margin;
+  // Right to left flow mirrors the bars; arrows then point left.
+  const xs = theme.direction === 'rtl' ? forward.map((x) => width - x) : forward;
+  const sign = theme.direction === 'rtl' ? -1 : 1;
 
   const items: SceneItem[] = [];
 
   const arrow = theme.box.arrow;
   for (let i = 0; i + 1 < count; i++) {
-    const start = xs[i]! + w / 2 + ARROW_GAP;
-    const tip = xs[i + 1]! - w / 2 - ARROW_GAP;
+    const start = xs[i]! + sign * (w / 2 + ARROW_GAP);
+    const tip = xs[i + 1]! - sign * (w / 2 + ARROW_GAP);
+    const back = tip - sign * HEAD_LENGTH;
     const group = `edges-${i}`;
     items.push({ kind: 'group', id: group, classes: ['edges'] });
     items.push({
@@ -121,7 +128,7 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
       x1: start,
       y1: centerY,
       // Stop inside the head so the line's butt end never shows past its point.
-      x2: tip - HEAD_LENGTH + 1,
+      x2: back + sign,
       y2: centerY,
       paint: { stroke: arrow.color, strokeWidth: arrow.width },
     });
@@ -130,7 +137,7 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
       id: `arrow-${i}-head`,
       parent: group,
       classes: ['arrow-head'],
-      d: `M${tip} ${centerY}L${tip - HEAD_LENGTH} ${centerY - HEAD_HALF}L${tip - HEAD_LENGTH} ${centerY + HEAD_HALF}Z`,
+      d: `M${tip} ${centerY}L${back} ${centerY - HEAD_HALF}L${back} ${centerY + HEAD_HALF}Z`,
       paint: { fill: arrow.color },
     });
   }
@@ -164,7 +171,7 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
       const x = xs[bar.index]!;
       if (bar.name) {
         items.push(
-          textItem(
+          ...labelItems(
             `name-${bar.index}`,
             ['label', 'label-name'],
             bar.name,
@@ -172,12 +179,13 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
             nameBaseline,
             theme.nameText,
             engine,
+            'labels',
           ),
         );
       }
       if (bar.size) {
         items.push(
-          textItem(
+          ...labelItems(
             `size-${bar.index}`,
             ['label', 'label-size'],
             bar.size,
@@ -185,6 +193,7 @@ export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): Lay
             sizeBaseline,
             theme.sizeText,
             engine,
+            'labels',
           ),
         );
       }

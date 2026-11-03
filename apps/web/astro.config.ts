@@ -6,8 +6,9 @@ import { defineConfig } from 'astro/config';
 import { SITE } from './src/site.config.ts';
 
 // The engine (TypeScript sources) is bundled into the build; HarfBuzz stays external so its WASM
-// loads from node_modules. harfbuzzjs and @fontsource/inter are therefore direct dependencies here.
-const ENGINE = ['harfbuzzjs'];
+// loads from node_modules, and so does MathJax, whose font loads extra glyph modules at run time
+// that must share one copy of the font class. They and the label fonts are direct dependencies here.
+const ENGINE = ['harfbuzzjs', '@mathjax/src', '@mathjax/mathjax-newcm-font'];
 
 export default defineConfig({
   site: SITE.url,

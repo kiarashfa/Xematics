@@ -66,7 +66,7 @@ describe('parseModel', () => {
     expect(rest).toEqual([]);
     expect(error).toMatchObject({ code: 'model.unknown-key', line: 2, column: 7 });
     expect(error?.message).toBe(
-      "Layer 1 has an unknown key 'unit'. Did you mean 'units'? Allowed keys: type, units, name, activation, collapse.",
+      "Layer 1 has an unknown key 'unit'. Did you mean 'units'? Allowed keys: type, units, name, nodeLabel, activation, collapse.",
     );
     expect(errors('layer: [3]')[0]?.message).toContain("Did you mean 'layers'?");
     expect(errors('layers: [3]\nstyle: { colapse: { above: 4 } }')[0]?.message).toContain(

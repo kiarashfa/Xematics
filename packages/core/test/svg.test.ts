@@ -3,7 +3,7 @@ import { renderDiagram, renderSvg, type Scene } from '../src/index.ts';
 import { getEngine } from './helpers.ts';
 
 async function svg(text: string, options = {}) {
-  const result = renderDiagram(text, await getEngine(), options);
+  const result = await renderDiagram(text, await getEngine(), options);
   if (!result.svg) throw new Error(result.diagnostics.map((d) => d.message).join('\n'));
   return result.svg;
 }
@@ -31,10 +31,25 @@ describe('SVG renderer', () => {
 
   test('outlined text by default, live text on request', async () => {
     expect(await svg('3-2')).not.toContain('<text');
-    const live = await svg('3-2', { text: 'live' });
-    expect(live).toContain(
-      '<text id="xm-name-0" class="xm-label xm-label-name" x="37.82" y="137.59" text-anchor="middle" font-family="Inter, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">Input</text>',
+    const plain = await svg('3-2', { text: 'live', embedFonts: false });
+    expect(plain).not.toContain('@font-face');
+    expect(plain).toContain(
+      '<text id="xm-name-0" class="xm-label xm-label-name" x="37.82" y="137.59" text-anchor="middle" font-family="Inter, Vazirmatn, &#39;Noto Sans Hebrew&#39;, &#39;Noto Sans SC&#39;, &#39;Noto Sans JP&#39;, &#39;Noto Sans KR&#39;, &#39;Helvetica Neue&#39;, Arial, sans-serif" font-size="13" font-weight="500" fill="#1f2937">Input</text>',
     );
+  });
+
+  test('live text embeds subsets of the fonts it uses, named with the id prefix', async () => {
+    const live = await svg('3-2', { text: 'live', prefix: 'fig-' });
+    const faces = [
+      ...live.matchAll(
+        /@font-face\{font-family:'(fig-font-\d)';src:url\(data:font\/ttf;base64,([A-Za-z0-9+/=]+)\)\}/g,
+      ),
+    ];
+    // Medium for names, regular for sizes; each holds only the characters used.
+    expect(faces.map((f) => f[1])).toEqual(['fig-font-0', 'fig-font-1']);
+    for (const [, , data] of faces) expect(data!.length).toBeLessThan(8000);
+    expect(live).toContain('font-family="&#39;fig-font-1&#39;, Inter,');
+    expect(live).not.toContain('xm-');
   });
 
   test('shared paint moves to the group', async () => {

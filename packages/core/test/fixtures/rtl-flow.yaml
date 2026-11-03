@@ -1,0 +1,7 @@
+# Right-to-left flow: the input layer is on the right.
+layers:
+  - { units: 784, name: پیکسل‌ها }
+  - { units: 16, name: لایه پنهان }
+  - { units: 10, name: ارقام }
+style:
+  direction: rtl

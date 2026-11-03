@@ -49,6 +49,13 @@
     return () => removeEventListener('beforeunload', guard);
   });
 
+  // Fonts and formulas load on demand; the preview redraws when they arrive.
+  $effect(() => {
+    void tool.model;
+    void tool.engine;
+    void tool.prepareText();
+  });
+
   // Autosave whenever any document or setting changes.
   $effect(() => {
     void JSON.stringify(tool.documents);

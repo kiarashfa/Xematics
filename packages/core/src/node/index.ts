@@ -2,24 +2,20 @@
 
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
-import { createTextEngine, type FontFaceData, type TextEngine } from '../text/engine.ts';
-import { BUNDLED_FONTS, FONT_PACKAGE } from '../text/fonts.ts';
+import { createTextEngine, type FontFile, type TextEngine } from '../text/engine.ts';
 
 const require = createRequire(import.meta.url);
 
-export async function loadBundledFonts(): Promise<FontFaceData[]> {
-  return Promise.all(
-    BUNDLED_FONTS.map(async (font) => {
-      const file = require.resolve(`${FONT_PACKAGE}/files/${font.file}`);
-      return {
-        family: font.family,
-        weight: font.weight,
-        data: new Uint8Array(await readFile(file)),
-      };
-    }),
-  );
+/** Reads a bundled font file from its npm package. */
+export async function readBundledFont(font: FontFile): Promise<Uint8Array> {
+  return new Uint8Array(await readFile(require.resolve(`${font.package}/files/${font.file}`)));
 }
 
 export async function createNodeTextEngine(): Promise<TextEngine> {
-  return createTextEngine(await loadBundledFonts());
+  return createTextEngine({
+    loadFont: readBundledFont,
+    importMath: (specifier) => import(specifier),
+    loadSubsetter: async () =>
+      new Uint8Array(await readFile(require.resolve('harfbuzzjs/dist/harfbuzz-subset.wasm'))),
+  });
 }

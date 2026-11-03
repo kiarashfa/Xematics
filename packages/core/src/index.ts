@@ -40,7 +40,16 @@ export {
   type ShorthandLayer,
   type ShorthandResult,
 } from './parse/shorthand.ts';
-export { renderDiagram, type RenderResult } from './pipeline.ts';
+export {
+  labelContent,
+  prepareModel,
+  renderDiagram,
+  renderScene,
+  sceneText,
+  type RenderOptions,
+  type RenderResult,
+} from './pipeline.ts';
+export { joinMath, nodeLabelText, splitMath, type Segment } from './layout/label.ts';
 export { renderSvg, type SvgOptions } from './render/svg.ts';
 export {
   SCENE_VERSION,
@@ -52,6 +61,7 @@ export {
   type RectItem,
   type Scene,
   type SceneItem,
+  type MathItem,
   type TextItem,
 } from './scene.ts';
 export {
@@ -64,13 +74,19 @@ export {
 } from './style/theme.ts';
 export {
   createTextEngine,
+  type EmbeddedFace,
+  type EmbeddedFonts,
   type FontFaceData,
+  type FontFile,
   type FontSpec,
   type ShapedGlyph,
   type ShapedText,
   type TextEngine,
+  type TextEngineOptions,
+  type TextRequest,
 } from './text/engine.ts';
-export { BUNDLED_FONTS, CSS_FONT_STACKS, FONT_PACKAGE, type BundledFont } from './text/fonts.ts';
+export { CSS_FONT_STACKS } from './text/fonts.ts';
+export { type MathBox, type MathResult } from './text/math.ts';
 export {
   applyStructure,
   insertLayer,

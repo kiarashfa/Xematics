@@ -1,0 +1,7 @@
+# Persian names (Vazirmatn), including a zero-width non-joiner and Persian digits.
+title: شبکه عصبی
+layers:
+  - { units: 784, name: پیکسل‌ها }
+  - { units: 16, name: لایه پنهان ۱ }
+  - { units: 16, name: لایه پنهان ۲ }
+  - { units: 10, name: ارقام }

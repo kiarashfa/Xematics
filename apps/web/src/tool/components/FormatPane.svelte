@@ -79,6 +79,22 @@
       />
     </label>
     <label class="field">
+      <span>Node labels</span>
+      <input
+        value={layer.nodeLabel ?? ''}
+        placeholder={`none, or $x_{i}$`}
+        aria-describedby="node-label-hint"
+        oninput={(e) =>
+          tool.edit(
+            (m) => patchLayer(m, index, { nodeLabel: e.currentTarget.value || undefined }),
+            true,
+          )}
+      />
+      <small id="node-label-hint" class="hint"
+        >{`{i} is the neuron number. Math goes in $...$.`}</small
+      >
+    </label>
+    <label class="field">
       <span>Neurons</span>
       <input type="number" min="1" max={LIMITS.units} value={layer.units} onchange={setUnits} />
     </label>

@@ -89,6 +89,12 @@ export function base64urlEncode(bytes: Uint8Array): string {
   return out;
 }
 
+/** Standard base64 with padding (for data: URLs). */
+export function base64Encode(bytes: Uint8Array): string {
+  const text = base64urlEncode(bytes).replaceAll('-', '+').replaceAll('_', '/');
+  return text + '='.repeat((4 - (text.length % 4)) % 4);
+}
+
 export function base64urlDecode(text: string): Uint8Array | undefined {
   if (!/^[A-Za-z0-9_-]*$/.test(text) || text.length % 4 === 1) return undefined;
   const out = new Uint8Array(Math.floor((text.length * 3) / 4));

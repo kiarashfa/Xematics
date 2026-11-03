@@ -11,14 +11,17 @@ import {
   encodeShare,
   insertLayer,
   isShareFragment,
+  labelContent,
   layoutModel,
   moveLayer,
   parseModel,
   parseShorthand,
   parseWorkspace,
   patchStyle,
+  prepareModel,
   PRESETS,
   removeLayer,
+  renderScene,
   renderSvg,
   SHARE_SOFT_LIMIT,
   structureOf,
@@ -78,6 +81,8 @@ export class ToolState {
   saveStatus = $state<SaveStatus>('saved');
   /** True when the editor was opened from a share link (the phone then skips the file list). */
   openedFromLink = $state(false);
+  /** Bumped when fonts or formulas finish loading, so the layout picks them up. */
+  textVersion = $state(0);
 
   #past: string[] = [];
   #future: string[] = [];
@@ -97,7 +102,10 @@ export class ToolState {
   });
   valid = $derived(this.parsed.model !== undefined);
   errors = $derived(this.parsed.diagnostics.filter((d) => d.severity === 'error'));
-  layout = $derived(this.engine && this.model ? layoutModel(this.model, this.engine) : undefined);
+  layout = $derived.by(() => {
+    void this.textVersion;
+    return this.engine && this.model ? layoutModel(this.model, this.engine) : undefined;
+  });
   warnings = $derived<Diagnostic[]>([
     ...this.parsed.diagnostics.filter((d) => d.severity === 'warning'),
     ...(this.layout?.diagnostics ?? []),
@@ -209,6 +217,7 @@ export class ToolState {
     last: this.model?.style?.collapse?.last ?? DEFAULTS.collapse.last,
   });
   transparent = $derived(this.model?.style?.background === 'transparent');
+  rightToLeft = $derived(this.model?.style?.direction === 'rtl');
   preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');
 
   // Settings equal to the preset default are removed, so the source stays short.
@@ -228,6 +237,10 @@ export class ToolState {
 
   setPreset(id: PresetId): void {
     this.edit((model) => patchStyle(model, { preset: id === 'classic' ? undefined : id }));
+  }
+
+  setRightToLeft(on: boolean): void {
+    this.edit((model) => patchStyle(model, { direction: on ? 'rtl' : undefined }));
   }
 
   setTransparent(on: boolean): void {
@@ -341,11 +354,34 @@ export class ToolState {
     this.switchTo(workspace.current);
   }
 
-  /** The figure as exported: default ids, outlined or live text. */
-  exportSvg(): string | undefined {
-    return this.layout
-      ? renderSvg(this.layout.scene, { text: this.liveText ? 'live' : 'outline' })
-      : undefined;
+  /** Loads the fonts and formulas the current model needs (Persian, CJK, math, ...). */
+  async prepareText(): Promise<void> {
+    const { engine, model } = this;
+    if (!engine || !model) return;
+    // Fonts are quick; the first formula waits for MathJax. Each redraws as soon as it is ready.
+    const { text, math } = labelContent(model);
+    const redraw = (changed: boolean) => {
+      if (changed) this.textVersion++;
+    };
+    await Promise.all([
+      engine.load(text).then(redraw),
+      math.length > 0
+        ? engine
+            .loadMath(math)
+            .then(redraw, () => this.flash('Math could not be loaded. Check your connection.'))
+        : undefined,
+    ]);
+  }
+
+  /** The figure as exported: default ids, outlined or live text (with its fonts embedded). */
+  async exportSvg(): Promise<string | undefined> {
+    const { engine, model } = this;
+    if (!engine || !model) return undefined;
+    // Never export before the fonts and formulas the labels need have arrived.
+    await prepareModel(model, engine);
+    return renderScene(layoutModel(model, engine).scene, engine, {
+      text: this.liveText ? 'live' : 'outline',
+    });
   }
 
   fileName(extension: string): string {
