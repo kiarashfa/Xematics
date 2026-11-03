@@ -119,3 +119,6 @@ export {
   type WorkspaceDocument,
   type WorkspaceResult,
 } from './share/workspace.ts';
+export { renderPdf } from './export/pdf.ts';
+export { renderTikz, type TikzOptions } from './export/tikz.ts';
+export { embedSnippets, pngSize, setPngDpi, type EmbedSnippets } from './export/embed.ts';

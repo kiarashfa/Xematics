@@ -334,6 +334,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@resvg/resvg-wasm':
+        specifier: 2.6.2
+        version: 2.6.2
       '@xematics/core':
         specifier: workspace:*
         version: link:../core
@@ -1332,6 +1335,13 @@ packages:
       {
         integrity: sha512-FIRv2rZotO9NP/r66taYqD1zICpPiBbrECqjKV/xqNotqDxF7fLzzUeK+1RSRx9Tenk0DajR/GcRmTJ2qtHaKQ==,
       }
+
+  '@resvg/resvg-wasm@2.6.2':
+    resolution:
+      {
+        integrity: sha512-FqALmHI8D4o6lk/LRWDnhw95z5eO+eAa6ORjVg09YRR7BkcM6oPHU9uyC0gtQG5vpFLvgpeU4+zEAz2H8APHNw==,
+      }
+    engines: { node: '>= 10' }
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
     resolution:
@@ -5231,6 +5241,8 @@ snapshots:
       playwright: 1.64.1
 
   '@prettier/parse-srcset@3.1.0': {}
+
+  '@resvg/resvg-wasm@2.6.2': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
     optional: true

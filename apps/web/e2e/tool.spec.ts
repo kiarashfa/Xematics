@@ -20,6 +20,18 @@ async function openEditor(page: Page) {
 
 const source = (page: Page) => page.getByRole('textbox', { name: 'Source' });
 
+/** Opens the ribbon's Export tab and clicks one of its buttons. */
+async function exportButton(page: Page, name: string) {
+  await page.getByRole('tab', { name: 'Export' }).click();
+  await page.getByRole('button', { name, exact: true }).click();
+}
+
+/** Switches SVG export to editable text (Export tab, Options group). */
+async function setEditableText(page: Page) {
+  await page.getByRole('tab', { name: 'Export' }).click();
+  await page.getByRole('switch', { name: 'Editable SVG text' }).check();
+}
+
 test('editor renders the example and has no accessibility violations', async ({ page }) => {
   await openEditor(page);
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
@@ -41,12 +53,12 @@ test.describe('desktop editor', () => {
 
     const exportSvg = async () => {
       const download = page.waitForEvent('download');
-      await page.getByRole('button', { name: 'Export SVG' }).click();
+      await exportButton(page, 'Export SVG');
       const file = await (await download).path();
       return readFile(file, 'utf8');
     };
     expect(await exportSvg()).toBe(await readFile(new URL('mnist.svg', GOLDEN), 'utf8'));
-    await page.getByRole('switch', { name: 'Editable text' }).check();
+    await setEditableText(page);
     expect(await exportSvg()).toBe(await readFile(new URL('mnist.live.svg', GOLDEN), 'utf8'));
   });
 
@@ -108,7 +120,7 @@ test.describe('desktop editor', () => {
     );
     await expect(page.locator('#pv-box-3')).toBeAttached();
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await exportButton(page, 'Export SVG');
     const file = await (await download).path();
     expect(await readFile(file, 'utf8')).toBe(await readFile(new URL('boxes.svg', GOLDEN), 'utf8'));
   });
@@ -193,7 +205,7 @@ test.describe('text and math', () => {
 
   async function exportSvg(page: Page) {
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Export SVG' }).click();
+    await exportButton(page, 'Export SVG');
     return readFile(await (await download).path(), 'utf8');
   }
 
@@ -213,7 +225,7 @@ test.describe('text and math', () => {
       await source(page).fill(await readFile(new URL(file, FIXTURES), 'utf8'));
       expect(await exportSvg(page)).toBe(await readFile(new URL(`${name}.svg`, GOLDEN), 'utf8'));
       if (live) {
-        await page.getByRole('switch', { name: 'Editable text' }).check();
+        await setEditableText(page);
         expect(await exportSvg(page)).toBe(
           await readFile(new URL(`${name}.live.svg`, GOLDEN), 'utf8'),
         );
@@ -245,5 +257,92 @@ test.describe('text and math', () => {
     await expect(page.locator('#pv-nodelabel-0-0')).toBeAttached();
     await page.getByRole('switch', { name: 'Right to left' }).uncheck();
     await expect(source(page)).not.toHaveValue(/direction/);
+  });
+});
+
+test.describe('exports', () => {
+  test.skip(({ isMobile }) => isMobile, 'Ribbon layout is desktop only');
+
+  async function download(page: Page, button: string) {
+    const file = page.waitForEvent('download');
+    await exportButton(page, button);
+    const done = await file;
+    return { name: done.suggestedFilename(), bytes: await readFile(await done.path()) };
+  }
+
+  test('the Export tab sits between View and Help and is accessible', async ({ page }) => {
+    await openEditor(page);
+    const tabs = await page
+      .getByRole('tablist', { name: 'Ribbon' })
+      .getByRole('tab')
+      .allInnerTexts();
+    expect(tabs).toEqual(['File', 'Home', 'View', 'Export', 'Help']);
+    await page.getByRole('tab', { name: 'Export' }).click();
+    for (const group of ['Images', 'Documents', 'Share', 'Export options']) {
+      await expect(page.getByRole('group', { name: group })).toBeVisible();
+    }
+    const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+    expect(results.violations.map((v) => v.id)).toEqual([]);
+  });
+
+  test('PDF and TikZ match the Node golden files', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('784-16-16-10');
+    const pdf = await download(page, 'Export PDF');
+    expect(pdf.name).toBe('diagram.pdf');
+    expect(pdf.bytes.toString('latin1')).toBe(
+      await readFile(new URL('mnist.pdf', GOLDEN), 'latin1'),
+    );
+    const tex = await download(page, 'Export TikZ');
+    expect(tex.bytes.toString('utf8')).toBe(await readFile(new URL('mnist.tex', GOLDEN), 'utf8'));
+  });
+
+  test('PNG is 300 dpi by default, with the resolution saved in the file', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('784-16-16-10');
+    const png = await download(page, 'Export PNG');
+    expect(png.bytes.subarray(1, 4).toString('latin1')).toBe('PNG');
+    // The figure is 411.07 x 410.25 px at 96 dpi.
+    expect([png.bytes.readUInt32BE(16), png.bytes.readUInt32BE(20)]).toEqual([1285, 1282]);
+    const phys = png.bytes.indexOf('pHYs');
+    expect(png.bytes.readUInt32BE(phys + 4)).toBe(11811);
+  });
+
+  test('model JSON opens again as the same diagram', async ({ page }) => {
+    await openEditor(page);
+    const json = await download(page, 'Model file');
+    expect(json.name).toBe('mnist-classifier.json');
+    const model = JSON.parse(json.bytes.toString('utf8'));
+    expect(model).toMatchObject({ version: 1, title: 'MNIST classifier' });
+    expect(model.layers).toHaveLength(4);
+  });
+
+  test('ribbon options change the PNG size and the TikZ form', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('784-16-16-10');
+    await page.getByRole('tab', { name: 'Export' }).click();
+    await page.getByRole('combobox', { name: 'PNG size' }).selectOption({ label: '2x' });
+    await page.getByRole('combobox', { name: 'TikZ' }).selectOption({ label: 'tikzpicture only' });
+    const png = await download(page, 'Export PNG');
+    expect(png.bytes.readUInt32BE(16)).toBe(Math.round(411.07 * 2));
+    const tex = await download(page, 'Export TikZ');
+    expect(tex.bytes.toString('utf8')).not.toContain('\\documentclass');
+  });
+
+  test('embed code offers Markdown, HTML and a data URL', async ({ page }) => {
+    await openEditor(page);
+    await exportButton(page, 'Embed code');
+    const dialog = page.getByRole('dialog', { name: 'Embed code' });
+    await expect(dialog.getByRole('textbox', { name: 'Markdown' })).toHaveValue(
+      /^!\[Fully connected neural network.*\]\(data:image\/svg\+xml;base64,/,
+    );
+    await expect(dialog.getByRole('textbox', { name: 'HTML' })).toHaveValue(/^<img src="data:/);
+    const data = await dialog.getByRole('textbox', { name: 'Data URL' }).inputValue();
+    const svg = Buffer.from(data.split(',')[1]!, 'base64').toString('utf8');
+    expect(svg).toContain('<title id="xm-title">MNIST classifier</title>');
+    const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+    expect(results.violations.map((v) => v.id)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
   });
 });

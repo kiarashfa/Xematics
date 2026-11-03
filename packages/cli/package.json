@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@resvg/resvg-wasm": "2.6.2",
     "@xematics/core": "workspace:*"
   },
   "devDependencies": {

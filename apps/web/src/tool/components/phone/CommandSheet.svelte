@@ -8,7 +8,8 @@
     copyShareLink,
     copySvg,
     downloadSource,
-    exportSvg,
+    copyTikz,
+    exportAs,
     openSourceFile,
     openWorkspaceFile,
     saveWorkspace,
@@ -172,9 +173,18 @@
       {@render stepper('Show first', 'first')}
       {@render stepper('Show last', 'last')}
     {:else if tab === 'Export'}
-      {@render row('download', 'Save SVG', exportSvg, !tool.layout)}
+      {@render row('download', 'Save SVG', () => exportAs('svg'), !tool.layout)}
+      {@render row('download', 'Save PNG', () => exportAs('png'), !tool.layout)}
+      {@render row('download', 'Save PDF', () => exportAs('pdf'), !tool.layout)}
+      {@render row('download', 'Save TikZ (.tex)', () => exportAs('tex'), !tool.layout)}
+      {@render row('download', 'Save model (JSON)', () => exportAs('json'), !tool.model)}
+      <li class="ph-rule" aria-hidden="true"></li>
       {@render row('copy', 'Copy SVG', copySvg, !tool.layout)}
+      {@render row('code', 'Copy TikZ code', copyTikz, !tool.layout)}
+      {@render row('code', 'Embed code', () => exportAs('embed'), !tool.layout)}
       {@render row('link', 'Copy share link', copyShareLink, !tool.ready)}
+      {@render row('more', 'Export options', () => (tool.dialog = 'export-options'))}
+      <li class="ph-rule" aria-hidden="true"></li>
       {@render toggle(
         'edit',
         'Editable text in the SVG',

@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
   import Canvas from './components/Canvas.svelte';
+  import EmbedDialog from './components/EmbedDialog.svelte';
+  import ExportOptions from './components/ExportOptions.svelte';
   import FormatPane from './components/FormatPane.svelte';
   import FormulaBar from './components/FormulaBar.svelte';
   import Navigator from './components/Navigator.svelte';
@@ -61,6 +63,9 @@
     void JSON.stringify(tool.documents);
     void tool.currentId;
     void tool.liveText;
+    void tool.exportFormat;
+    void tool.pngDpi;
+    void tool.tikzStandalone;
     tool.scheduleSave();
   });
 
@@ -109,6 +114,12 @@
     </div>
     <StatusBar onReveal={revealFirstError} />
   </div>
+{/if}
+
+{#if tool.dialog === 'export-options'}
+  <ExportOptions />
+{:else if tool.dialog === 'embed'}
+  <EmbedDialog />
 {/if}
 
 <style>

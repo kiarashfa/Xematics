@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 
@@ -37,5 +40,32 @@ describe('xematics CLI', () => {
     expect(run(['render', '-', '--text', 'bold'], '3').code).toBe(2);
     expect(run(['render', '-', '--prefix', '1bad'], '3').code).toBe(2);
     expect(run(['--help']).code).toBe(0);
+    expect(run(['render', '-', '-o', 'x.gif'], '3').code).toBe(2);
+    expect(run(['render', '-', '--dpi', 'lots'], '3').code).toBe(2);
+  });
+
+  test('picks the format from the output extension or --format', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'xematics-'));
+    try {
+      expect(run(['render', '-', '-o', join(dir, 'a.pdf')], '3-2').code).toBe(0);
+      expect(readFileSync(join(dir, 'a.pdf'), 'latin1').startsWith('%PDF-1.4')).toBe(true);
+
+      expect(run(['render', '-', '-o', join(dir, 'a.png'), '--dpi', '192'], '3-2').code).toBe(0);
+      const png = readFileSync(join(dir, 'a.png'));
+      expect(png.subarray(1, 4).toString('latin1')).toBe('PNG');
+      // 192 dpi is twice the SVG's 96 px per inch; the figure is 191.07 px wide.
+      expect(png.readUInt32BE(16)).toBe(382);
+      expect(png.includes(Buffer.from('pHYs'))).toBe(true);
+
+      const tex = run(['render', '-', '-f', 'tex', '--tikz', 'picture'], '3-2');
+      expect(tex.code).toBe(0);
+      expect(tex.stdout).toContain('\\begin{tikzpicture}');
+      expect(tex.stdout).not.toContain('\\documentclass');
+
+      const json = run(['render', '-', '-f', 'json'], '3-2:softmax');
+      expect(JSON.parse(json.stdout)).toMatchObject({ version: 1, layers: [{ units: 3 }, {}] });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -192,7 +192,7 @@ function parseTransform(text: string): Matrix {
 }
 
 /** Parses path data into absolute M, L, Q, C and Z commands (H, V, S, T and relatives expanded). */
-function parsePath(d: string): PathCommand[] {
+export function parsePath(d: string): PathCommand[] {
   const tokens = d.match(/[a-zA-Z]|-?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?/g) ?? [];
   const out: PathCommand[] = [];
   let i = 0;

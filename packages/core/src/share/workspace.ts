@@ -22,7 +22,16 @@ const WorkspaceSchema = v.object({
   version: v.literal(WORKSPACE_VERSION),
   current: v.string(),
   documents: v.pipe(v.array(DocumentSchema), v.minLength(1), v.maxLength(MAX_DOCUMENTS)),
-  settings: v.optional(v.object({ liveText: v.optional(v.boolean()) })),
+  // Values are checked by the editor, so a setting a later release adds or changes never makes an
+  // older file unreadable.
+  settings: v.optional(
+    v.object({
+      liveText: v.optional(v.boolean()),
+      exportFormat: v.optional(v.string()),
+      pngDpi: v.optional(v.number()),
+      tikzStandalone: v.optional(v.boolean()),
+    }),
+  ),
 });
 
 export type Workspace = v.InferOutput<typeof WorkspaceSchema>;

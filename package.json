@@ -19,6 +19,7 @@
     "test:e2e": "pnpm --filter @xematics/web test:e2e",
     "check:text": "node scripts/check-public-text.ts",
     "check:leaks": "node scripts/check-build-leaks.ts",
+    "check:tikz": "node scripts/check-tikz.ts",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build && pnpm check:text && pnpm check:leaks"
   },
   "devDependencies": {

@@ -122,3 +122,14 @@ test('command sheet: preset strip switches the look', async ({ page }) => {
   await sheet.getByRole('button', { name: 'Close' }).click();
   await expect(await sourceText(page)).toHaveValue(/preset: mono/);
 });
+
+test('command sheet: PDF and TikZ exports', async ({ page }) => {
+  await openDocument(page);
+  await page.getByRole('button', { name: 'All commands' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Commands' });
+  await sheet.getByRole('tab', { name: 'Export' }).click();
+  await shot(page, '9-export');
+  const download = page.waitForEvent('download');
+  await sheet.getByRole('button', { name: 'Save PDF' }).click();
+  expect((await download).suggestedFilename()).toBe('mnist-classifier.pdf');
+});

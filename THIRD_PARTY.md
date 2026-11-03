@@ -22,6 +22,14 @@ Xematics includes and uses the third-party software and fonts listed below. Each
 | yaml                                          | 2.9.1            | ISC        | <https://eemeli.org/yaml/>                     |
 | Svelte (editor runtime)                       | 5.57.3           | MIT        | <https://svelte.dev>                           |
 
+## Used by the command-line tool only
+
+| Component                                         | Version | License | Source                               |
+| ------------------------------------------------- | ------- | ------- | ------------------------------------ |
+| resvg-js (resvg compiled to WebAssembly, for PNG) | 2.6.2   | MPL-2.0 | <https://github.com/yisibl/resvg-js> |
+
+resvg-js is used unmodified; its source is available at the link above under the Mozilla Public License 2.0 (<https://mozilla.org/MPL/2.0/>). The website does not include it: in the browser, PNG images are drawn by the browser itself.
+
 ## Used to build the website
 
 | Component                                       | Version             | License |

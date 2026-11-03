@@ -1,7 +1,16 @@
 // Editor commands shared by the ribbon, the title bar and the phone layout.
 
-import { serializeWorkspace } from '@xematics/core';
-import { copyText, downloadText } from './browser.ts';
+import {
+  pngSize,
+  renderPdf,
+  renderScene,
+  renderTikz,
+  serializeWorkspace,
+  setPngDpi,
+  toJsonText,
+} from '@xematics/core';
+import { copyText, downloadBytes, downloadText, rasterize } from './browser.ts';
+import { MAX_PNG_PIXELS, type ExportFormat } from './formats.ts';
 import { tool } from './state.svelte.ts';
 
 const MAX_SOURCE_BYTES = 400_000;
@@ -10,6 +19,52 @@ const MAX_WORKSPACE_BYTES = 60_000_000;
 export async function exportSvg(): Promise<void> {
   const svg = await tool.exportSvg();
   if (svg) downloadText(tool.fileName('svg'), svg, 'image/svg+xml');
+}
+
+/** Runs one export format; the Export button then repeats it. */
+export async function exportAs(format: ExportFormat): Promise<void> {
+  tool.exportFormat = format;
+  if (format === 'embed') {
+    tool.dialog = 'embed';
+    return;
+  }
+  if (format === 'svg') return exportSvg();
+  if (format === 'json') {
+    if (tool.model) downloadText(tool.fileName('json'), toJsonText(tool.model), 'application/json');
+    return;
+  }
+  const ready = await tool.exportScene();
+  if (!ready) return;
+  const { scene, engine } = ready;
+  if (format === 'pdf') {
+    downloadBytes(tool.fileName('pdf'), renderPdf(scene), 'application/pdf');
+  } else if (format === 'tex') {
+    const tex = renderTikz(scene, { standalone: tool.tikzStandalone });
+    downloadText(tool.fileName('tex'), tex, 'application/x-tex');
+  } else {
+    const size = pngSize(scene, tool.pngDpi);
+    if (size.width * size.height > MAX_PNG_PIXELS) {
+      tool.flash(
+        'That PNG would be too large for the browser. Pick a smaller size in Export options.',
+      );
+      return;
+    }
+    try {
+      // Outlined text, so the image looks the same whatever fonts this device has.
+      const svg = await renderScene(scene, engine);
+      const png = setPngDpi(await rasterize(svg, size.width, size.height), tool.pngDpi);
+      downloadBytes(tool.fileName('png'), png, 'image/png');
+    } catch (error) {
+      tool.flash(error instanceof Error ? error.message : 'The PNG image could not be made.');
+    }
+  }
+}
+
+export async function copyTikz(): Promise<void> {
+  const ready = await tool.exportScene();
+  if (!ready) return;
+  const tex = renderTikz(ready.scene, { standalone: tool.tikzStandalone });
+  tool.flash((await copyText(tex)) ? 'TikZ code copied.' : 'Copying is blocked in this browser.');
 }
 
 export async function copySvg(): Promise<void> {

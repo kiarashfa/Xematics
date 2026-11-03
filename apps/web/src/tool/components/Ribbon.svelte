@@ -3,20 +3,22 @@
   import {
     copyShareLink,
     copySvg,
+    copyTikz,
+    exportAs,
     deleteDocument,
     downloadSource,
-    exportSvg,
     openSourceFile,
     openWorkspaceFile,
     saveWorkspace,
   } from '../actions.ts';
   import { currentTheme, setTheme } from '../browser.ts';
+  import { PNG_SIZES } from '../formats.ts';
   import { EXAMPLES, tool } from '../state.svelte.ts';
   import { PRESET_IDS, PRESET_NAMES } from '@xematics/core';
   import Icon, { type IconName } from './Icon.svelte';
   import PresetThumb from './PresetThumb.svelte';
 
-  const TABS = ['File', 'Home', 'View', 'Help'] as const;
+  const TABS = ['File', 'Home', 'View', 'Export', 'Help'] as const;
   type Tab = (typeof TABS)[number];
   let active = $state<Tab>('Home');
   let theme = $state(currentTheme());
@@ -268,16 +270,6 @@
         </div>
         <div class="caption">Large layers</div>
       </div>
-      <div class="group" role="group" aria-label="Export">
-        <div class="body">
-          {@render big('download', 'Export SVG', exportSvg, !tool.layout, true)}
-          <div class="stack">
-            {@render small('copy', 'Copy SVG', copySvg, !tool.layout)}
-            {@render toggle('Editable text', tool.liveText, (on) => (tool.liveText = on))}
-          </div>
-        </div>
-        <div class="caption">Export</div>
-      </div>
     {:else if active === 'View'}
       <div class="group" role="group" aria-label="Zoom">
         <div class="body">
@@ -310,6 +302,60 @@
           )}
         </div>
         <div class="caption">Theme</div>
+      </div>
+    {:else if active === 'Export'}
+      <div class="group" role="group" aria-label="Images">
+        <div class="body">
+          {@render big('download', 'Export SVG', () => exportAs('svg'), !tool.layout, true)}
+          {@render big('download', 'Export PNG', () => exportAs('png'), !tool.layout)}
+          <div class="stack">
+            {@render small('copy', 'Copy SVG', copySvg, !tool.layout)}
+            {@render toggle('Editable SVG text', tool.liveText, (on) => (tool.liveText = on))}
+          </div>
+        </div>
+        <div class="caption">Images</div>
+      </div>
+      <div class="group" role="group" aria-label="Documents">
+        <div class="body">
+          {@render big('file', 'Export PDF', () => exportAs('pdf'), !tool.layout)}
+          {@render big('code', 'Export TikZ', () => exportAs('tex'), !tool.layout)}
+          <div class="stack">
+            {@render small('copy', 'Copy TikZ', copyTikz, !tool.layout)}
+          </div>
+        </div>
+        <div class="caption">Documents</div>
+      </div>
+      <div class="group" role="group" aria-label="Share">
+        <div class="body">
+          {@render big('code', 'Embed code', () => exportAs('embed'), !tool.layout)}
+          {@render big('download', 'Model file', () => exportAs('json'), !tool.model)}
+        </div>
+        <div class="caption">Share</div>
+      </div>
+      <div class="group" role="group" aria-label="Export options">
+        <div class="body stack">
+          <label class="option"
+            >PNG size <select
+              class="documents"
+              value={tool.pngDpi}
+              onchange={(e) => (tool.pngDpi = Number(e.currentTarget.value))}
+            >
+              {#each PNG_SIZES as size (size.dpi)}<option value={size.dpi}>{size.label}</option
+                >{/each}
+            </select></label
+          >
+          <label class="option"
+            >TikZ <select
+              class="documents"
+              value={tool.tikzStandalone ? 'document' : 'picture'}
+              onchange={(e) => (tool.tikzStandalone = e.currentTarget.value === 'document')}
+            >
+              <option value="document">Standalone document</option>
+              <option value="picture">tikzpicture only</option>
+            </select></label
+          >
+        </div>
+        <div class="caption">Options</div>
       </div>
     {:else}
       <div class="group" role="group" aria-label="Shorthand">
@@ -479,6 +525,15 @@
     color: var(--muted);
     opacity: 0.55;
     cursor: default;
+  }
+
+  .option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.8rem;
+    white-space: nowrap;
   }
 
   .documents {

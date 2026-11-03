@@ -28,11 +28,13 @@ import {
   updateText,
   type Diagnostic,
   type Model,
+  type Scene,
   type PresetId,
   type TextEngine,
   type Workspace,
   type WorkspaceDocument,
 } from '@xematics/core';
+import { DEFAULT_PNG_DPI, isExportFormat, PNG_SIZES, type ExportFormat } from './formats.ts';
 import type { WorkspaceStore } from './storage.ts';
 
 export const EXAMPLES = [
@@ -65,6 +67,12 @@ export class ToolState {
   selection = $state<Selection>({ kind: 'diagram' });
   /** Export outlined text (default) or live, editable text. */
   liveText = $state(false);
+  /** The format the Export button repeats. */
+  exportFormat = $state<ExportFormat>('svg');
+  pngDpi = $state(DEFAULT_PNG_DPI);
+  tikzStandalone = $state(true);
+  /** The open editor dialog, if any. */
+  dialog = $state<'export-options' | 'embed' | undefined>(undefined);
   showNavigator = $state(true);
   showFormat = $state(true);
   canUndo = $state(false);
@@ -282,7 +290,12 @@ export class ToolState {
       ...createWorkspace(this.documents[0]!),
       current: this.currentId,
       documents: this.documents.map((d) => ({ ...d })),
-      settings: { liveText: this.liveText },
+      settings: {
+        liveText: this.liveText,
+        exportFormat: this.exportFormat,
+        pngDpi: this.pngDpi,
+        tikzStandalone: this.tikzStandalone,
+      },
     };
   }
 
@@ -350,7 +363,13 @@ export class ToolState {
 
   #apply(workspace: Workspace): void {
     this.documents = workspace.documents.map((d) => ({ ...d }));
-    this.liveText = workspace.settings?.liveText ?? false;
+    const settings = workspace.settings;
+    this.liveText = settings?.liveText ?? false;
+    this.exportFormat = isExportFormat(settings?.exportFormat) ? settings.exportFormat : 'svg';
+    this.pngDpi = PNG_SIZES.some((s) => s.dpi === settings?.pngDpi)
+      ? settings!.pngDpi!
+      : DEFAULT_PNG_DPI;
+    this.tikzStandalone = settings?.tikzStandalone ?? true;
     this.switchTo(workspace.current);
   }
 
@@ -375,13 +394,18 @@ export class ToolState {
 
   /** The figure as exported: default ids, outlined or live text (with its fonts embedded). */
   async exportSvg(): Promise<string | undefined> {
+    const ready = await this.exportScene();
+    return ready
+      ? renderScene(ready.scene, ready.engine, { text: this.liveText ? 'live' : 'outline' })
+      : undefined;
+  }
+
+  /** The figure as every exporter sees it, laid out once its fonts and formulas have arrived. */
+  async exportScene(): Promise<{ scene: Scene; engine: TextEngine } | undefined> {
     const { engine, model } = this;
     if (!engine || !model) return undefined;
-    // Never export before the fonts and formulas the labels need have arrived.
     await prepareModel(model, engine);
-    return renderScene(layoutModel(model, engine).scene, engine, {
-      text: this.liveText ? 'live' : 'outline',
-    });
+    return { scene: layoutModel(model, engine).scene, engine };
   }
 
   fileName(extension: string): string {
