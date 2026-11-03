@@ -6,6 +6,7 @@ import Wordmark from './Wordmark.astro';
 const base = import.meta.env.BASE_URL;
 const links = [
   { href: base, label: 'Home' },
+  { href: `${base}tool/`, label: 'Editor' },
   { href: `${base}#examples`, label: 'Examples' },
   { href: `${base}#status`, label: 'Status' },
 ];
@@ -15,7 +16,7 @@ const links = [
   <div class="page top">
     <p class="meta">Neural network diagrams · Free and private</p>
     <a class="brand" href={base} aria-label={`${SITE.name} home`}>
-      <Wordmark aria-hidden="true" />
+      <Wordmark />
     </a>
     <div class="actions">
       <ThemeToggle />

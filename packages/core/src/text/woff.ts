@@ -1,49 +1,11 @@
 // WOFF 1.0 to sfnt (TTF/OTF) conversion. HarfBuzz reads only sfnt, and WOFF files are what font
 // packages ship. Tables are zlib streams, inflated with the web-standard DecompressionStream
-// (available in browsers and in Node), so core needs no compression library.
+// (available in browsers and in Node; see ../util/web.ts), so core needs no compression library.
+
+import { transform } from '../util/web.ts';
 
 const WOFF = 0x774f4646; // 'wOFF'
 const WOFF2 = 0x774f4632; // 'wOF2'
-
-interface ByteReader {
-  read(): Promise<{ done: boolean; value?: Uint8Array }>;
-}
-interface DecompressionStreamLike {
-  readonly readable: { getReader(): ByteReader };
-  readonly writable: {
-    getWriter(): { write(chunk: Uint8Array): Promise<void>; close(): Promise<void> };
-  };
-}
-type DecompressionStreamConstructor = new (format: 'deflate') => DecompressionStreamLike;
-
-async function inflate(data: Uint8Array): Promise<Uint8Array> {
-  const Decompression = (globalThis as { DecompressionStream?: DecompressionStreamConstructor })
-    .DecompressionStream;
-  if (!Decompression) throw new Error('This environment cannot decompress WOFF fonts.');
-  const stream = new Decompression('deflate');
-  const writer = stream.writable.getWriter();
-  // Write and read concurrently; awaiting the write first can stall on backpressure.
-  const writing = writer.write(data).then(() => writer.close());
-  const reader = stream.readable.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) {
-      chunks.push(value);
-      total += value.length;
-    }
-  }
-  await writing;
-  const out = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return out;
-}
 
 /** Returns sfnt bytes for a font file: WOFF 1.0 is converted, TTF/OTF pass through unchanged. */
 export async function toSfnt(data: Uint8Array): Promise<Uint8Array> {
@@ -70,7 +32,8 @@ export async function toSfnt(data: Uint8Array): Promise<Uint8Array> {
     if (offset + compressedLength > data.byteLength)
       throw new Error('Invalid WOFF file: table out of bounds.');
     const raw = data.subarray(offset, offset + compressedLength);
-    const bytes = compressedLength < length ? await inflate(raw) : raw;
+    const bytes =
+      compressedLength < length ? await transform(raw, 'decompress', 'deflate', length) : raw;
     if (bytes.length !== length) throw new Error('Invalid WOFF file: table size mismatch.');
     tables.push({ tag, checksum, bytes });
   }

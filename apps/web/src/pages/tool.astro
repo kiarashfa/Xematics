@@ -1,0 +1,28 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import ToolApp from '../tool/ToolApp.svelte';
+
+const base = import.meta.env.BASE_URL;
+---
+
+<AppLayout
+  title="Editor"
+  description="Write a neural network as text or with forms and see the figure as you type. Export SVG."
+>
+  <ToolApp client:only="svelte" home={base} />
+  <noscript>
+    <p class="noscript">
+      The editor runs entirely in your browser and needs JavaScript.{' '}
+      <a href={base}>Back to the front page</a>.
+    </p>
+  </noscript>
+</AppLayout>
+
+<style>
+  .noscript {
+    max-width: 32em;
+    margin: 80px auto;
+    padding: 0 24px;
+    text-align: center;
+  }
+</style>

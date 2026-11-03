@@ -18,5 +18,7 @@ export default defineConfig({
     build: { sourcemap: false },
     ssr: { external: ENGINE },
     environments: { prerender: { resolve: { external: ENGINE } } },
+    // Pre-bundling would move harfbuzz.js away from harfbuzz.wasm, which it loads relative to itself.
+    optimizeDeps: { exclude: ENGINE },
   },
 });

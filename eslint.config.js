@@ -28,13 +28,25 @@ export default defineConfig(
     },
   },
   {
+    files: ['apps/web/src/**'],
+    languageOptions: { globals: globals.browser },
+  },
+  {
     files: ['scripts/**', 'packages/cli/**', '**/*.config.*', '**/test/**', '**/e2e/**'],
     languageOptions: { globals: globals.node },
   },
   {
+    // TypeScript already reports undefined names (and knows DOM types); see typescript-eslint docs.
+    files: ['**/*.ts', '**/*.svelte', '**/*.astro'],
+    rules: { 'no-undef': 'off' },
+  },
+  {
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true },
+      ],
     },
   },
 );

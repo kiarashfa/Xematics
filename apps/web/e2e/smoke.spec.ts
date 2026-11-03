@@ -5,7 +5,12 @@ const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
 async function expectAccessible(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
-  expect(results.violations).toEqual([]);
+  expect(
+    results.violations.map((v) => ({
+      rule: v.id,
+      targets: v.nodes.map((node) => node.target.join(' ')),
+    })),
+  ).toEqual([]);
 }
 
 for (const colorScheme of ['light', 'dark'] as const) {

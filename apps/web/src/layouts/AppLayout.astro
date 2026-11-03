@@ -1,0 +1,24 @@
+---
+// Full-window layout for the editor: no site header or footer, no page scrolling.
+import Head, { type Props as HeadProps } from '../components/Head.astro';
+
+type Props = HeadProps;
+---
+
+<!doctype html>
+<html lang="en" class="app">
+  <head>
+    <Head {...Astro.props} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  html.app,
+  html.app body {
+    height: 100%;
+    overflow: hidden;
+  }
+</style>

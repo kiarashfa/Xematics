@@ -14,6 +14,7 @@
   --line: light-dark(#d3c9b8, #3b352d);
   --accent: light-dark(#1f4e79, #9cc3e6);
   --accent-ink: light-dark(#ffffff, #0f1d2b);
+  --canvas: light-dark(#e9e3d7, #0e0d0b);
   --mark-accent: var(--accent);
 }
 

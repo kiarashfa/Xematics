@@ -14,6 +14,7 @@ Xematics includes and uses the third-party software and fonts listed below. Each
 | HarfBuzz text shaping engine                  | bundled in above | "Old MIT" | <https://github.com/harfbuzz/harfbuzz>         |
 | Valibot                                       | 1.5.0            | MIT       | <https://valibot.dev>                          |
 | yaml                                          | 2.9.1            | ISC       | <https://eemeli.org/yaml/>                     |
+| Svelte (editor runtime)                       | 5.57.3           | MIT       | <https://svelte.dev>                           |
 
 ## Used to build the website
 
@@ -21,7 +22,6 @@ Xematics includes and uses the third-party software and fonts listed below. Each
 | ----------------------------------------------- | ------------------- | ------- |
 | Astro                                           | 7.4.2               | MIT     |
 | @astrojs/svelte, @astrojs/mdx, @astrojs/sitemap | 9.1.1, 8.1.1, 3.7.4 | MIT     |
-| Svelte                                          | 5.57.3              | MIT     |
 | Tailwind CSS                                    | 4.3.3               | MIT     |
 
 Development tools (TypeScript, ESLint, Prettier, Vitest, Playwright, axe-core, fast-check) are used only to build and test Xematics and are not distributed with it.
@@ -43,6 +43,10 @@ Copyright (c) 2019-2026 The harfbuzzjs project authors. Released under the MIT L
 ### Valibot
 
 Copyright (c) Fabian Hiller. Released under the MIT License.
+
+### Svelte
+
+Copyright (c) 2016-2025 Svelte Contributors (<https://github.com/sveltejs/svelte/graphs/contributors>). Released under the MIT License.
 
 ### yaml
 

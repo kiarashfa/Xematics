@@ -50,12 +50,17 @@ const highlights = [
       </p>
       <div class="status" id="status">
         <p>
-          <strong>In development.</strong> The engine already turns <code>784-16-16-10</code> into
-          the figure on this page. The editor comes next.
+          <strong>Early preview.</strong> The editor works today with the Classic style and SVG
+          export. More styles, share links and PDF, PNG and TikZ export are on the way.
         </p>
-        <a class="btn btn-primary" href={SITE.repoUrl}>
-          Follow on GitHub
-        </a>
+        <div class="actions">
+          <a class="btn btn-primary" href={`${import.meta.env.BASE_URL}tool/`}>
+            Open the editor
+          </a>
+          <a class="btn" href={SITE.repoUrl}>
+            Follow on GitHub
+          </a>
+        </div>
       </div>
     </div>
     <figure class="hero-figure">
@@ -127,6 +132,12 @@ const highlights = [
 
   .status p {
     margin: 0 0 12px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
   .hero-figure {

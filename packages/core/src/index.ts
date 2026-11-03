@@ -64,3 +64,35 @@ export {
   type TextEngine,
 } from './text/engine.ts';
 export { BUNDLED_FONTS, CSS_FONT_STACKS, FONT_PACKAGE, type BundledFont } from './text/fonts.ts';
+export {
+  applyStructure,
+  insertLayer,
+  moveLayer,
+  patchLayer,
+  patchModel,
+  patchStyle,
+  removeLayer,
+  structureOf,
+  type LayerPatch,
+  type Patch,
+  type StylePatch,
+} from './edit/model.ts';
+export { toJsonText, toPlain, toYaml, updateText } from './edit/text.ts';
+export {
+  decodeShare,
+  encodeShare,
+  isShareFragment,
+  SHARE_PREFIX,
+  SHARE_SOFT_LIMIT,
+  type ShareResult,
+} from './share/link.ts';
+export {
+  createWorkspace,
+  parseWorkspace,
+  serializeWorkspace,
+  WORKSPACE_FORMAT,
+  WORKSPACE_VERSION,
+  type Workspace,
+  type WorkspaceDocument,
+  type WorkspaceResult,
+} from './share/workspace.ts';
