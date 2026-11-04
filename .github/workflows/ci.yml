@@ -30,6 +30,10 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+        env:
+          # Public OAuth ids for cloud save (repository variables); the build works without them.
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          DROPBOX_APP_KEY: ${{ vars.DROPBOX_APP_KEY }}
       - run: pnpm check:budgets
       - run: pnpm check:text
       - run: pnpm check:leaks

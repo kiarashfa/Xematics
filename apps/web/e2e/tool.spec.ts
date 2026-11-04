@@ -194,7 +194,7 @@ test.describe('saving and sharing', () => {
     await fresh.close();
   });
 
-  test('a saved workspace keeps every document and opens elsewhere', async ({ page, browser }) => {
+  test('a save file keeps every document and merges elsewhere', async ({ page, browser }) => {
     await openEditor(page);
     await page.getByRole('tab', { name: 'File' }).click();
     await page.getByRole('button', { name: 'New', exact: true }).click();
@@ -202,18 +202,18 @@ test.describe('saving and sharing', () => {
       page.getByRole('combobox', { name: 'Open document' }).locator('option'),
     ).toHaveCount(2);
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Save workspace' }).click();
+    await page.getByRole('button', { name: 'Download save file' }).click();
     const file = await (await download).path();
 
     const fresh = await browser.newContext();
     const other = await fresh.newPage();
     await openEditor(other);
-    other.on('dialog', (dialog) => dialog.accept());
     await other.getByRole('tab', { name: 'File' }).click();
     await other.locator('input[type="file"][accept=".json"]').setInputFiles(file);
+    // Merged with the document already there: nothing in either browser is lost.
     await expect(
       other.getByRole('combobox', { name: 'Open document' }).locator('option'),
-    ).toHaveCount(2);
+    ).toHaveCount(3);
     await expect(source(other)).toHaveValue('4-8-3');
     await fresh.close();
   });

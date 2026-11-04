@@ -15,6 +15,7 @@
   --accent: light-dark(#1f4e79, #9cc3e6);
   --accent-ink: light-dark(#ffffff, #0f1d2b);
   --canvas: light-dark(#e9e3d7, #0e0d0b);
+  --danger: light-dark(#b3261e, #f2a29b);
   --mark-accent: var(--accent);
 }
 
@@ -163,6 +164,124 @@
     background: var(--accent);
     border-color: var(--accent);
     color: var(--accent-ink);
+  }
+
+  /* The profile circle: a photo, an emoji or initials on a tint, or the empty person icon. */
+  .avatar {
+    --av: 32px;
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: var(--av);
+    height: var(--av);
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--muted);
+    box-shadow: 0 0 0 1px var(--line);
+    user-select: none;
+  }
+
+  .avatar > * {
+    grid-area: 1 / 1;
+  }
+
+  .avatar-icon {
+    width: 58%;
+    height: 58%;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+  }
+
+  .avatar[data-kind='picture'] .avatar-icon,
+  .avatar[data-kind='emoji'] .avatar-icon,
+  .avatar[data-kind='mono'] .avatar-icon {
+    display: none;
+  }
+
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-glyph {
+    font:
+      600 calc(var(--av) * 0.42) / 1 'EB Garamond',
+      Georgia,
+      serif;
+    letter-spacing: 0.03em;
+  }
+
+  .avatar[data-kind='emoji'] .avatar-glyph {
+    font:
+      calc(var(--av) * 0.56) / 1 system-ui,
+      'Apple Color Emoji',
+      'Segoe UI Emoji',
+      'Noto Color Emoji',
+      sans-serif;
+    letter-spacing: 0;
+  }
+
+  .avatar[data-tint='blue'] {
+    background: #e3ecf5;
+    color: #1f4e79;
+  }
+  .avatar[data-tint='amber'] {
+    background: #fbe8c4;
+    color: #7a4f00;
+  }
+  .avatar[data-tint='sand'] {
+    background: #ede6d9;
+    color: #1d1a16;
+  }
+  .avatar[data-tint='green'] {
+    background: #dcefe1;
+    color: #2e6b3f;
+  }
+  .avatar[data-tint='rose'] {
+    background: #f3dede;
+    color: #8a2b2b;
+  }
+  .avatar[data-tint='night'] {
+    background: #1b1916;
+    color: #9cc3e6;
+  }
+  .avatar[data-tint='violet'] {
+    background: #e8e3f3;
+    color: #4b3b8a;
+  }
+  .avatar[data-tint='paper'] {
+    background: #fffdf8;
+    color: #1f4e79;
+  }
+
+  /* Cloud state on the circle: saved, changes waiting, or a sign-in needed. */
+  .avatar-dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+    background: #2e7d32;
+  }
+
+  .avatar-dot[data-dot='pending'] {
+    background: #c98a00;
+  }
+
+  .avatar-dot[data-dot='auth'] {
+    background: #b3261e;
+  }
+
+  .avatar-dot:not([data-dot]),
+  .avatar-dot[data-dot=''] {
+    display: none;
   }
 
   /* Figures always sit on white paper: exports never follow the site theme. */

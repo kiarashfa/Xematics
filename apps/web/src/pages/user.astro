@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Profile from '../user/Profile.svelte';
+---
+
+<BaseLayout
+  title="Your profile"
+  description="Your picture, your diagrams and your save: kept in this browser or in your own cloud."
+>
+  <div class="page profile-page">
+    <Profile client:only="svelte" />
+    <noscript>
+      <p>Your profile lives in this browser and needs JavaScript.</p>
+    </noscript>
+  </div>
+</BaseLayout>
+
+<style>
+  .profile-page {
+    min-height: 70vh;
+    padding-block: 34px 60px;
+  }
+</style>

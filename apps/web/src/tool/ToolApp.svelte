@@ -14,7 +14,9 @@
   import TitleBar from './components/TitleBar.svelte';
   import { loadEngine } from './engine.ts';
   import { tool } from './state.svelte.ts';
-  import { browserStore } from './storage.ts';
+  import { cloudState, onLocalChange } from '../user/local.ts';
+  import { browserStore } from '../user/store.ts';
+  import { visitor } from '../user/visitor.svelte.ts';
 
   let { home }: { home: string } = $props();
   const phone = new MediaQuery('max-width: 760px');
@@ -33,6 +35,7 @@
   onMount(() => {
     // Narrow windows give the canvas more room; the View tab brings the format pane back.
     if (innerWidth < 1100) tool.showFormat = false;
+    visitor.start();
     loadEngine().then(
       (engine) => (tool.engine = engine),
       (error: unknown) =>
@@ -40,15 +43,32 @@
     );
     // A share link is opened once; afterwards the address no longer carries the old diagram.
     const fragment = location.hash;
-    tool.init(browserStore, fragment).then(() => {
-      if (fragment) history.replaceState(null, '', location.pathname + location.search);
+    const openId = new URLSearchParams(location.search).get('doc');
+    tool.init(browserStore, fragment, openId).then(() => {
+      if (fragment || openId) history.replaceState(null, '', location.pathname);
     });
+    // Saves from another tab, a save file or the cloud reach the open editor.
+    let reading = false;
+    const offChanges = onLocalChange(() => {
+      if (reading || !tool.ready) return;
+      reading = true;
+      void browserStore
+        .load()
+        .then((workspace) => workspace && tool.absorb(workspace))
+        .catch(() => {})
+        .finally(() => (reading = false));
+    });
+    // With a cloud save connected, the editor keeps it up to date (the code loads only then).
+    if (cloudState()) void import('../user/cloud.ts').then((cloud) => cloud.startAutoSave());
     // Warn before leaving only while a save is pending or storage is blocked.
     const guard = (event: BeforeUnloadEvent) => {
       if (tool.saveStatus !== 'saved') event.preventDefault();
     };
     addEventListener('beforeunload', guard);
-    return () => removeEventListener('beforeunload', guard);
+    return () => {
+      removeEventListener('beforeunload', guard);
+      offChanges();
+    };
   });
 
   // Fonts and formulas load on demand; the preview redraws when they arrive.

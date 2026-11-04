@@ -1,5 +1,6 @@
 ---
 import { SITE } from '../site.config.ts';
+import ProfileMenu from './ProfileMenu.astro';
 import ThemeToggle from './ThemeToggle.astro';
 import Wordmark from './Wordmark.astro';
 import pkg from '../../package.json';
@@ -29,9 +30,7 @@ const volume = ROMAN[Number(pkg.version.split('.')[0])] ?? pkg.version.split('.'
     <div class="actions">
       <span class="meta edition">Vol. {volume} · Free and private</span>
       <ThemeToggle />
-      <a class="source label-caps" href={SITE.repoUrl}>
-        GitHub
-      </a>
+      <ProfileMenu />
     </div>
   </div>
   <nav class="page links" aria-label="Main">
@@ -86,11 +85,6 @@ const volume = ROMAN[Number(pkg.version.split('.')[0])] ?? pkg.version.split('.'
     gap: 12px;
   }
 
-  .source {
-    color: var(--muted);
-    text-decoration: none;
-  }
-
   .links {
     display: flex;
     justify-content: center;
@@ -106,8 +100,7 @@ const volume = ROMAN[Number(pkg.version.split('.')[0])] ?? pkg.version.split('.'
   }
 
   .links a:hover,
-  .links a[aria-current='page'],
-  .source:hover {
+  .links a[aria-current='page'] {
     color: var(--ink);
   }
 

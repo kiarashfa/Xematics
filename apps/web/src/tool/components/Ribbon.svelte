@@ -144,8 +144,8 @@
       </div>
       <div class="group" role="group" aria-label="Workspace">
         <div class="body">
-          {@render big('open', 'Open workspace', () => workspaceInput?.click())}
-          {@render big('download', 'Save workspace', saveWorkspace)}
+          {@render big('open', 'Open save file', () => workspaceInput?.click())}
+          {@render big('download', 'Download save file', saveWorkspace)}
         </div>
         <div class="caption">Workspace, autosaved in this browser</div>
       </div>

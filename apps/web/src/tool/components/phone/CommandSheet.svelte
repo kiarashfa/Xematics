@@ -123,10 +123,10 @@
       <li class="ph-rule" aria-hidden="true"></li>
       <li>
         <button type="button" class="ph-row" onclick={() => workspaceInput?.click()}
-          ><Icon name="open" /><span class="ph-label">Open workspace</span></button
+          ><Icon name="open" /><span class="ph-label">Open save file</span></button
         >
       </li>
-      {@render row('download', 'Save workspace', saveWorkspace)}
+      {@render row('download', 'Download save file', saveWorkspace)}
     {:else if tab === 'Home'}
       {@render row('plus', 'Add layer', () => tool.addLayer(), !tool.valid)}
       {@render row(

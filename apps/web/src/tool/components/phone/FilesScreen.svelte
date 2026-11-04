@@ -4,6 +4,9 @@
   import { openSourceFile, openWorkspaceFile, saveWorkspace } from '../../actions.ts';
   import { parseSafeSvg } from '../../safe-svg.ts';
   import { EXAMPLES, tool } from '../../state.svelte.ts';
+  import Avatar from '../../../user/Avatar.svelte';
+  import { PROVIDERS } from '../../../user/local.ts';
+  import { visitor } from '../../../user/visitor.svelte.ts';
   import Icon from '../Icon.svelte';
   import Sheet from './Sheet.svelte';
 
@@ -73,6 +76,9 @@
     <a class="brand" href={home} aria-label="Xematics home">{@html wordmark}</a>
     <h1 class="sr-only">Documents</h1>
     <span class="grow"></span>
+    <a class="me" href={`${home}user/`} aria-label="Your profile"
+      ><Avatar profile={visitor.profile} size={30} dot={visitor.dot} /></a
+    >
     <button type="button" class="ph-ib" aria-label="Workspace options" onclick={() => (menu = true)}
       ><Icon name="more" /></button
     >
@@ -130,8 +136,10 @@
   <p class="saved">
     <Icon name="check" size={16} />{tool.saveStatus === 'error'
       ? 'Browser storage is blocked'
-      : 'Saved in this browser'} ·
-    <button type="button" class="link" onclick={saveWorkspace}>Save workspace</button>
+      : visitor.cloud
+        ? `Saved to ${PROVIDERS[visitor.cloud.provider]}`
+        : 'Saved in this browser'} ·
+    <button type="button" class="link" onclick={saveWorkspace}>Download save file</button>
   </p>
 
   <button type="button" class="fab" onclick={() => create()}><Icon name="plus" />New diagram</button
@@ -147,7 +155,7 @@
         </li>
         <li>
           <button type="button" class="ph-row" onclick={() => workspaceInput?.click()}
-            ><Icon name="open" /><span class="ph-label">Open workspace</span></button
+            ><Icon name="open" /><span class="ph-label">Open save file</span></button
           >
         </li>
         <li>
@@ -157,7 +165,7 @@
             onclick={() => {
               menu = false;
               saveWorkspace();
-            }}><Icon name="download" /><span class="ph-label">Save workspace</span></button
+            }}><Icon name="download" /><span class="ph-label">Download save file</span></button
           >
         </li>
         <li>
@@ -221,6 +229,12 @@
   .brand :global(svg) {
     height: 24px;
     width: auto;
+  }
+
+  .me {
+    display: inline-grid;
+    margin-right: 4px;
+    border-radius: 50%;
   }
 
   .grow {

@@ -14,6 +14,8 @@ const KB = 1024;
 /** Gzipped bytes a page may load before any interaction. */
 const BUDGETS = {
   toolScript: 150 * KB,
+  /** The profile page: Svelte, the save format and cloud save; its previews load later. */
+  userScript: 50 * KB,
   pageScript: 12 * KB,
   css: 40 * KB,
 } as const;
@@ -84,7 +86,12 @@ for (const page of pages) {
   const css = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"/g)]
     .map((m) => asset(m[1]!))
     .reduce((sum, f) => sum + gz(f), 0);
-  const budget = name === 'tool/index.html' ? BUDGETS.toolScript : BUDGETS.pageScript;
+  const budget =
+    name === 'tool/index.html'
+      ? BUDGETS.toolScript
+      : name === 'user/index.html'
+        ? BUDGETS.userScript
+        : BUDGETS.pageScript;
   console.log(
     `${name.padEnd(24)} js ${kb(js).padStart(9)} / ${kb(budget)}   css ${kb(css).padStart(8)} / ${kb(BUDGETS.css)}`,
   );

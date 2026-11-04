@@ -1,0 +1,320 @@
+---
+// The profile circle in the masthead and its menu. Everything in it is read from this browser by
+// the script below; the page itself is the same for every visitor. On phones the menu is a sheet
+// at the bottom of the screen.
+const base = import.meta.env.BASE_URL;
+const person =
+  '<circle cx="12" cy="9" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path>';
+---
+
+<div class="profile" data-profile>
+  <button
+    type="button"
+    class="trigger"
+    aria-haspopup="true"
+    aria-expanded="false"
+    aria-controls="profile-menu"
+    aria-label="Your profile"
+    title="Your profile"
+    data-profile-trigger
+  >
+    <span class="avatar" data-avatar>
+      <svg class="avatar-icon" viewBox="0 0 24 24" aria-hidden="true" set:html={person} />
+    </span>
+    <span class="avatar-dot" data-cloud-dot></span>
+  </button>
+  <div class="backdrop" data-profile-close hidden></div>
+  <div class="menu" id="profile-menu" hidden data-profile-menu>
+    <div class="head">
+      <span class="avatar" data-avatar>
+        <svg class="avatar-icon" viewBox="0 0 24 24" aria-hidden="true" set:html={person} />
+      </span>
+      <div>
+        <p class="name" data-profile-name>
+          Your desk
+        </p>
+        <p class="sub" data-profile-sub>
+          No profile in this browser yet
+        </p>
+      </div>
+    </div>
+    <p class="sync" data-profile-sync hidden>
+      <i class="avatar-dot" data-cloud-dot></i>
+      <span></span>
+    </p>
+    <nav aria-label="Profile">
+      <a href={`${base}user/`} data-profile-main>
+        Your profile
+      </a>
+      <a href={`${base}tool/`}>Open the editor</a>
+      <button type="button" data-profile-download hidden>
+        Download save file
+      </button>
+      <a class="out" href={`${base}user/#sign-out`} data-profile-out hidden>
+        Sign out of this browser
+      </a>
+    </nav>
+  </div>
+</div>
+
+<script>
+  import { loadRaw } from '../user/idb.ts';
+  import {
+    ago,
+    cloudDot,
+    cloudState,
+    onLocalChange,
+    paintAvatar,
+    profileMirror,
+    PROVIDERS,
+  } from '../user/local.ts';
+
+  const root = document.querySelector<HTMLElement>('[data-profile]');
+  const trigger = root?.querySelector<HTMLButtonElement>('[data-profile-trigger]');
+  const menu = root?.querySelector<HTMLElement>('[data-profile-menu]');
+  const backdrop = root?.querySelector<HTMLElement>('.backdrop');
+  let raw: string | undefined;
+
+  function paint() {
+    if (!root) return;
+    const profile = profileMirror();
+    for (const el of root.querySelectorAll<HTMLElement>('[data-avatar]')) paintAvatar(el, profile);
+    const cloud = cloudState();
+    const dot = cloudDot(cloud);
+    for (const el of root.querySelectorAll<HTMLElement>('[data-cloud-dot]'))
+      el.dataset['dot'] = dot ?? '';
+    const name = profile?.name.trim();
+    root.querySelector('[data-profile-name]')!.textContent = name || 'Your desk';
+    trigger?.setAttribute('aria-label', name ? `Your profile: ${name}` : 'Your profile');
+    const sync = root.querySelector<HTMLElement>('[data-profile-sync]')!;
+    sync.hidden = !cloud;
+    if (cloud) {
+      const where = PROVIDERS[cloud.provider];
+      sync.querySelector('span')!.textContent =
+        dot === 'auth'
+          ? `${where} needs you to sign in again`
+          : dot === 'pending'
+            ? `Changes waiting to save to ${where}`
+            : `Saved to ${where}${cloud.savedAt ? ` · ${ago(cloud.savedAt)}` : ''}`;
+    }
+  }
+
+  // The save is read when the menu opens, for the count and the download.
+  async function readSave() {
+    try {
+      raw = await loadRaw();
+    } catch {
+      raw = undefined;
+    }
+    let count = 0;
+    try {
+      const docs = raw ? (JSON.parse(raw) as { documents?: unknown[] }).documents : undefined;
+      count = Array.isArray(docs) ? docs.length : 0;
+    } catch {
+      // A damaged save shows as empty here; the profile page explains.
+    }
+    const has = !!raw;
+    root!.querySelector('[data-profile-sub]')!.textContent = has
+      ? `${count} ${count === 1 ? 'diagram' : 'diagrams'} in this browser`
+      : profileMirror()
+        ? 'Nothing saved in this browser yet'
+        : 'No profile in this browser yet';
+    root!.querySelector<HTMLElement>('[data-profile-download]')!.hidden = !has;
+    root!.querySelector<HTMLElement>('[data-profile-out]')!.hidden = !has && !profileMirror();
+    root!.querySelector('[data-profile-main]')!.textContent =
+      has || profileMirror() ? 'Your profile' : 'Set up a profile or open a save';
+  }
+
+  function setOpen(open: boolean) {
+    if (!menu || !trigger || !backdrop) return;
+    menu.hidden = !open;
+    backdrop.hidden = !open;
+    trigger.setAttribute('aria-expanded', String(open));
+    if (open) {
+      paint();
+      void readSave().then(() =>
+        menu.querySelector<HTMLElement>('a, button:not([hidden])')?.focus(),
+      );
+    }
+  }
+
+  trigger?.addEventListener('click', () => setOpen(menu?.hidden === true));
+  backdrop?.addEventListener('click', () => setOpen(false));
+  // The event's path, not its target: opening repaints the circle, so a clicked emoji or photo
+  // may already be gone from the page when this runs.
+  document.addEventListener('click', (event) => {
+    if (menu && !menu.hidden && root && !event.composedPath().includes(root)) setOpen(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && menu && !menu.hidden) {
+      setOpen(false);
+      trigger?.focus();
+    }
+  });
+  root?.querySelector('[data-profile-download]')?.addEventListener('click', () => {
+    if (!raw) return;
+    const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'xematics-save.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setOpen(false);
+  });
+
+  onLocalChange(paint);
+  paint();
+</script>
+
+<style>
+  .profile {
+    position: relative;
+  }
+
+  .trigger {
+    position: relative;
+    display: inline-grid;
+    padding: 2px;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+  }
+
+  .trigger:hover .avatar {
+    box-shadow: 0 0 0 1px var(--ink);
+  }
+
+  .trigger[aria-expanded='true'] {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 10px);
+    z-index: 30;
+    width: 280px;
+    background: var(--surface);
+    border: 1px solid var(--ink);
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--ink) 12%, transparent);
+    text-align: left;
+  }
+
+  .menu[hidden],
+  .backdrop[hidden] {
+    display: none;
+  }
+
+  .head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .head .avatar {
+    --av: 44px;
+  }
+
+  .name {
+    margin: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .sub {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .sync {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 9px 14px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .sync .avatar-dot {
+    position: static;
+    border: 0;
+    width: 8px;
+    height: 8px;
+  }
+
+  nav {
+    display: flex;
+    flex-direction: column;
+    padding-block: 4px;
+  }
+
+  nav a,
+  nav button {
+    padding: 9px 14px;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  nav a:hover,
+  nav button:hover,
+  nav a:focus-visible,
+  nav button:focus-visible {
+    background: var(--surface-2);
+    outline-offset: -2px;
+  }
+
+  nav .out {
+    margin-top: 4px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+  }
+
+  nav [hidden] {
+    display: none;
+  }
+
+  .backdrop {
+    display: none;
+  }
+
+  /* Phones: the menu rises from the bottom of the screen. */
+  @media (max-width: 720px) {
+    .backdrop {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 29;
+      background: color-mix(in srgb, var(--ink) 35%, transparent);
+    }
+
+    .menu {
+      position: fixed;
+      inset: auto 0 0;
+      top: auto;
+      width: auto;
+      border: 0;
+      border-top: 1px solid var(--ink);
+      box-shadow: none;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    nav a,
+    nav button {
+      padding: 13px 18px;
+      font-size: 1rem;
+    }
+  }
+</style>

@@ -13,6 +13,7 @@ import {
   isShareFragment,
   labelContent,
   layoutModel,
+  mergeWorkspaces,
   moveLayer,
   parseModel,
   parseShorthand,
@@ -30,22 +31,16 @@ import {
   type Model,
   type Scene,
   type PresetId,
+  type RemovedDocument,
   type TextEngine,
   type Workspace,
   type WorkspaceDocument,
 } from '@xematics/core';
 import { DEFAULT_PNG_DPI, isExportFormat, PNG_SIZES, type ExportFormat } from './formats.ts';
-import type { WorkspaceStore } from './storage.ts';
+import { describeMerge, type WorkspaceStore } from '../user/store.ts';
+import { documentName, EXAMPLES } from './documents.ts';
 
-export const EXAMPLES = [
-  { name: 'Perceptron', text: '3-1' },
-  { name: 'Two-layer MLP', text: '3-5-4-2' },
-  {
-    name: 'MNIST classifier',
-    text: 'title: MNIST classifier\nlayers:\n  - { units: 784, name: Pixels }\n  - { units: 16, activation: relu }\n  - { units: 16, activation: relu }\n  - { units: 10, name: Digits }\n',
-  },
-  { name: 'Autoencoder', text: '8-4-2-4-8' },
-] as const;
+export { EXAMPLES };
 
 export type SaveStatus = 'saved' | 'saving' | 'error';
 export type Selection = { kind: 'diagram' } | { kind: 'layer'; index: number };
@@ -99,6 +94,8 @@ export class ToolState {
   #lastModel: Model | undefined;
   #noticeTimer: ReturnType<typeof setTimeout> | undefined;
   #store: WorkspaceStore | undefined;
+  /** Documents deleted here or on another device, so merges do not bring them back. */
+  #removed: RemovedDocument[] = [];
   #saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   parsed = $derived(parseModel(this.text));
@@ -259,8 +256,9 @@ export class ToolState {
     this.zoom = Math.min(4, Math.max(0.1, Math.round(this.scale * factor * 100) / 100));
   }
 
-  /** Loads the saved workspace, then opens a share link from the URL fragment, if any. */
-  async init(store: WorkspaceStore, fragment: string): Promise<void> {
+  /** Loads the saved workspace, then opens a share link from the URL fragment, if any, or the
+   * document named by `?doc=` (links from the profile gallery). */
+  async init(store: WorkspaceStore, fragment: string, openId?: string | null): Promise<void> {
     this.#store = store;
     let workspace: Workspace | undefined;
     try {
@@ -271,6 +269,11 @@ export class ToolState {
     this.#apply(
       workspace ?? createWorkspace({ id: newId(), text: EXAMPLES[2].text, updatedAt: now() }),
     );
+    if (openId && this.documents.some((d) => d.id === openId)) {
+      this.switchTo(openId);
+      // Like a share link, a gallery link goes straight to the diagram on phones.
+      this.openedFromLink = true;
+    }
     if (isShareFragment(fragment)) {
       const shared = await decodeShare(fragment);
       if (shared.ok) {
@@ -286,7 +289,7 @@ export class ToolState {
 
   /** The workspace as stored and saved to files. */
   snapshot(): Workspace {
-    return {
+    const workspace: Workspace = {
       ...createWorkspace(this.documents[0]!),
       current: this.currentId,
       documents: this.documents.map((d) => ({ ...d })),
@@ -297,6 +300,37 @@ export class ToolState {
         tikzStandalone: this.tikzStandalone,
       },
     };
+    if (this.#removed.length > 0) workspace.removed = this.#removed.map((r) => ({ ...r }));
+    return workspace;
+  }
+
+  /**
+   * Takes in documents saved elsewhere (another tab, a save file, the cloud) without losing edits
+   * made here: the newer edit of each document wins. The open document, settings and undo history
+   * stay unless the open document itself changed or was deleted elsewhere.
+   */
+  absorb(incoming: Workspace): void {
+    if (!this.ready) return;
+    const merged = mergeWorkspaces(this.snapshot(), incoming);
+    this.#removed = merged.removed ?? [];
+    const mine = Object.fromEntries(this.documents.map((d) => [d.id, d]));
+    const same =
+      merged.documents.length === this.documents.length &&
+      merged.documents.every((d) => {
+        const m = mine[d.id];
+        return m && m.text === d.text && m.updatedAt === d.updatedAt;
+      });
+    if (same) return;
+    this.documents = merged.documents.map((d) => ({ ...d }));
+    const open = this.documents.find((d) => d.id === this.currentId);
+    if (!open) {
+      this.switchTo(merged.current);
+    } else if (open.text !== this.text) {
+      this.text = open.text;
+      this.#past = [];
+      this.#future = [];
+      this.#afterChange();
+    }
   }
 
   scheduleSave(): void {
@@ -314,9 +348,7 @@ export class ToolState {
 
   /** A short name for a document: its title, or the start of its source. */
   documentName(document: WorkspaceDocument): string {
-    const title = /^\s*title:\s*['"]?(.+?)['"]?\s*$/m.exec(document.text)?.[1];
-    const first = document.text.trim().split('\n')[0] ?? '';
-    return (title ?? first).slice(0, 48) || 'Untitled';
+    return documentName(document.text);
   }
 
   newDocument(text = NEW_DOCUMENT): void {
@@ -341,17 +373,30 @@ export class ToolState {
   deleteCurrent(): void {
     const index = this.documents.findIndex((d) => d.id === this.currentId);
     if (index === -1) return;
+    this.#removed.push({ id: this.currentId, at: now() });
     this.documents.splice(index, 1);
     if (this.documents.length === 0) this.newDocument();
     else this.switchTo(this.documents[Math.max(0, index - 1)]!.id);
   }
 
-  /** Replaces the workspace with one from a file. Returns an error message, if any. */
-  openWorkspace(json: string): string | undefined {
+  /** Merges a save file into this browser (documents, profile and all). Returns a message. */
+  async openWorkspace(json: string, fileName: string): Promise<string> {
     const result = parseWorkspace(json);
     if (!result.ok) return result.error;
-    this.#apply(result.workspace);
-    return undefined;
+    const before = this.snapshot();
+    if (this.#store) {
+      // The file goes through the store, so its profile is kept too.
+      await this.#store.save(this.snapshot());
+      this.absorb(await this.#store.save(result.workspace));
+    } else {
+      this.absorb(result.workspace);
+    }
+    if (this.documents.some((d) => d.id === result.workspace.current))
+      this.switchTo(result.workspace.current);
+    const brought = describeMerge(before, this.snapshot());
+    return brought
+      ? `Opened ${fileName}: ${brought}.`
+      : `Everything in ${fileName} was already here.`;
   }
 
   /** A link that opens the current source, or undefined when it would be too long to share. */
@@ -363,6 +408,7 @@ export class ToolState {
 
   #apply(workspace: Workspace): void {
     this.documents = workspace.documents.map((d) => ({ ...d }));
+    this.#removed = workspace.removed ? workspace.removed.map((r) => ({ ...r })) : [];
     const settings = workspace.settings;
     this.liveText = settings?.liveText ?? false;
     this.exportFormat = isExportFormat(settings?.exportFormat) ? settings.exportFormat : 'svg';

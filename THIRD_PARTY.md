@@ -15,7 +15,7 @@ Xematics includes and uses the third-party software and fonts listed below. Each
 | bidi-js (Unicode bidirectional algorithm)     | 1.1.0            | MIT        | <https://github.com/lojjic/bidi-js>            |
 | Archivo font (site text)                      | 5.3.0            | OFL-1.1    | <https://github.com/Omnibus-Type/Archivo>      |
 | IBM Plex Mono font (site code text)           | 5.3.0            | OFL-1.1    | <https://github.com/IBM/plex>                  |
-| EB Garamond font (outlines in the wordmark)   | 5.3.0            | OFL-1.1    | <https://github.com/octaviopardo/EBGaramond12> |
+| EB Garamond font (wordmark, profile initials) | 5.3.0            | OFL-1.1    | <https://github.com/octaviopardo/EBGaramond12> |
 | harfbuzzjs (HarfBuzz compiled to WebAssembly) | 1.6.4            | MIT        | <https://github.com/harfbuzz/harfbuzzjs>       |
 | HarfBuzz text shaping engine                  | bundled in above | "Old MIT"  | <https://github.com/harfbuzz/harfbuzz>         |
 | Valibot                                       | 1.5.0            | MIT        | <https://valibot.dev>                          |

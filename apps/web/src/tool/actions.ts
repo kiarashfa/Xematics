@@ -12,6 +12,7 @@ import {
 import { copyText, downloadBytes, downloadText, rasterize } from './browser.ts';
 import { MAX_PNG_PIXELS, type ExportFormat } from './formats.ts';
 import { tool } from './state.svelte.ts';
+import { browserStore } from '../user/store.ts';
 
 const MAX_SOURCE_BYTES = 400_000;
 const MAX_WORKSPACE_BYTES = 60_000_000;
@@ -112,21 +113,24 @@ export async function openSourceFile(file: File): Promise<void> {
   tool.flash(`Opened ${file.name} as a new document.`);
 }
 
-export function saveWorkspace(): void {
-  downloadText('xematics-workspace.json', serializeWorkspace(tool.snapshot()), 'application/json');
+/** Downloads the save file: what this browser stores (with the profile), after the latest edits. */
+export async function saveWorkspace(): Promise<void> {
+  let workspace = tool.snapshot();
+  try {
+    workspace = await browserStore.save(workspace);
+  } catch {
+    // Storage is blocked: the file still carries the documents open here.
+  }
+  downloadText('xematics-save.json', serializeWorkspace(workspace), 'application/json');
 }
 
+/** Opens a save file: its documents and profile are merged with this browser's (newer edits win). */
 export async function openWorkspaceFile(file: File): Promise<void> {
   if (file.size > MAX_WORKSPACE_BYTES) {
-    tool.flash('That workspace file is too large.');
+    tool.flash('That save file is too large.');
     return;
   }
-  const replace = confirm(
-    'Opening a workspace replaces the documents saved in this browser. Save the current workspace first if you still need it. Continue?',
-  );
-  if (!replace) return;
-  const error = tool.openWorkspace(await file.text());
-  tool.flash(error ?? `Opened the workspace ${file.name}.`);
+  tool.flash(await tool.openWorkspace(await file.text(), file.name));
 }
 
 export function deleteDocument(): void {
