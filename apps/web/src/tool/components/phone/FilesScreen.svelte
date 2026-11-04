@@ -171,7 +171,12 @@
           >
         </li>
         <li>
-          <a class="ph-row" href={`${home}privacy/`}
+          <a class="ph-row" href={`${home}guide/`}
+            ><Icon name="help" /><span class="ph-label">Syntax and export guide</span></a
+          >
+        </li>
+        <li>
+          <a class="ph-row" href={`${home}about/#privacy`}
             ><Icon name="external" /><span class="ph-label">Privacy and cookies</span></a
           >
         </li>

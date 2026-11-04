@@ -50,10 +50,11 @@ test('cookie settings reopen the bar from the footer', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Cookie consent' })).toBeVisible();
 });
 
-test('privacy page explains storage and analytics', async ({ page }) => {
-  await page.goto('./privacy/');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Your diagrams stay with you.');
-  await expect(
-    page.getByRole('heading', { name: 'Analytics, only with your consent' }),
-  ).toBeVisible();
+test('the About page explains privacy and reopens cookie settings', async ({ page }) => {
+  await watchGoogle(page);
+  await page.goto('./about/#privacy');
+  await page.getByRole('button', { name: 'Decline' }).click();
+  await expect(page.getByRole('heading', { name: 'Privacy' })).toBeVisible();
+  await page.locator('#privacy + p').getByRole('button', { name: 'Cookie settings' }).click();
+  await expect(page.getByRole('region', { name: 'Cookie consent' })).toBeVisible();
 });

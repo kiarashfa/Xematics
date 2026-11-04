@@ -1,6 +1,6 @@
 // Scans the production build for things that must never ship: source maps, references to
 // private working files, local filesystem paths, third-party font hosts (fonts are self-hosted,
-// so visitors' browsers never contact a font CDN), and em-dashes in rendered HTML.
+// so visitors' browsers never contact a font CDN), em-dashes, and words glued to links in HTML.
 
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join, relative } from 'node:path';
@@ -41,6 +41,14 @@ try {
       if (pattern.test(text)) problems.push(`${rel}: ${label} (${pattern})`);
     }
     if (extname(file) === '.html' && text.includes('\u2014')) problems.push(`${rel}: em-dash`);
+    if (extname(file) === '.html') {
+      // Astro drops the space when a line ends right before a link ("the<a>"), gluing words.
+      const prose = text.replace(/<(svg|script|style)\b[^]*?<\/\1>/g, '');
+      for (const match of prose.matchAll(/[A-Za-z',;:]<a\s|<\/a>[A-Za-z]/g)) {
+        const context = prose.slice(Math.max(0, match.index - 20), match.index + 20);
+        problems.push(`${rel}: missing space around a link near "${context.replace(/\s+/g, ' ')}"`);
+      }
+    }
   }
 } catch (error) {
   console.error(`Could not scan ${relative(ROOT, DIST)}. Run the build first.`, error);

@@ -1,0 +1,129 @@
+---
+import { EXAMPLES } from '../examples.ts';
+import { editorLink, figure, sourceSummary } from '../figures.ts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+const plates = await Promise.all(
+  EXAMPLES.map(async (example, i) => ({
+    ...example,
+    numeral: NUMERALS[i] ?? String(i + 1),
+    svg: await figure(example.source, `ex-${example.slug}-`),
+    link: await editorLink(example.source),
+    summary: sourceSummary(example.source),
+  })),
+);
+---
+
+<BaseLayout
+  title="Examples"
+  description="Ten neural network diagrams to start from: perceptron, XOR, MLPs, an MNIST classifier, an autoencoder and more, each one click away from the editor."
+>
+  <div class="page examples">
+    <p class="kicker">Examples</p>
+    <h1>Ten networks to start from</h1>
+    <p class="lead">
+      Each plate opens in the editor exactly as shown. Change a size, a name or the style, then
+      export it.
+    </p>
+    <div class="grid">
+      {plates.map((plate) => (
+        <article class="plate" id={plate.slug} aria-labelledby={`${plate.slug}-title`}>
+          <div class="paper" set:html={plate.svg} />
+          <h2 id={`${plate.slug}-title`}>
+            <em>Plate {plate.numeral}.</em> {plate.title}
+          </h2>
+          <p class="note">{plate.note}</p>
+          <div class="row">
+            <code>{plate.summary}</code>
+            <a class="btn" href={plate.link}>
+              Open in editor<span class="sr-only">: {plate.title}</span>
+            </a>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .examples {
+    padding-block: 44px 24px;
+  }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .lead {
+    margin: 0 0 32px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 36px 24px;
+  }
+
+  .plate .paper {
+    display: grid;
+    place-items: center;
+    height: 240px;
+    padding: 14px;
+  }
+
+  .plate .paper :global(svg) {
+    max-width: 100%;
+    max-height: 210px;
+    width: auto;
+    height: auto;
+  }
+
+  h2 {
+    margin: 12px 0 2px;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  h2 em {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .note {
+    margin: 0;
+    color: var(--muted);
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 1080px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 700px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .plate .paper {
+      height: 240px;
+    }
+
+    .plate .paper :global(svg) {
+      max-height: 208px;
+    }
+  }
+</style>

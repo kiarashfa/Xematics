@@ -14,6 +14,27 @@ export default defineConfig({
   site: SITE.url,
   base: SITE.basePath,
   integrations: [svelte(), mdx(), sitemap()],
+  // Plain code blocks: highlighters add inline styles, which the Content-Security-Policy blocks.
+  markdown: { syntaxHighlight: false },
+  // Content-Security-Policy as a <meta> tag on every page (GitHub Pages cannot send headers).
+  // Astro adds hashes for its own scripts and styles. WebAssembly runs the text engine; Google
+  // Analytics hosts are only used after the visitor accepts analytics.
+  security: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "img-src 'self' data: blob: https://*.google-analytics.com https://*.googletagmanager.com",
+        "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com",
+        "font-src 'self' data:",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+      ],
+      scriptDirective: {
+        resources: ["'self'", "'wasm-unsafe-eval'", 'https://www.googletagmanager.com'],
+      },
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
     build: { sourcemap: false },

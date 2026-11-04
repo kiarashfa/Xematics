@@ -1,60 +1,68 @@
 ---
+// One row, like the foot of a journal page: the links and the copyright.
 import { SITE } from '../site.config.ts';
+
+const base = import.meta.env.BASE_URL;
+
+// The first year is fixed (when the project began); the last is read at build time, so each
+// deploy shows the right range without editing: 2026, then 2026–2027.
+const START_YEAR = 2026;
+const buildYear = new Date().getFullYear();
+const years = buildYear > START_YEAR ? `${START_YEAR}–${buildYear}` : `${START_YEAR}`;
 ---
 
 <footer class="colophon">
   <div class="page">
-    <p class="set-in">Set in Archivo and IBM Plex Mono. Wordmark in EB Garamond.</p>
-    <p>
-      © 2026 Kiarash Farajzadehahary. Source-available under the{' '}
-      <a href={`${SITE.repoUrl}/blob/main/LICENSE`}>KFA Source-Available License 1.0</a>. Diagrams
-      you create are yours to use for any purpose.
-    </p>
-    <nav aria-label="Footer">
-      <a class="label-caps" href={`${import.meta.env.BASE_URL}privacy/`}>
-        Privacy and cookies
-      </a>
-      <button type="button" class="label-caps settings" data-consent-open>
-        Cookie settings
-      </button>
-      <a class="label-caps" href={SITE.repoUrl}>
-        Source on GitHub
-      </a>
-      <a class="label-caps" href={`${SITE.repoUrl}/blob/main/THIRD_PARTY.md`}>
-        Third-party notices
-      </a>
-    </nav>
+    <div class="bar">
+      <nav aria-label="Footer">
+        <a class="label-caps" href={`${base}about/#privacy`}>
+          Privacy
+        </a>
+        <button type="button" class="label-caps settings" data-consent-open>
+          Cookie settings
+        </button>
+        <a class="label-caps" href={`${base}credits/`}>
+          Credits
+        </a>
+        <a class="label-caps" href={`${SITE.repoUrl}/blob/main/LICENSE`}>
+          License
+        </a>
+        <a class="label-caps" href={SITE.repoUrl}>
+          Source
+        </a>
+      </nav>
+      <p class="copy">© {years} Kiarash Farajzadehahary</p>
+    </div>
   </div>
 </footer>
 
 <style>
   .colophon {
     margin-top: 72px;
-    padding-block: 26px 40px;
-    border-top: 3px double var(--ink);
-    text-align: center;
-    font-size: 0.88rem;
+    padding-block: 0 32px;
+    font-size: 0.85rem;
     color: var(--muted);
   }
 
-  p {
-    margin: 0 auto 8px;
-    max-width: 60em;
-  }
-
-  .set-in {
-    font-style: italic;
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 24px;
+    padding-block: 12px;
+    border-top: 3px double var(--ink);
   }
 
   nav {
     display: flex;
-    justify-content: center;
     flex-wrap: wrap;
-    gap: 8px 26px;
-    margin-top: 14px;
+    align-items: center;
+    gap: 4px 22px;
   }
 
-  nav a {
+  nav a,
+  .settings {
     color: var(--muted);
     text-decoration: none;
   }
@@ -64,12 +72,15 @@ import { SITE } from '../site.config.ts';
     padding: 0;
     border: 0;
     background: none;
-    color: var(--muted);
     cursor: pointer;
   }
 
   nav a:hover,
   .settings:hover {
     color: var(--ink);
+  }
+
+  .copy {
+    margin: 0;
   }
 </style>

@@ -2,6 +2,18 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
+
+// Every editor flow (fonts, math, WebAssembly, PNG export) must work under the site's CSP.
+let cspViolations: string[] = [];
+test.beforeEach(({ page }) => {
+  cspViolations = [];
+  page.on('console', (m) => {
+    if (/Content Security Policy/i.test(m.text())) cspViolations.push(m.text());
+  });
+});
+test.afterEach(() => {
+  expect(cspViolations).toEqual([]);
+});
 const SHOTS = process.env['XEMATICS_SHOTS'];
 
 test.skip(({ isMobile }) => !isMobile, 'Phone layout only');

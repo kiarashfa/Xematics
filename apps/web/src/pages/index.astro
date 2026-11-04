@@ -1,27 +1,23 @@
 ---
-import { renderDiagram } from '@xematics/core';
-import { createNodeTextEngine } from '@xematics/core/node';
+import { EXAMPLES } from '../examples.ts';
+import { editorLink, figure, sourceSummary } from '../figures.ts';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE } from '../site.config.ts';
 
-// Figures are rendered at build time by the same engine the editor will use.
-const engine = await createNodeTextEngine();
-const figure = async (source: string, prefix: string) =>
-  (await renderDiagram(source, engine, { prefix })).svg ?? '';
-
+// Figures are rendered at build time by the same engine as the editor.
+const base = import.meta.env.BASE_URL;
 const hero = await figure('784-16-16-10', 'hero-');
-const plateSources = [
-  { title: 'Perceptron', source: '3-1' },
-  { title: 'Two-layer MLP', source: '3-5-4-2' },
-  { title: 'MNIST classifier', source: '784-16-16-10' },
-  { title: 'Autoencoder', source: '8-4-2-4-8' },
-];
 const plates = await Promise.all(
-  plateSources.map(async (plate, i) => ({
-    ...plate,
-    numeral: ['I', 'II', 'III', 'IV'][i],
-    svg: await figure(plate.source, `plate${i + 1}-`),
-  })),
+  ['perceptron', 'xor', 'mnist', 'autoencoder'].map(async (slug, i) => {
+    const example = EXAMPLES.find((e) => e.slug === slug)!;
+    return {
+      ...example,
+      numeral: ['I', 'II', 'III', 'IV'][i],
+      svg: await figure(example.source, `plate${i + 1}-`),
+      link: await editorLink(example.source),
+      summary: sourceSummary(example.source),
+    };
+  }),
 );
 
 const highlights = [
@@ -40,7 +36,19 @@ const highlights = [
 ];
 ---
 
-<BaseLayout>
+<BaseLayout
+  structuredData={{
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Xematics',
+    url: `${SITE.url}${base}`,
+    description:
+      'Free neural network diagram generator: write the architecture as text and export publication-quality SVG, PNG, PDF or TikZ.',
+    applicationCategory: 'DesignApplication',
+    operatingSystem: 'Any (runs in a web browser)',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  }}
+>
   <section class="page hero">
     <div class="copy">
       <p class="kicker">A diagram tool for researchers</p>
@@ -51,17 +59,17 @@ const highlights = [
         Write the architecture as text, choose a style, and export vector figures that drop straight
         into your paper, thesis or slides. No account, nothing uploaded.
       </p>
-      <div class="status" id="status">
+      <div class="status">
         <p>
-          <strong>Early preview.</strong> The editor works today with the Classic style and SVG
-          export. More styles, share links and PDF, PNG and TikZ export are on the way.
+          Five styles, math and right-to-left labels, and export to SVG, PNG, PDF or TikZ for LaTeX.
+          Free, and it works offline once loaded.
         </p>
         <div class="actions">
-          <a class="btn btn-primary" href={`${import.meta.env.BASE_URL}tool/`}>
+          <a class="btn btn-primary" href={`${base}tool/`}>
             Open the editor
           </a>
-          <a class="btn" href={SITE.repoUrl}>
-            Follow on GitHub
+          <a class="btn" href={`${base}guide/`}>
+            Read the guide
           </a>
         </div>
       </div>
@@ -89,15 +97,25 @@ const highlights = [
   </section>
 
   <section class="page plates" id="examples" aria-labelledby="plates-title">
-    <h2 id="plates-title" class="label-caps">
-      Plates
-    </h2>
+    <div class="plates-head">
+      <h2 id="plates-title" class="label-caps">
+        Plates
+      </h2>
+      <a class="label-caps" href={`${base}examples/`}>
+        All ten examples
+      </a>
+    </div>
     <div class="plate-grid">
       {plates.map((plate) => (
         <figure class="plate">
-          <div class="paper" set:html={plate.svg} />
+          <a
+            class="paper"
+            href={plate.link}
+            aria-label={`Open ${plate.title} in the editor`}
+            set:html={plate.svg}
+          />
           <figcaption>
-            <em>Plate {plate.numeral}.</em> {plate.title} <code>{plate.source}</code>
+            <em>Plate {plate.numeral}.</em> {plate.title} <code>{plate.summary}</code>
           </figcaption>
         </figure>
       ))}
@@ -200,11 +218,27 @@ const highlights = [
     padding-top: 52px;
   }
 
-  .plates h2 {
+  .plates-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
     margin: 0 0 18px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--line);
+  }
+
+  .plates h2 {
+    margin: 0;
     font-size: 0.85rem;
+  }
+
+  .plates-head a {
+    font-size: 0.75rem;
+  }
+
+  .plate a.paper {
+    display: grid;
+    place-items: center;
   }
 
   .plate-grid {

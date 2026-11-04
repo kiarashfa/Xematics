@@ -2,23 +2,32 @@
 import { SITE } from '../site.config.ts';
 import ThemeToggle from './ThemeToggle.astro';
 import Wordmark from './Wordmark.astro';
+import pkg from '../../package.json';
 
 const base = import.meta.env.BASE_URL;
 const links = [
   { href: base, label: 'Home' },
   { href: `${base}tool/`, label: 'Editor' },
-  { href: `${base}#examples`, label: 'Examples' },
-  { href: `${base}#status`, label: 'Status' },
+  { href: `${base}examples/`, label: 'Examples' },
+  { href: `${base}guide/`, label: 'Guide' },
+  { href: `${base}about/`, label: 'About' },
 ];
+// The edition mark follows the major version, like a journal volume: 1.x is Vol. I.
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const volume = ROMAN[Number(pkg.version.split('.')[0])] ?? pkg.version.split('.')[0];
 ---
 
 <header class="masthead">
   <div class="page top">
-    <p class="meta">Neural network diagrams · Free and private</p>
+    <!-- Today's date, written by the script below in the visitor's own time zone. -->
+    <p class="meta">
+      <time class="today" data-today></time>
+    </p>
     <a class="brand" href={base} aria-label={`${SITE.name} home`}>
       <Wordmark />
     </a>
     <div class="actions">
+      <span class="meta edition">Vol. {volume} · Free and private</span>
       <ThemeToggle />
       <a class="source label-caps" href={SITE.repoUrl}>
         GitHub
@@ -51,6 +60,12 @@ const links = [
     font-size: 0.85rem;
     font-style: italic;
     color: var(--muted);
+  }
+
+  .meta.edition {
+    font-size: 0.75rem;
+    font-style: normal;
+    letter-spacing: 0.08em;
   }
 
   .brand {
@@ -119,3 +134,18 @@ const links = [
     }
   }
 </style>
+
+<script>
+  // A dateline like a newspaper's: today's date in English, in the visitor's preferred English.
+  const locale = navigator.languages.find((l) => l.toLowerCase().startsWith('en')) ?? 'en-GB';
+  const now = new Date();
+  for (const node of document.querySelectorAll<HTMLTimeElement>('[data-today]')) {
+    node.dateTime = now.toISOString().slice(0, 10);
+    node.textContent = now.toLocaleDateString(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+</script>

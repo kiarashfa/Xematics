@@ -1,0 +1,202 @@
+---
+// Layout for the one-page guide: numbered sections with a sticky contents column.
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  frontmatter: { title: string; description: string };
+  headings: { depth: number; slug: string; text: string }[];
+}
+
+const { frontmatter, headings } = Astro.props;
+const sections = headings.filter((h) => h.depth === 2);
+---
+
+<BaseLayout title={frontmatter.title} description={frontmatter.description}>
+  <div class="page guide">
+    <nav class="toc" aria-labelledby="contents-title">
+      <p id="contents-title" class="label-caps">
+        Contents
+      </p>
+      <ol>
+        {sections.map((section) => (
+          <li>
+            <a href={`#${section.slug}`}>{section.text}</a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+    <article class="prose guide-body">
+      <p class="kicker">Guide</p>
+      <h1>{frontmatter.title}</h1>
+      <slot />
+    </article>
+  </div>
+</BaseLayout>
+
+<script>
+  // Marks the contents link of the section being read: the last heading above the reading line.
+  const links = new Map(
+    [...document.querySelectorAll<HTMLAnchorElement>('.toc a')].map((a) => [
+      decodeURIComponent(a.hash.slice(1)),
+      a,
+    ]),
+  );
+  const headings = [...document.querySelectorAll<HTMLElement>('.guide-body h2[id]')];
+
+  function update() {
+    const line = innerHeight * 0.3;
+    let current = headings[0];
+    for (const heading of headings) {
+      if (heading.getBoundingClientRect().top <= line) current = heading;
+    }
+    // At the very bottom, the last section is the one being read.
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2)
+      current = headings.at(-1);
+    for (const [id, link] of links) {
+      if (id === current?.id) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    }
+  }
+
+  let queued = false;
+  addEventListener(
+    'scroll',
+    () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        update();
+      });
+    },
+    { passive: true },
+  );
+  addEventListener('resize', update);
+  update();
+</script>
+
+<style>
+  .guide {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 48px;
+    padding-block: 44px 24px;
+  }
+
+  .toc {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    padding-right: 16px;
+    border-right: 1px solid var(--line);
+  }
+
+  .toc p {
+    margin: 0 0 10px;
+    font-size: 0.75rem;
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 1.6em;
+    list-style: decimal;
+    font-size: 0.9rem;
+  }
+
+  li + li {
+    margin-top: 6px;
+  }
+
+  .toc a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+
+  .toc a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  /* The section being read, set by the script below. */
+  .toc a[aria-current='location'] {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .guide-body {
+    min-width: 0;
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .guide-body :global(h2) {
+    margin: 44px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+    font-size: 1.35rem;
+    font-weight: 600;
+    scroll-margin-top: 16px;
+  }
+
+  .guide-body :global(h3) {
+    margin: 26px 0 6px;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  /* Code wraps rather than scrolls, so no region needs keyboard scrolling. */
+  .guide-body :global(pre) {
+    padding: 10px 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .guide-body :global(pre code) {
+    padding: 0;
+    background: none;
+  }
+
+  .guide-body :global(li + li) {
+    margin-top: 4px;
+  }
+
+  .guide-body :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .guide-body :global(th),
+  .guide-body :global(td) {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  @media (max-width: 900px) {
+    .guide {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    .toc {
+      position: static;
+      max-height: none;
+      padding: 0 0 16px;
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+</style>

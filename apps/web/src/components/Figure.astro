@@ -1,0 +1,51 @@
+---
+// A figure rendered at build time from diagram source, with an Open in editor link.
+import { editorLink, figure } from '../figures.ts';
+
+export interface Props {
+  source: string;
+  /** Unique per page: element ids inside the SVG start with it. */
+  id: string;
+  caption?: string;
+}
+
+const { source, id, caption } = Astro.props;
+const svg = await figure(source, `${id}-`);
+const link = await editorLink(source);
+---
+
+<figure class="guide-figure">
+  <div class="paper" set:html={svg} />
+  <figcaption>
+    {caption && <span>{caption}</span>}
+    <a href={link}>Open in editor</a>
+  </figcaption>
+</figure>
+
+<style>
+  .guide-figure {
+    margin: 14px 0 22px;
+  }
+
+  .paper {
+    display: grid;
+    place-items: center;
+    padding: 14px;
+  }
+
+  .paper :global(svg) {
+    max-width: 100%;
+    max-height: 280px;
+    width: auto;
+    height: auto;
+  }
+
+  figcaption {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+</style>

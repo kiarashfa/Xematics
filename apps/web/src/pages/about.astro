@@ -1,0 +1,304 @@
+---
+// What Xematics is, who makes it, and how to reach or support them. Cards in a sticky left
+// column, the text beside them, like the guide.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../site.config.ts';
+
+const base = import.meta.env.BASE_URL;
+
+const contact = [
+  {
+    label: 'Personal site',
+    href: 'https://kiarashfa.github.io/website/',
+    note: 'kiarashfa.github.io',
+  },
+  { label: 'Email', href: 'mailto:kiarashfa@gmail.com', note: 'kiarashfa@gmail.com' },
+  { label: 'GitHub', href: 'https://github.com/kiarashfa', note: 'github.com/kiarashfa' },
+];
+
+const support = [
+  {
+    label: 'Donate with PayPal',
+    href: 'https://www.paypal.com/donate/?hosted_button_id=S3BD5XFBMMWSJ',
+    icon: 'paypal',
+  },
+  { label: 'Buy Me a Coffee', href: 'https://www.buymeacoffee.com/kiarashfa', icon: 'coffee' },
+];
+---
+
+<BaseLayout
+  title="About"
+  description="What Xematics is, who makes it, how it is licensed, and how to get in touch or support the work."
+>
+  <div class="page about">
+    <aside class="side" aria-label="About the author">
+      <section class="card" aria-labelledby="who">
+        <h2 id="who" class="label-caps">
+          Who made this
+        </h2>
+        <div class="author">
+          <img
+            src={`${base}images/author.webp`}
+            alt="Kiarash Farajzadehahary"
+            width="56"
+            height="56"
+          />
+          <div>
+            <p class="name">Kiarash Farajzadehahary</p>
+            <p class="role">Scientist · developer · designer</p>
+          </div>
+        </div>
+        <p class="note">
+          I kept redrawing the same network figure for every paper. Xematics is the tool I wanted:
+          type the architecture, get a figure that is ready to print.
+        </p>
+      </section>
+
+      <section class="card" aria-labelledby="contact">
+        <h2 id="contact" class="label-caps">
+          Contact
+        </h2>
+        <ul class="contact">
+          {contact.map((item) => (
+            <li>
+              {item.href.startsWith('mailto:') ? (
+                <a href={item.href}>{item.label}</a>
+              ) : (
+                <a href={item.href} target="_blank" rel="noopener">
+                  {item.label}
+                </a>
+              )}
+              <span class="note">{item.note}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="support">
+        <h2 id="support" class="label-caps">
+          Support
+        </h2>
+        <p class="note">
+          Xematics is free, with no ads and no account, and stays that way. If it saved you an
+          afternoon of drawing, you can support the next features.
+        </p>
+        <div class="support">
+          {support.map((item) => (
+            <a class="support-link" href={item.href} target="_blank" rel="noopener">
+              <span class={`mark mark-${item.icon}`} aria-hidden="true" />
+              <span>{item.label}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    </aside>
+
+    <article class="prose body">
+      <p class="kicker">About</p>
+      <h1>About Xematics</h1>
+      <p class="lead">
+        Xematics turns a short description of a neural network into a figure you can put in a paper,
+        a thesis or a slide. It runs entirely in your browser: no account, no upload.
+      </p>
+
+      <h2>What it does</h2>
+      <p>
+        Write the architecture as one line, like <code>784-128-10</code>, or as YAML with names and
+        options. The figure is laid out, labeled and colored for you in one of five styles, with
+        math, Persian, Hebrew or CJK labels where you need them. Export it as SVG, PNG, PDF or TikZ
+        code for LaTeX, or share it as a link. The <a href={`${base}guide/`}>guide</a> covers every
+        option, and the <a href={`${base}examples/`}>examples</a> are ready to open.
+      </p>
+
+      <h2>License</h2>
+      <p>
+        The source code is available on <a href={SITE.repoUrl}>GitHub</a> under the{' '}
+        <a href={`${SITE.repoUrl}/blob/main/LICENSE`}>KFA Source-Available License 1.0</a>. It is
+        source-available, not open source: read the license before reusing the code.
+      </p>
+      <p>
+        <strong>Your diagrams are yours.</strong> Figures you make with Xematics, in any format, are
+        yours to use for any purpose, including commercial work and publications. No credit is
+        required. Fonts embedded in editable-text SVGs stay under their own licenses, which allow
+        this use.
+      </p>
+
+      <h2 id="privacy">Privacy</h2>
+      <p>
+        Your diagrams never leave your device unless you share them. They are saved in this browser,
+        and a share link carries the diagram in the part of the address that browsers never send to
+        a server. If you accept analytics, Google Analytics counts visits to the site but never sees
+        your diagrams; if you decline, it is not loaded at all. You can change your answer at any
+        time:{' '}
+        <button type="button" class="inline-button" data-consent-open>
+          Cookie settings
+        </button>
+        .
+      </p>
+
+      <h2>Feedback</h2>
+      <p>
+        Ideas and bug reports are welcome on the project's{' '}
+        <a href={`${SITE.repoUrl}/issues`}>GitHub issues</a> page, or by email.
+      </p>
+
+      <h2>Credits</h2>
+      <p>
+        Xematics is built on fonts and libraries by many people: Inter, Vazirmatn and Noto for
+        labels, HarfBuzz for shaping text, MathJax for math, and more. Each stays under its own
+        license. See the <a href={`${base}credits/`}>credits</a>.
+      </p>
+    </article>
+  </div>
+</BaseLayout>
+
+<style>
+  .about {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 48px;
+    padding-block: 44px 24px;
+  }
+
+  .side {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .card {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+  }
+
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 0.75rem;
+  }
+
+  .author {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .author img {
+    border-radius: 50%;
+  }
+
+  .name {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .role,
+  .note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+
+  .author + .note {
+    margin-top: 10px;
+  }
+
+  .contact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .contact li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+  }
+
+  .support {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .support-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
+    font-size: 0.85rem;
+    text-decoration: none;
+  }
+
+  .support-link:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  /* Self-hosted brand marks, drawn in the link's own color so they follow the theme. */
+  .mark {
+    width: 15px;
+    height: 15px;
+    flex: none;
+    background: currentColor;
+    mask: center / contain no-repeat;
+  }
+
+  .mark-paypal {
+    mask-image: url('/icons/paypal.svg');
+  }
+
+  .mark-coffee {
+    mask-image: url('/icons/buy-me-a-coffee.svg');
+  }
+
+  .inline-button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  .body h2 {
+    margin: 36px 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 900px) {
+    .about {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 28px;
+    }
+
+    .side {
+      position: static;
+      order: 2;
+    }
+  }
+</style>

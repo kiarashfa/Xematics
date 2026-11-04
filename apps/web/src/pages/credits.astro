@@ -1,0 +1,99 @@
+---
+// Credits: the component tables from THIRD_PARTY.md and a summary of the licenses. The full
+// notices are published as a text file, so this page stays short.
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { creditTables, licenseSummary } from '../notices.ts';
+import { SITE } from '../site.config.ts';
+
+const base = import.meta.env.BASE_URL;
+const tables = creditTables();
+// The first paragraph; the second only describes the notices file, linked below instead.
+const [summary] = licenseSummary();
+const slug = (title: string) => title.toLowerCase().replace(/[^a-z]+/g, '-');
+---
+
+<BaseLayout
+  title="Credits"
+  description="The fonts and libraries Xematics is built on, with their versions and licenses."
+>
+  <article class="page prose credits">
+    <p class="kicker">Credits</p>
+    <h1>Built on the work of others</h1>
+    <p class="lead">
+      Xematics would not exist without these fonts and libraries. Each remains under its own
+      license; the KFA Source-Available License does not apply to them.
+    </p>
+
+    {tables.map((table) => (
+      <section aria-labelledby={slug(table.title)}>
+        <h2 id={slug(table.title)}>{table.title}</h2>
+        <table>
+          <thead>
+            <tr>
+              {table.head.map((cell) => (
+                <th scope="col">{cell}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((row) => (
+              <tr>
+                {row.map((cell) => (
+                  <td>{cell.href ? <a href={cell.href}>{cell.text}</a> : cell.text}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    ))}
+
+    <h2>Licenses in short</h2>
+    <p>{summary}</p>
+    <p>
+      Read the <a href={`${base}third-party-notices.txt`}>full notices and license texts</a>, or{' '}
+      <a href={`${SITE.repoUrl}/blob/main/THIRD_PARTY.md`}>THIRD_PARTY.md</a> in the source.
+    </p>
+  </article>
+</BaseLayout>
+
+<style>
+  .credits {
+    padding-block: 48px 24px;
+  }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    margin: 36px 0 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  th,
+  td {
+    padding: 6px 10px 6px 0;
+    border-bottom: 1px solid var(--line);
+    text-align: start;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  th {
+    color: var(--muted);
+    font-weight: 600;
+  }
+</style>

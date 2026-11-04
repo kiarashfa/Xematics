@@ -1,0 +1,262 @@
+---
+layout: ../layouts/GuideLayout.astro
+title: Syntax and export guide
+description: How to write networks in Xematics (shorthand, YAML and JSON), every layer and style option, math and right-to-left labels, and how to export to SVG, PNG, PDF and TikZ.
+---
+
+import Figure from '../components/Figure.astro';
+
+Everything you can do in the editor's forms you can also write as text. This page covers the
+syntax, every option, and the export formats. Each figure here opens in the editor.
+
+## Shorthand
+
+The quickest way to describe a network is one line of layer sizes:
+
+```text
+784-16-16-10
+```
+
+- Separate layers with `-`, a comma or spaces: `784, 128, 10` works too.
+- Add an activation after a colon: `4-8:relu-3:softmax`.
+- `dense(64)`, `fc(64)` and `linear(64)` all mean a fully connected layer of 64 neurons.
+
+<Figure id="g-shorthand" source="4-8:relu-3:softmax" caption="4-8:relu-3:softmax" />
+
+The editor's shorthand bar (marked fx) shows the current network as shorthand. Typing there
+changes sizes and activations and keeps every other setting, such as layer names.
+
+## YAML and JSON
+
+For names and options, write the network as YAML. A layer is either a number or a map of options:
+
+```yaml
+title: MNIST classifier
+layers:
+  - { units: 784, name: Pixels }
+  - { units: 128, activation: relu }
+  - 64
+  - { units: 10, activation: softmax, name: Digits }
+```
+
+JSON works the same way, since every JSON document is also valid YAML. The model JSON export is
+the canonical file format and opens again in the editor.
+
+| Key           | Meaning                                                   |
+| ------------- | --------------------------------------------------------- |
+| `title`       | The figure's title, used as its accessible name.          |
+| `description` | Alternative text. Without it, a description is generated. |
+| `layers`      | The list of layers, input first.                          |
+| `style`       | Options for the whole figure (see Styles and presets).    |
+
+Mistakes are reported with their line and column, and unknown keys suggest what you probably
+meant. While the source has an error, the preview keeps the last valid figure.
+
+## Layer options
+
+| Key          | Values             | Meaning                                                  |
+| ------------ | ------------------ | -------------------------------------------------------- |
+| `units`      | 1 to 1000000       | Number of neurons.                                       |
+| `name`       | text               | Label under the layer. An empty name hides it.           |
+| `activation` | a name like `relu` | Shown in the shorthand and the editor.                   |
+| `collapse`   | `false`, or a map  | Per-layer collapse: `false` draws every neuron.          |
+| `nodeLabel`  | text with `{i}`    | A label inside every neuron; `{i}` is the neuron number. |
+
+Without a name, layers are called Input, Hidden (or Hidden 1, Hidden 2, ...) and Output.
+
+### Large layers
+
+Layers with more than 10 neurons are drawn as the first 3 and last 3 around an ellipsis. Change
+the rule for one layer, or for the whole figure under `style`:
+
+```yaml
+layers:
+  - { units: 64, collapse: { first: 2, last: 4 } }
+  - { units: 20, collapse: false }
+  - 12
+style:
+  collapse: { above: 16 }
+```
+
+Layers with more than 500 neurons are always collapsed. When two layers would need more than 2500
+connection lines, they are drawn as one shaded band instead.
+
+### Node labels
+
+`nodeLabel` writes a label inside each neuron. `{i}` becomes the neuron's number, and the
+numbering stays correct around the ellipsis.
+
+<Figure
+  id="g-nodes"
+  source={`layers:
+  - { units: 12, nodeLabel: '$x_{i}$' }
+  - { units: 4, nodeLabel: 'h{i}' }
+  - { units: 2, nodeLabel: '$\\hat{y}_{i}$' }
+`}
+  caption="Inputs x1 to x12, collapsed; outputs y-hat"
+/>
+
+## Styles and presets
+
+A preset sets every color and shape at once. Pick one in the Home tab, or write it:
+
+```yaml
+style: { preset: colorblind }
+```
+
+| Preset            | Look                                                               |
+| ----------------- | ------------------------------------------------------------------ |
+| `classic`         | Light role tints: blue inputs, gray hidden layers, orange outputs. |
+| `boxes`           | One bar per layer, its height growing with the layer's size.       |
+| `mono`            | Gray levels only, for black and white printing.                    |
+| `colorblind`      | The Okabe-Ito palette, safe for common color blindness.            |
+| `colorblind-dark` | The same palette on a dark background, for slides.                 |
+
+<Figure
+  id="g-boxes"
+  source={`layers: [784, 256, 128, 10]
+style: { preset: boxes }
+`}
+  caption="The Layer boxes preset"
+/>
+
+Other style options:
+
+| Key            | Values                          | Default         |
+| -------------- | ------------------------------- | --------------- |
+| `labels`       | `{ names: true, sizes: true }`  | both shown      |
+| `background`   | `transparent` or a quoted color | the preset's    |
+| `nodeRadius`   | 2 to 100                        | 12              |
+| `nodeSpacing`  | 0 to 200                        | 9               |
+| `layerSpacing` | 20 to 2000                      | 110 (boxes: 96) |
+| `direction`    | `ltr` or `rtl`                  | `ltr`           |
+
+Write colors in quotes, like `background: '#ffffff'`, because YAML treats `#` as a comment.
+
+## Labels and math
+
+Any name or node label can hold math between dollar signs. It is typeset with the New Computer
+Modern font, like the math in a LaTeX paper, and mixes freely with text.
+
+<Figure
+  id="g-math"
+  source={`layers:
+  - { units: 784, name: '$\\mathbf{x} \\in \\mathbb{R}^{784}$' }
+  - { units: 16, name: 'Hidden $h^{(1)}$' }
+  - { units: 10, name: '$\\hat{\\mathbf{y}}$' }
+`}
+/>
+
+- Write `\$` for a dollar sign that is not math.
+- The TeX commands of LaTeX and the AMS packages work. Commands that load files or define
+  macros do not.
+- A formula with a mistake is shown as its source, with a warning that says what is wrong.
+
+In YAML, put labels with backslashes in single quotes: `name: '$\alpha$'`. Inside double quotes,
+backslashes must be doubled.
+
+## Persian, Hebrew and CJK
+
+Labels can use any of these scripts, and each label may mix them:
+
+- Persian and Arabic with Vazirmatn, Hebrew with Noto Sans Hebrew.
+- Chinese, Japanese and Korean with Noto Sans SC, JP and KR. A label with kana uses the Japanese
+  forms, one with Hangul the Korean forms, and other Han text the Chinese forms.
+
+The fonts load only when a label needs them. Each label reads in the direction of its first
+letter, so a Persian name with a Latin word inside still reads right to left.
+
+To mirror the whole figure, with the input on the right, set the flow direction:
+
+<Figure
+  id="g-rtl"
+  source={`layers:
+  - { units: 784, name: پیکسل‌ها }
+  - { units: 64, name: لایه پنهان }
+  - { units: 10, name: ارقام }
+style: { direction: rtl }
+`}
+/>
+
+## Exports
+
+All exports are in the editor's Export tab, and on phones in the Export section of the commands.
+
+| Format | Best for                       | Notes                                                   |
+| ------ | ------------------------------ | ------------------------------------------------------- |
+| SVG    | The web, Inkscape, Illustrator | Text outlined by default; see below for editable text.  |
+| PNG    | Slides and documents           | 300 dpi by default; also 1x, 2x, 4x and 600 dpi.        |
+| PDF    | Papers and print               | Vector, text outlined, one page the size of the figure. |
+| TikZ   | LaTeX documents                | Code you can edit; see TikZ in LaTeX.                   |
+| JSON   | Saving the model               | Opens again in the editor.                              |
+| Embed  | Web pages and Markdown         | Markdown image, HTML image tag or data URL.             |
+
+**Outlined or editable text.** Outlined text is drawn as shapes, so the figure looks the same in
+every viewer and program. With Editable SVG text on, labels stay text you can change later, and
+the fonts they use are embedded in the file (only the letters used, a few kilobytes).
+
+**PNG resolution.** The resolution is saved in the file, so a 300 dpi PNG appears at the figure's
+real size in Word, LaTeX and other programs.
+
+**Accessibility.** Every SVG has a title and a description, taken from `title` and `description`
+or generated from the layers.
+
+## TikZ in LaTeX
+
+The TikZ export rebuilds the figure as LaTeX code with every neuron as a named node, at exactly
+the positions of the SVG. Choose the form in the Export tab:
+
+- **Standalone document:** compiles on its own to a PDF of the figure.
+- **Only the tikzpicture:** to paste into your paper. Its first lines say which packages it needs.
+
+```latex
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{amsmath, amssymb} % only for math labels
+\begin{document}
+\begin{figure}
+  \centering
+  \resizebox{\linewidth}{!}{\input{network.tex}}
+  \caption{Our network.}
+\end{figure}
+\end{document}
+```
+
+- Compile with pdfLaTeX, or with XeLaTeX or LuaLaTeX when labels use Persian, Hebrew or CJK
+  text. Then choose a font that covers them with `\setsansfont` from the fontspec package.
+- Math labels stay LaTeX, so they match your paper. Other label text is escaped.
+- Styles at the top, such as `xm input` and `xm edge`, control colors and line widths. Change one
+  line to restyle every neuron of that kind.
+- Coordinates are in px, with 1 px = 0.75 pt, as in the SVG.
+
+## Command line
+
+The repository also contains a command-line tool that renders the same files. From a copy of the
+repository, after `pnpm install`:
+
+```sh
+node packages/cli/src/main.ts render network.yaml -o network.pdf
+```
+
+The output extension picks the format: `.svg`, `.png`, `.pdf`, `.tex` or `.json`. Other options:
+
+| Option           | Meaning                                     |
+| ---------------- | ------------------------------------------- |
+| `-f`, `--format` | Pick the format when writing to the console |
+| `--text live`    | Editable SVG text with embedded fonts       |
+| `--dpi 600`      | PNG resolution (default 300)                |
+| `--tikz picture` | Only the tikzpicture                        |
+| `--prefix fig-`  | Prefix for ids in the SVG                   |
+
+Use `-` instead of a file name to read from standard input, for example
+`echo 784-16-10 | node packages/cli/src/main.ts render - > net.svg`.
+
+## Sharing and privacy
+
+- **Share links** carry the whole diagram after the `#` in the address. Browsers never send that
+  part to any server, so the diagram reaches only the people you give the link to. A diagram too
+  large for a link is saved as a file instead.
+- **Your documents** are saved in this browser and stay on your device. Save workspace (in the
+  File tab) writes every document to one file you can open on another device.
+- Analytics run only if you accept them, and never see your diagrams. See
+  [Privacy](../about/#privacy) on the About page.

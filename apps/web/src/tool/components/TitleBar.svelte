@@ -47,6 +47,10 @@
     disabled={!tool.ready}
     onclick={copyShareLink}><Icon name="link" size={16} /></button
   >
+  <!-- Work is autosaved, so closing simply returns to the site. -->
+  <a class="icon close" href={home} aria-label="Close the editor" title="Close the editor"
+    ><Icon name="close" size={16} /></a
+  >
 </header>
 
 <style>
@@ -86,6 +90,11 @@
 
   .icon:hover:not(:disabled) {
     background: color-mix(in srgb, currentColor 15%, transparent);
+  }
+
+  .close {
+    margin-left: 4px;
+    text-decoration: none;
   }
 
   .icon:disabled {

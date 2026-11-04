@@ -30,6 +30,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - run: pnpm check:budgets
       - run: pnpm check:text
       - run: pnpm check:leaks
       - run: pnpm --filter @xematics/web exec playwright install --with-deps chromium

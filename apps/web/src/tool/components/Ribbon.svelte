@@ -153,6 +153,14 @@
         <div class="body">{@render big('link', 'Copy link', copyShareLink, !tool.ready)}</div>
         <div class="caption">Share</div>
       </div>
+      <div class="group" role="group" aria-label="Close">
+        <div class="body">
+          <a class="big" href={import.meta.env.BASE_URL}
+            ><Icon name="close" size={26} /><span>Close editor</span></a
+          >
+        </div>
+        <div class="caption">Back to the site</div>
+      </div>
       <input
         bind:this={sourceInput}
         type="file"
@@ -381,6 +389,14 @@
         </div>
         <div class="caption">Keyboard</div>
       </div>
+      <div class="group" role="group" aria-label="Guide">
+        <div class="body">
+          <a class="big" href={`${import.meta.env.BASE_URL}guide/`}
+            ><Icon name="help" size={26} /><span>Syntax and export guide</span></a
+          >
+        </div>
+        <div class="caption">Guide</div>
+      </div>
       <div class="group" role="group" aria-label="Feedback">
         <div class="body">
           <a class="big" href={`${SITE.repoUrl}/issues`} target="_blank" rel="noopener"
@@ -391,7 +407,7 @@
       </div>
       <div class="group" role="group" aria-label="Privacy">
         <div class="body stack">
-          <a class="small" href={`${import.meta.env.BASE_URL}privacy/`}>Privacy and cookies</a>
+          <a class="small" href={`${import.meta.env.BASE_URL}about/#privacy`}>Privacy</a>
           <button
             type="button"
             class="small"

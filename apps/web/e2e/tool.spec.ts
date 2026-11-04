@@ -5,6 +5,18 @@ import { readFile } from 'node:fs/promises';
 const GOLDEN = new URL('../../../packages/core/test/golden/', import.meta.url);
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
+// Every editor flow (fonts, math, WebAssembly, PNG export) must work under the site's CSP.
+let cspViolations: string[] = [];
+test.beforeEach(({ page }) => {
+  cspViolations = [];
+  page.on('console', (m) => {
+    if (/Content Security Policy/i.test(m.text())) cspViolations.push(m.text());
+  });
+});
+test.afterEach(() => {
+  expect(cspViolations).toEqual([]);
+});
+
 async function openEditor(page: Page) {
   await page.goto('./tool/');
   // Phones start on the document list.
@@ -45,6 +57,14 @@ test('editor renders the example and has no accessibility violations', async ({ 
 
 test.describe('desktop editor', () => {
   test.skip(({ isMobile }) => isMobile, 'Ribbon layout is desktop only');
+
+  test('the editor can be closed from the title bar and the File tab', async ({ page }) => {
+    await openEditor(page);
+    await page.getByRole('tab', { name: 'File' }).click();
+    await expect(page.getByRole('link', { name: 'Close editor' })).toBeVisible();
+    await page.getByRole('link', { name: 'Close the editor' }).click();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Neural network figures');
+  });
 
   test('exported SVG is byte-identical to the Node golden files', async ({ page }) => {
     await openEditor(page);

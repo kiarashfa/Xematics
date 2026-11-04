@@ -90,6 +90,26 @@
     margin-inline: auto;
   }
 
+  /* Tailwind's reset removes list markers; reading pages keep them. */
+  .prose ul {
+    padding-left: 1.4em;
+    list-style: disc;
+  }
+
+  .prose ol {
+    padding-left: 1.6em;
+    list-style: decimal;
+  }
+
+  .prose ul,
+  .prose ol {
+    margin: 10px 0 14px;
+  }
+
+  .prose li + li {
+    margin-top: 4px;
+  }
+
   .skip-link {
     position: absolute;
     left: -9999px;
@@ -121,7 +141,6 @@
   .lead {
     font-size: 1.15rem;
     color: var(--muted);
-    max-width: 34em;
   }
 
   .btn {
