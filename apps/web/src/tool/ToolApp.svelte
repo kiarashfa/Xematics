@@ -14,7 +14,7 @@
   import TitleBar from './components/TitleBar.svelte';
   import { loadEngine } from './engine.ts';
   import { tool } from './state.svelte.ts';
-  import { cloudState, onLocalChange } from '../user/local.ts';
+  import { CHANGED_KEY, cloudState, onLocalChange } from '../user/local.ts';
   import { browserStore } from '../user/store.ts';
   import { visitor } from '../user/visitor.svelte.ts';
 
@@ -43,12 +43,24 @@
     );
     // A share link is opened once; afterwards the address no longer carries the old diagram.
     const fragment = location.hash;
-    const openId = new URLSearchParams(location.search).get('doc');
+    // ?doc=<id> opens a document and ?new starts one (links from the profile gallery).
+    const params = new URLSearchParams(location.search);
+    const openId = params.get('doc');
     tool.init(browserStore, fragment, openId).then(() => {
-      if (fragment || openId) history.replaceState(null, '', location.pathname);
+      if (params.has('new')) {
+        tool.newDocument();
+        tool.openedFromLink = true;
+      }
+      if (fragment || openId || params.has('new'))
+        history.replaceState(null, '', location.pathname);
     });
-    // Saves from another tab, a save file or the cloud reach the open editor.
+    // Saves from another tab, a save file or the cloud reach the open editor. Signing out in
+    // another tab empties the save: the editor starts over instead of saving its copy back.
     let reading = false;
+    const signedOut = (event: StorageEvent) => {
+      if (event.key === CHANGED_KEY && event.newValue === null) location.reload();
+    };
+    addEventListener('storage', signedOut);
     const offChanges = onLocalChange(() => {
       if (reading || !tool.ready) return;
       reading = true;
@@ -67,6 +79,7 @@
     addEventListener('beforeunload', guard);
     return () => {
       removeEventListener('beforeunload', guard);
+      removeEventListener('storage', signedOut);
       offChanges();
     };
   });

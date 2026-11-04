@@ -50,10 +50,23 @@ const person =
       <button type="button" data-profile-download hidden>
         Download save file
       </button>
-      <a class="out" href={`${base}user/#sign-out`} data-profile-out hidden>
+      <button type="button" class="out" data-profile-out hidden>
         Sign out of this browser
-      </a>
+      </button>
     </nav>
+    <!-- Shown only when signing out would lose diagrams kept nowhere else. -->
+    <div class="confirm" data-profile-confirm hidden>
+      <p data-profile-warning></p>
+      <div class="row">
+        <button type="button" data-profile-download-first>
+          Download save file
+        </button>
+        <button type="button" class="danger" data-profile-out-anyway>
+          Sign out
+        </button>
+      </div>
+    </div>
+    <p class="note" role="status" data-profile-note></p>
   </div>
 </div>
 
@@ -74,6 +87,9 @@ const person =
   const menu = root?.querySelector<HTMLElement>('[data-profile-menu]');
   const backdrop = root?.querySelector<HTMLElement>('.backdrop');
   let raw: string | undefined;
+  let count = 0;
+  const note = root?.querySelector<HTMLElement>('[data-profile-note]');
+  const confirmBox = root?.querySelector<HTMLElement>('[data-profile-confirm]');
 
   function paint() {
     if (!root) return;
@@ -106,7 +122,7 @@ const person =
     } catch {
       raw = undefined;
     }
-    let count = 0;
+    count = 0;
     try {
       const docs = raw ? (JSON.parse(raw) as { documents?: unknown[] }).documents : undefined;
       count = Array.isArray(docs) ? docs.length : 0;
@@ -127,6 +143,12 @@ const person =
 
   function setOpen(open: boolean) {
     if (!menu || !trigger || !backdrop) return;
+    if (open) {
+      note!.textContent = '';
+      confirmBox!.hidden = true;
+      // With a cloud save, the code that saves before signing out loads ahead of the click.
+      if (cloudState()) void import('../user/signout.ts').then((m) => m.warmUp());
+    }
     menu.hidden = !open;
     backdrop.hidden = !open;
     trigger.setAttribute('aria-expanded', String(open));
@@ -151,7 +173,7 @@ const person =
       trigger?.focus();
     }
   });
-  root?.querySelector('[data-profile-download]')?.addEventListener('click', () => {
+  function download() {
     if (!raw) return;
     const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
     const link = document.createElement('a');
@@ -159,8 +181,45 @@ const person =
     link.download = 'xematics-save.json';
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function signOut() {
+    const buttons = root!.querySelectorAll<HTMLButtonElement>(
+      '[data-profile-out], .confirm button',
+    );
+    buttons.forEach((b) => (b.disabled = true));
+    note!.textContent = 'Signing out…';
+    try {
+      const { signOut } = await import('../user/signout.ts');
+      await signOut();
+      confirmBox!.hidden = true;
+      paint();
+      await readSave();
+      note!.textContent = 'Signed out of this browser.';
+    } catch (error) {
+      note!.textContent = error instanceof Error ? error.message : 'Signing out did not work.';
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
+    }
+  }
+
+  root?.querySelector('[data-profile-download]')?.addEventListener('click', () => {
+    download();
     setOpen(false);
   });
+  // Diagrams kept only here get a warning first; with a cloud save, signing out is immediate.
+  root?.querySelector('[data-profile-out]')?.addEventListener('click', () => {
+    if (!cloudState() && raw) {
+      root.querySelector('[data-profile-warning]')!.textContent =
+        `Your ${count === 1 ? 'diagram is' : `${count} diagrams are`} kept only in this browser. Download the save file first to keep ${count === 1 ? 'it' : 'them'}.`;
+      confirmBox!.hidden = false;
+      root.querySelector<HTMLElement>('[data-profile-download-first]')?.focus();
+    } else {
+      void signOut();
+    }
+  });
+  root?.querySelector('[data-profile-download-first]')?.addEventListener('click', download);
+  root?.querySelector('[data-profile-out-anyway]')?.addEventListener('click', () => void signOut());
 
   onLocalChange(paint);
   paint();
@@ -282,8 +341,55 @@ const person =
     color: var(--muted);
   }
 
-  nav [hidden] {
+  nav [hidden],
+  .confirm[hidden] {
     display: none;
+  }
+
+  .confirm {
+    padding: 12px 14px;
+    border-top: 1px solid var(--line);
+    background: var(--surface-2);
+  }
+
+  .confirm p {
+    margin: 0 0 10px;
+    font-size: 0.85rem;
+  }
+
+  .confirm .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .confirm button {
+    padding: 6px 12px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .confirm .danger {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .note {
+    margin: 0;
+    padding: 0 14px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+
+  .note:not(:empty) {
+    padding-block: 10px;
+    border-top: 1px solid var(--line);
   }
 
   .backdrop {

@@ -142,7 +142,7 @@
   <div class="providers">
     {#each order as p (p)}
       {@const on = visitor.cloud?.provider === p}
-      <div class="provider" class:on>
+      <div class="provider" class:on title={HOME[p]}>
         {@render logo(p)}
         <div class="about">
           <b>{PROVIDERS[p]}</b>
@@ -155,7 +155,6 @@
           {:else}
             <small>Not connected</small>
           {/if}
-          <small>{HOME[p]}</small>
         </div>
         {#if !on}
           <button
@@ -188,14 +187,10 @@
         >Disconnect</button
       >
     </div>
-    <p class="muted small">
-      Saves a few seconds after each change. Open the same save on another device by connecting
-      there with the same account.
-    </p>
+    <p class="muted small">Saves by itself a few seconds after each change.</p>
   {:else}
     <p class="muted small">
-      Keep your save in your own cloud: it updates by itself, and connecting on another device
-      brings everything there.
+      Keep your save in your own cloud. It updates by itself and follows you to other devices.
     </p>
   {/if}
 {/if}
@@ -203,15 +198,14 @@
 <style>
   .providers {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 12px;
+    gap: 8px;
   }
 
   .provider {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-    padding: 14px;
+    padding: 10px 12px;
     border: 1px solid var(--line);
     background: var(--surface);
   }
@@ -222,8 +216,8 @@
   }
 
   .logo {
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
     flex: none;
   }
 
@@ -305,6 +299,7 @@
   }
 
   .small {
+    margin: 10px 0 0;
     font-size: 0.85rem;
   }
 </style>

@@ -125,42 +125,26 @@ const support = [
 
       <h2 id="privacy">Privacy</h2>
       <p>
-        Xematics has no server and no database, and there are no accounts. Your diagrams, your name
-        and your picture are saved in this browser and never leave your device unless you share a
-        diagram, download your save file or connect a cloud save. A share link carries the diagram
-        in the part of the address that browsers never send to a server. If you accept analytics,
-        Google Analytics counts visits to the site but never sees your diagrams, name or picture; if
-        you decline, it is not loaded at all. You can change your answer at any time:{' '}
+        Xematics has no server, no database and no accounts. Your diagrams, name and picture stay in
+        this browser unless you share a diagram, download your save file or turn on cloud save. If
+        you accept analytics, Google Analytics counts visits to the site but never sees your
+        diagrams, name or picture; if you decline, it is not loaded at all. You can change your
+        answer at any time:{' '}
         <button type="button" class="inline-button" data-consent-open>
           Cookie settings
         </button>
         .
       </p>
       <p>
-        <strong>Cloud save.</strong> If you choose to connect Google Drive or Dropbox on{' '}
-        <a href={`${base}user/`}>your profile</a>, your browser talks to that service directly, with
-        the permission you grant there. Xematics keeps one file, <code>xematics-save.json</code>,
-        holding the same data as the save file: your diagrams, editor settings, name and picture. On
-        Google Drive it lives in the hidden app-data folder, and the only permission requested is{' '}
-        <code>drive.appdata</code>, which lets Xematics see that one folder and nothing else in your
-        Drive. On Dropbox it lives in the app's own folder, Apps/Xematics. Xematics reads your
-        account name and email address only to show which account is connected. The access tokens
-        stay in your browser; nothing passes through or is stored on any server of Xematics, and
-        nothing is shared with anyone or used for any other purpose.
-      </p>
-      <p>
-        You can disconnect at any time on your profile, which also revokes the access. You can also
-        remove it in your Google Account (Security, Third-party apps and services) or in Dropbox
-        (Settings, Connected apps). Disconnecting leaves the file in your account; delete it there
-        if you no longer want it. Signing out of this browser on your profile removes your diagrams,
-        name and picture from the browser.
-      </p>
-      <p>
-        Xematics' use and transfer of information received from Google APIs adheres to the{' '}
+        <strong>Cloud save</strong> is off unless you turn it on in{' '}
+        <a href={`${base}user/`}>your profile</a>. Your browser then keeps a copy of your save in
+        your own Google Drive or Dropbox, in a private folder only Xematics can use, and nothing
+        passes through any server of ours. You can disconnect at any time, which also removes the
+        access. Data from Google is handled under the{' '}
         <a href="https://developers.google.com/terms/api-services-user-data-policy">
           Google API Services User Data Policy
         </a>
-        , including the Limited Use requirements.
+        , including its Limited Use requirements.
       </p>
 
       <h2>Feedback</h2>

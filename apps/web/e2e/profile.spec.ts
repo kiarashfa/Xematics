@@ -72,7 +72,7 @@ test('a save file brings the profile and diagrams to another browser', async ({
   await page.getByRole('button', { name: 'Set up your profile' }).click();
   await pickRobot(page);
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download save file' }).click();
+  await page.getByRole('main').getByRole('button', { name: 'Download', exact: true }).click();
   const file = await (await download).path();
 
   const fresh = await browser.newContext();
@@ -105,4 +105,69 @@ test('signing out removes everything from this browser', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Your desk' })).toBeVisible();
   await expect(headerAvatar(page)).toHaveAttribute('data-kind', '');
+});
+
+test('signing out from the header menu warns in the menu and stays on the page', async ({
+  page,
+}) => {
+  await page.goto('./user/');
+  await page.getByRole('button', { name: 'Set up your profile' }).click();
+  await pickRobot(page);
+  await page.goto('./examples/');
+  await page.getByRole('button', { name: /^Your profile/ }).click();
+  const menu = page.locator('#profile-menu');
+  await menu.getByRole('button', { name: 'Sign out of this browser' }).click();
+  // The only copy of the diagram is here, so the menu offers the save file first.
+  await expect(menu).toContainText('kept only in this browser');
+  await menu.getByRole('button', { name: 'Sign out', exact: true }).click();
+  await expect(menu).toContainText('Signed out of this browser.');
+  await expect(page).toHaveURL(/\/examples\/$/);
+  await expect(headerAvatar(page)).toHaveAttribute('data-kind', '');
+});
+
+test('the gallery switches views, sorts and finds diagrams', async ({ page }) => {
+  await page.goto('./user/');
+  await page.getByRole('button', { name: 'Set up your profile' }).click();
+  await pickRobot(page);
+  await page.getByRole('link', { name: 'New diagram' }).click();
+  await expect(page).toHaveURL(/\/tool\/$/);
+  // Wait for the editor's autosave to store the new document.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            const open = indexedDB.open('xematics');
+            open.onsuccess = () => {
+              const get = open.result
+                .transaction('workspace')
+                .objectStore('workspace')
+                .get('current');
+              get.onsuccess = () =>
+                resolve(
+                  (JSON.parse(String(get.result)) as { documents: unknown[] }).documents.length,
+                );
+            };
+          }),
+      ),
+    )
+    .toBe(2);
+  await page.goto('./user/');
+  await expect(page.getByRole('heading', { name: /Your diagrams/ })).toContainText('2');
+
+  await page.getByRole('button', { name: 'Details' }).click();
+  const table = page.getByRole('table');
+  await expect(table.getByRole('row')).toHaveCount(3);
+  await page.getByRole('combobox', { name: 'Sort by' }).selectOption('size');
+  await expect(table.getByRole('row').nth(1)).toContainText('MNIST classifier');
+  await page.getByRole('searchbox', { name: 'Find a diagram' }).fill('mnist');
+  await expect(table.getByRole('row')).toHaveCount(2);
+  await expectAccessible(page);
+
+  // The view is remembered.
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Details' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
 });

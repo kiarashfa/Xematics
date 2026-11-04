@@ -1,21 +1,20 @@
 <script lang="ts">
   // /user/: the visitor's profile. With nothing in this browser yet it welcomes them: start a
-  // profile, or bring a save (the "login"). Otherwise: a card with picture, name and numbers, a
-  // gallery of their diagrams, cloud save, the save file, and signing out of this browser.
+  // profile, or bring a save (the "login"). Otherwise the left column holds the picture, name and
+  // numbers, then cloud save, the save file and signing out; the right side is their gallery.
   import { PROFILE_NAME_MAX, parseWorkspace, type Workspace } from '@xematics/core';
   import { onMount } from 'svelte';
-  import { documentName } from '../tool/documents.ts';
   import Avatar from './Avatar.svelte';
+  import CloudSave from './CloudSave.svelte';
+  import Gallery from './Gallery.svelte';
   import type PicturePicker from './PicturePicker.svelte';
   import type * as Render from './render.ts';
-  import CloudSave from './CloudSave.svelte';
-  import { finishDropbox, isDropboxReturn, startAutoSave, sync } from './cloud.ts';
+  import { finishDropbox, isDropboxReturn, startAutoSave } from './cloud.ts';
   import { loadRaw } from './idb.ts';
-  import { ago, cloudState, onLocalChange, PROVIDERS, unsaved } from './local.ts';
-  import { browserStore, clearBrowser, describeMerge, updateProfile } from './store.ts';
+  import { ago, cloudState, onLocalChange } from './local.ts';
+  import { browserStore, describeMerge, updateProfile } from './store.ts';
   import { visitor } from './visitor.svelte.ts';
 
-  const base = import.meta.env.BASE_URL;
   const MAX_FILE_BYTES = 60_000_000;
 
   let workspace = $state.raw<Workspace | undefined>(undefined);
@@ -26,25 +25,38 @@
   let picking = $state(false);
   let Picker = $state.raw<typeof PicturePicker | null>(null);
   let fileInput: HTMLInputElement | undefined = $state();
-  let signingOut = $state(false);
+  let confirming = $state(false);
   let leaving = $state(false);
 
   // Numbers and previews: the engine loads after the page shows.
   let render = $state.raw<typeof Render | null>(null);
 
   const profile = $derived(workspace?.profile);
-  const documents = $derived(
-    [...(workspace?.documents ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+  const documents = $derived(workspace?.documents ?? []);
+  const latest = $derived(
+    documents.reduce<string | undefined>(
+      (max, d) => (!max || d.updatedAt > max ? d.updatedAt : max),
+      undefined,
+    ),
+  );
+  const earliest = $derived(
+    documents.reduce<string | undefined>(
+      (min, d) => (!min || d.updatedAt < min ? d.updatedAt : min),
+      undefined,
+    ),
   );
   const neurons = $derived(
-    render ? documents.reduce((sum, d) => sum + render!.neurons(d.text), 0) : null,
+    render ? documents.reduce((sum, d) => sum + render!.facts(d.text).neurons, 0) : null,
   );
-  const since = $derived(profile?.createdAt ?? documents.at(-1)?.updatedAt);
+  const since = $derived(profile?.createdAt ?? earliest);
   const welcome = $derived(loaded && !workspace);
 
   async function reload() {
+    const had = !!workspace;
     try {
       workspace = await browserStore.load();
+      // Signed out (here or in the header menu): earlier messages no longer apply.
+      if (had && !workspace) notice = '';
       blocked = false;
     } catch {
       blocked = true;
@@ -116,54 +128,31 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  async function signOut() {
-    leaving = true;
-    const cloud = cloudState();
-    if (cloud && unsaved(cloud)) {
-      try {
-        await sync({ interactive: true });
-      } catch (error) {
-        leaving = false;
-        const reason = error instanceof Error ? error.message : '';
-        return say(
-          `Could not save to ${PROVIDERS[cloud.provider]} first, so nothing was removed. ${reason}`,
-          true,
-        );
-      }
-    }
-    if (cloud) {
-      const { disconnect } = await import('./cloud.ts');
-      await disconnect();
-    }
-    await clearBrowser();
-    location.replace(`${base}user/`);
+  /** Diagrams kept only here get a warning first; with a cloud save, signing out is immediate. */
+  function askSignOut() {
+    if (visitor.cloud) void signOut();
+    else confirming = true;
   }
 
-  /** Mounts a document preview when the engine is ready. */
-  const preview = (text: string, id: string) => (node: HTMLElement) => {
-    let current = true;
-    void render
-      ?.thumbnail(text, `g-${id.slice(0, 8)}-`)
-      .then((svg) => {
-        if (current) node.replaceChildren(...(svg ? [svg] : []));
-      })
-      .catch(() => {});
-    return () => {
-      current = false;
-    };
-  };
+  async function signOut() {
+    leaving = true;
+    try {
+      const m = await import('./signout.ts');
+      await m.signOut();
+      await reload();
+      confirming = false;
+      say('Signed out of this browser.');
+    } catch (error) {
+      say(error instanceof Error ? error.message : 'Signing out did not work.', true);
+    } finally {
+      leaving = false;
+    }
+  }
 
   onMount(() => {
     visitor.start();
     const off = onLocalChange(() => void reload());
-    void reload().then(() => {
-      if (location.hash === '#sign-out' && workspace) {
-        signingOut = true;
-        requestAnimationFrame(() =>
-          document.getElementById('sign-out')?.scrollIntoView({ block: 'center' }),
-        );
-      }
-    });
+    void reload();
     if (isDropboxReturn()) {
       say('Connecting Dropbox…');
       finishDropbox().then(
@@ -172,7 +161,10 @@
           say(error instanceof Error ? error.message : 'Dropbox did not connect.', true),
       );
     }
-    if (cloudState()) startAutoSave();
+    if (cloudState()) {
+      startAutoSave();
+      void import('./signout.ts').then((m) => m.warmUp());
+    }
     void import('./render.ts').then((m) => (render = m));
     return off;
   });
@@ -232,126 +224,103 @@
   </section>
 {:else}
   <div class="layout">
-    <aside>
-      <div class="card who">
-        <span class="pic">
-          <Avatar profile={visitor.profile} size={120} />
-          {@render editButton('Change your picture', openPicker)}
-        </span>
-        {#if editing}
-          <form class="name-form" onsubmit={saveName}>
-            <label class="sr-only" for="profile-name">Your name</label>
-            <input
-              id="profile-name"
-              bind:this={nameInput}
-              bind:value={draft}
-              maxlength={PROFILE_NAME_MAX}
-              autocomplete="name"
-              onblur={() => saveName()}
-              onkeydown={(e) => {
-                if (e.key === 'Escape') editing = false;
-              }}
-            />
-          </form>
-        {:else}
-          <h1 class="name">{profile?.name || 'Your desk'}</h1>
-          <button type="button" class="link" onclick={editName}
-            >{profile?.name ? 'Edit name' : 'Add your name'}</button
-          >
-        {/if}
-        <dl class="numbers">
-          <div>
-            <dt>diagrams</dt>
-            <dd>{documents.length}</dd>
-          </div>
-          <div>
-            <dt>neurons drawn</dt>
-            <dd>{neurons === null ? '…' : neurons.toLocaleString('en-US')}</dd>
-          </div>
-          <div>
-            <dt>since</dt>
-            <dd>
-              {since
-                ? new Date(since).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-                : '-'}
-            </dd>
-          </div>
-          <div>
-            <dt>last edit</dt>
-            <dd>{documents[0] ? ago(documents[0].updatedAt, visitor.now) : '-'}</dd>
-          </div>
-        </dl>
-      </div>
-    </aside>
-
-    <article>
-      <h2 class="first">Your diagrams</h2>
-      <ul class="gallery">
-        {#each documents as doc (doc.id)}
-          <li>
-            <a href={`${base}tool/?doc=${encodeURIComponent(doc.id)}`}>
-              <span class="paper thumb" aria-hidden="true" {@attach preview(doc.text, doc.id)}
-              ></span>
-              <span class="caption">
-                <b>{documentName(doc.text)}</b>
-                <small>Edited {ago(doc.updatedAt, visitor.now)}</small>
-              </span>
-            </a>
-          </li>
-        {/each}
-      </ul>
-      <p class="more"><a href={`${base}tool/`}>Open the editor</a> to start a new diagram.</p>
-
-      <h2>Cloud save</h2>
-      <CloudSave onresult={say} />
-
-      <h2>Save file</h2>
-      <p>
-        One file with your diagrams, settings, name and picture. Keep it anywhere; opening it on
-        another device joins it with what is there (the newer edit of each diagram wins).
-      </p>
-      <div class="buttons">
-        <button type="button" class="btn" onclick={download}>Download save file</button>
-        <button type="button" class="btn quiet" onclick={() => fileInput?.click()}
-          >Open a save file…</button
+    <div class="card who">
+      <span class="pic">
+        <Avatar profile={visitor.profile} size={112} />
+        {@render editButton('Change your picture', openPicker)}
+      </span>
+      {#if editing}
+        <form class="name-form" onsubmit={saveName}>
+          <label class="sr-only" for="profile-name">Your name</label>
+          <input
+            id="profile-name"
+            bind:this={nameInput}
+            bind:value={draft}
+            maxlength={PROFILE_NAME_MAX}
+            autocomplete="name"
+            onblur={() => saveName()}
+            onkeydown={(e) => {
+              if (e.key === 'Escape') editing = false;
+            }}
+          />
+        </form>
+      {:else}
+        <h1 class="name">{profile?.name || 'Your desk'}</h1>
+        <button type="button" class="link" onclick={editName}
+          >{profile?.name ? 'Edit name' : 'Add your name'}</button
         >
-      </div>
+      {/if}
+      <dl class="numbers">
+        <div>
+          <dt>diagrams</dt>
+          <dd>{documents.length}</dd>
+        </div>
+        <div>
+          <dt>neurons drawn</dt>
+          <dd>{neurons === null ? '…' : neurons.toLocaleString('en-US')}</dd>
+        </div>
+        <div>
+          <dt>since</dt>
+          <dd>
+            {since
+              ? new Date(since).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+              : '-'}
+          </dd>
+        </div>
+        <div>
+          <dt>last edit</dt>
+          <dd>{latest ? ago(latest, visitor.now) : '-'}</dd>
+        </div>
+      </dl>
+    </div>
 
-      <h2 id="sign-out">This browser</h2>
-      <p>
-        Signing out saves to your cloud first (if one is connected), then removes your diagrams,
-        name and picture from this browser. Do this on a shared computer.
-      </p>
-      {#if signingOut}
-        <div class="confirm" role="group" aria-label="Sign out">
+    <div class="main">
+      <Gallery {documents} {render} now={visitor.now} />
+    </div>
+
+    <div class="account">
+      <section class="card" aria-labelledby="cloud-title">
+        <h2 id="cloud-title">Cloud save</h2>
+        <CloudSave onresult={say} />
+      </section>
+
+      <section class="card" aria-labelledby="file-title">
+        <h2 id="file-title">Save file</h2>
+        <p>Everything in one file. Opening it on another device joins it with what is there.</p>
+        <div class="buttons">
+          <button type="button" class="btn" onclick={download}>Download</button>
+          <button type="button" class="btn quiet" onclick={() => fileInput?.click()}>Open…</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="browser-title">
+        <h2 id="browser-title">This browser</h2>
+        {#if confirming}
           <p>
-            Remove {documents.length}
-            {documents.length === 1 ? 'diagram' : 'diagrams'}, your name and picture from this
-            browser?
-            {visitor.cloud
-              ? `They stay in your ${PROVIDERS[visitor.cloud.provider]}.`
-              : 'Without a cloud save, download the save file first to keep them.'}
+            Your {documents.length === 1 ? 'diagram is' : `${documents.length} diagrams are`} kept only
+            in this browser. Download the save file first to keep {documents.length === 1
+              ? 'it'
+              : 'them'}.
           </p>
           <div class="buttons">
-            {#if !visitor.cloud}
-              <button type="button" class="btn" onclick={download}>Download save file</button>
-            {/if}
+            <button type="button" class="btn" onclick={download}>Download</button>
             <button type="button" class="btn danger" disabled={leaving} onclick={signOut}
               >{leaving ? 'Signing out…' : 'Sign out'}</button
             >
-            <button type="button" class="btn quiet" onclick={() => (signingOut = false)}
+            <button type="button" class="btn quiet" onclick={() => (confirming = false)}
               >Cancel</button
             >
           </div>
-        </div>
-      {:else}
-        <div class="buttons">
-          <button type="button" class="btn danger" onclick={() => (signingOut = true)}
-            >Sign out of this browser</button
-          >
-        </div>
-      {/if}
-    </article>
+        {:else}
+          <p>On a shared computer, sign out to remove your diagrams, name and picture from it.</p>
+          <div class="buttons">
+            <button type="button" class="btn danger" disabled={leaving} onclick={askSignOut}
+              >{leaving ? 'Signing out…' : 'Sign out of this browser'}</button
+            >
+          </div>
+        {/if}
+      </section>
+    </div>
   </div>
 {/if}
 
@@ -430,28 +399,50 @@
     font-size: 0.85rem;
   }
 
-  @media (max-width: 520px) {
-    .welcome {
-      padding: 26px 16px 22px;
-    }
-  }
-
+  /* Left column: profile card, then the account cards; the gallery spans the right side. */
   .layout {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
-    gap: 40px;
+    grid-template-columns: 320px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'who main'
+      'account main';
+    gap: 16px 40px;
     align-items: start;
   }
 
-  aside {
-    position: sticky;
-    top: 20px;
+  .who {
+    grid-area: who;
+  }
+
+  .main {
+    grid-area: main;
+  }
+
+  .account {
+    grid-area: account;
+    display: grid;
+    gap: 16px;
   }
 
   .card {
-    padding: 20px;
+    padding: 18px;
     border: 1px solid var(--line);
     background: var(--surface);
+  }
+
+  .card h2 {
+    margin: 0 0 10px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .card p {
+    margin: 0;
+    font-size: 0.9rem;
   }
 
   .who {
@@ -547,77 +538,6 @@
     font-size: 0.8rem;
   }
 
-  article h2 {
-    margin: 34px 0 12px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--line);
-    font-size: 1.2rem;
-  }
-
-  article h2.first {
-    margin-top: 0;
-  }
-
-  article p {
-    margin: 0 0 10px;
-  }
-
-  .gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 18px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .gallery a {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    color: var(--ink);
-    text-decoration: none;
-  }
-
-  .thumb {
-    aspect-ratio: 4 / 3;
-    padding: 10px;
-    overflow: hidden;
-  }
-
-  .thumb :global(svg) {
-    max-height: 100%;
-  }
-
-  .gallery a:hover .thumb,
-  .gallery a:focus-visible .thumb {
-    box-shadow: 0 0 0 2px var(--accent);
-  }
-
-  .caption {
-    display: grid;
-  }
-
-  .caption b {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .caption small {
-    color: var(--muted);
-  }
-
-  .more {
-    margin-top: 14px;
-    color: var(--muted);
-  }
-
-  .more a {
-    color: var(--accent);
-    text-decoration: underline;
-  }
-
   .buttons {
     display: flex;
     flex-wrap: wrap;
@@ -644,24 +564,16 @@
     background: none;
   }
 
-  .confirm {
-    padding: 14px;
-    border: 1px solid var(--danger);
-    background: var(--surface);
-  }
-
-  .confirm p {
-    margin: 0;
-  }
-
-  @media (max-width: 860px) {
+  /* Phones and narrow windows: profile, gallery, then the account cards. */
+  @media (max-width: 900px) {
     .layout {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
+      grid-template-areas:
+        'who'
+        'main'
+        'account';
       gap: 26px;
-    }
-
-    aside {
-      position: static;
     }
   }
 </style>
