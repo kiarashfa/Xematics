@@ -6,6 +6,7 @@ import {
   createWorkspace,
   mergeWorkspaces,
   parseWorkspace,
+  pruneRemoved,
   serializeWorkspace,
   type Profile,
   type Workspace,
@@ -49,7 +50,9 @@ export const browserStore: WorkspaceStore = {
     request.onsuccess = () => {
       const stored =
         typeof request.result === 'string' ? parseWorkspace(request.result) : undefined;
-      result = stored?.ok ? mergeWorkspaces(stored.workspace, workspace) : workspace;
+      const merged = stored?.ok ? mergeWorkspaces(stored.workspace, workspace) : workspace;
+      // Deleted diagrams can be restored for a while; after that their text is let go.
+      result = pruneRemoved(merged, Date.now());
       const json = serializeWorkspace(result);
       if (json !== request.result) {
         store.put(json, KEY);

@@ -112,20 +112,25 @@ export {
 export {
   AVATAR_EMOJIS,
   createWorkspace,
+  favoriteIds,
   mergeWorkspaces,
   MONO_COLORS,
   parseProfile,
   parseWorkspace,
   PROFILE_NAME_MAX,
+  pruneRemoved,
+  RESTORE_DAYS,
   serializeWorkspace,
   WORKSPACE_FORMAT,
   WORKSPACE_VERSION,
+  type Favorite,
   type MonoColor,
   type Profile,
   type RemovedDocument,
   type Workspace,
   type WorkspaceDocument,
   type WorkspaceResult,
+  type WorkspaceSettings,
 } from './share/workspace.ts';
 export { renderPdf } from './export/pdf.ts';
 export { renderTikz, type TikzOptions } from './export/tikz.ts';

@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -170,4 +171,103 @@ test('the gallery switches views, sorts and finds diagrams', async ({ page }) =>
     'aria-pressed',
     'true',
   );
+});
+
+/** Opens the "…" menu of a diagram in the gallery and picks an item. */
+async function itemAction(page: Page, name: string, action: string) {
+  await page.getByRole('button', { name: `More for ${name}`, exact: true }).click();
+  await page.getByRole('menuitem', { name: action }).click();
+}
+
+test('gallery actions: rename, duplicate, favorite, delete with undo, restore', async ({
+  page,
+}) => {
+  await page.goto('./user/');
+  await page.getByRole('button', { name: 'Set up your profile' }).click();
+  await pickRobot(page);
+  const notice = page.locator('p.notice');
+
+  await itemAction(page, 'MNIST classifier', 'Rename…');
+  const rename = page.getByRole('dialog', { name: 'Rename diagram' });
+  await rename.getByRole('textbox', { name: 'Title' }).fill('Digits');
+  await rename.getByRole('button', { name: 'Rename' }).click();
+  await expect(page.getByRole('link', { name: /^Digits/ })).toBeVisible();
+
+  await itemAction(page, 'Digits', 'Duplicate');
+  await expect(notice).toContainText('Made a copy of Digits.');
+  await expect(page.getByRole('link', { name: /Digits copy/ })).toBeVisible();
+
+  // Favorites stay on top whatever the order.
+  await itemAction(page, 'Digits copy', 'Add to favorites');
+  await expect(page.locator('ul.cards > li').first()).toContainText('Digits copy');
+  await page.getByRole('button', { name: /^Favorites/ }).click();
+  await expect(page.locator('ul.cards > li')).toHaveCount(1);
+  await page.getByRole('button', { name: /^All/ }).click();
+
+  await itemAction(page, 'Digits', 'Delete');
+  await expect(notice).toContainText('Moved Digits to Recently deleted.');
+  await expect(page.locator('ul.cards > li')).toHaveCount(1);
+  await notice.getByRole('button', { name: 'Undo' }).click();
+  await expect(notice).toContainText('Restored Digits.');
+  await expect(page.locator('ul.cards > li')).toHaveCount(2);
+
+  await itemAction(page, 'Digits', 'Delete');
+  await page.getByRole('button', { name: /^Recently deleted/ }).click();
+  await expect(page.locator('ul.deleted li')).toContainText('30 days left');
+  await expectAccessible(page);
+  await page.getByRole('button', { name: 'Restore' }).click();
+  await expect(notice).toContainText('Restored Digits.');
+  await expect(page.locator('ul.deleted li')).toHaveCount(0);
+});
+
+test('export all downloads one ZIP with every diagram shown', async ({ page }) => {
+  await page.goto('./user/');
+  await page.getByRole('button', { name: 'Set up your profile' }).click();
+  await pickRobot(page);
+  await itemAction(page, 'MNIST classifier', 'Duplicate');
+  await expect(page.locator('ul.cards > li')).toHaveCount(2);
+
+  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Export diagrams' });
+  await dialog.getByRole('radio', { name: /TikZ/ }).check();
+  const download = page.waitForEvent('download');
+  await dialog.getByRole('button', { name: 'Download ZIP' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^xematics-diagrams-\d{4}-\d{2}-\d{2}\.zip$/);
+  const bytes = await readFile(await file.path());
+  expect(bytes.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+  const names = bytes.toString('latin1');
+  expect(names).toContain('mnist-classifier.tex');
+  expect(names).toContain('mnist-classifier-copy.tex');
+  expect(names).toContain('begin{tikzpicture}');
+  await expect(page.locator('p.notice')).toContainText('Downloaded 2 diagrams as a ZIP file.');
+});
+
+test('defaults: new diagrams use the chosen style, and the editor follows', async ({ page }) => {
+  await page.goto('./user/');
+  await page.getByRole('button', { name: 'Set up your profile' }).click();
+  await pickRobot(page);
+  await page.getByRole('combobox', { name: 'Style for new diagrams' }).selectOption('mono');
+  await page.getByRole('combobox', { name: 'Export button' }).selectOption('pdf');
+  await expect(page.getByRole('combobox', { name: 'Export button' })).toHaveValue('pdf');
+  await page.getByRole('link', { name: 'New diagram' }).click();
+  await expect(page).toHaveURL(/\/tool\/$/);
+  // The new document is saved in the default style.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<string>((resolve) => {
+            const open = indexedDB.open('xematics');
+            open.onsuccess = () => {
+              const get = open.result
+                .transaction('workspace')
+                .objectStore('workspace')
+                .get('current');
+              get.onsuccess = () => resolve(String(get.result));
+            };
+          }),
+      ),
+    )
+    .toMatch(/preset: mono/);
 });

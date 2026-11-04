@@ -135,6 +135,11 @@ export async function openWorkspaceFile(file: File): Promise<void> {
 
 export function deleteDocument(): void {
   const current = tool.documents.find((d) => d.id === tool.currentId);
-  if (current && confirm(`Delete "${tool.documentName(current)}"? This cannot be undone.`))
+  if (
+    current &&
+    confirm(
+      `Delete "${tool.documentName(current)}"? You can restore it from your profile for 30 days.`,
+    )
+  )
     tool.deleteCurrent();
 }

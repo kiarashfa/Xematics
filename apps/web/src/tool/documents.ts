@@ -16,3 +16,25 @@ export function documentName(text: string): string {
   const first = text.trim().split('\n')[0] ?? '';
   return (title ?? first).slice(0, 48) || 'Untitled';
 }
+
+/** Style presets in the order the ribbon shows them. */
+export const PRESET_CHOICES = [
+  { id: 'classic', label: 'Classic' },
+  { id: 'boxes', label: 'Layer boxes' },
+  { id: 'mono', label: 'Print mono' },
+  { id: 'colorblind', label: 'Colorblind' },
+  { id: 'colorblind-dark', label: 'Colorblind dark' },
+] as const;
+
+export type PresetChoice = (typeof PRESET_CHOICES)[number]['id'];
+
+export function isPresetChoice(value: unknown): value is PresetChoice {
+  return PRESET_CHOICES.some((p) => p.id === value);
+}
+
+/** The source of a new diagram, in the visitor's default style. */
+export function starterText(preset: unknown): string {
+  return isPresetChoice(preset) && preset !== 'classic'
+    ? `layers: [4, 8, 3]\nstyle: { preset: ${preset} }\n`
+    : '4-8-3';
+}

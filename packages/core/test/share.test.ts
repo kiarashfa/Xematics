@@ -4,8 +4,10 @@ import {
   createWorkspace,
   decodeShare,
   encodeShare,
+  favoriteIds,
   mergeWorkspaces,
   parseProfile,
+  pruneRemoved,
   parseWorkspace,
   serializeWorkspace,
   SHARE_PREFIX,
@@ -162,9 +164,46 @@ describe('workspace files', () => {
     };
     const merged = mergeWorkspaces(here, there);
     expect(merged.documents.map((d) => d.id)).toEqual(['keep', 'back']);
-    expect(merged.removed).toEqual([{ id: 'gone', at: T(5) }]);
+    // The record keeps the deleted text (from the copy that had it), so it can be restored.
+    expect(merged.removed).toEqual([{ id: 'gone', at: T(5), text: 'g' }]);
     // Deleting everything still leaves the newest document.
     const all = { ...here, removed: here.documents.map((d) => ({ id: d.id, at: T(30) })) };
     expect(mergeWorkspaces(here, all).documents.map((d) => d.id)).toEqual(['back']);
+  });
+
+  test('merge: the latest favourite mark and the newer settings win', () => {
+    const a = {
+      ...createWorkspace({ id: 'a', text: 'a', updatedAt: T(1) }),
+      settings: { exportFormat: 'pdf', updatedAt: T(8) },
+      favorites: [{ id: 'a', on: true, at: T(2) }],
+    };
+    const b = {
+      ...createWorkspace({ id: 'a', text: 'a', updatedAt: T(1) }),
+      settings: { exportFormat: 'svg', updatedAt: T(3) },
+      favorites: [{ id: 'a', on: false, at: T(4) }],
+    };
+    const merged = mergeWorkspaces(a, b);
+    expect(merged.settings?.exportFormat).toBe('pdf');
+    expect(favoriteIds(merged).has('a')).toBe(false);
+    expect(
+      favoriteIds(mergeWorkspaces(b, { ...a, favorites: [{ id: 'a', on: true, at: T(5) }] })).has(
+        'a',
+      ),
+    ).toBe(true);
+    expect(parseWorkspace(serializeWorkspace(merged))).toEqual({ ok: true, workspace: merged });
+  });
+
+  test('deleted text is forgotten after the restore period, the record stays', () => {
+    const ws = {
+      ...createWorkspace(doc),
+      removed: [
+        { id: 'old', at: '2026-09-01T00:00:00.000Z', text: 'x' },
+        { id: 'new', at: '2026-11-01T00:00:00.000Z', text: 'y' },
+      ],
+    };
+    expect(pruneRemoved(ws, Date.parse('2026-11-04T00:00:00.000Z')).removed).toEqual([
+      { id: 'old', at: '2026-09-01T00:00:00.000Z' },
+      { id: 'new', at: '2026-11-01T00:00:00.000Z', text: 'y' },
+    ]);
   });
 });

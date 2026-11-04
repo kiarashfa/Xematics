@@ -35,10 +35,11 @@ import {
   type TextEngine,
   type Workspace,
   type WorkspaceDocument,
+  type WorkspaceSettings,
 } from '@xematics/core';
 import { DEFAULT_PNG_DPI, isExportFormat, PNG_SIZES, type ExportFormat } from './formats.ts';
 import { describeMerge, type WorkspaceStore } from '../user/store.ts';
-import { documentName, EXAMPLES } from './documents.ts';
+import { documentName, EXAMPLES, isPresetChoice, starterText } from './documents.ts';
 
 export { EXAMPLES };
 
@@ -50,7 +51,6 @@ const HISTORY_LIMIT = 200;
 /** Keystrokes closer together than this become one undo step. */
 const COALESCE_MS = 800;
 const SAVE_DELAY_MS = 400;
-const NEW_DOCUMENT = '4-8-3';
 
 const newId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -66,6 +66,8 @@ export class ToolState {
   exportFormat = $state<ExportFormat>('svg');
   pngDpi = $state(DEFAULT_PNG_DPI);
   tikzStandalone = $state(true);
+  /** Style preset for new diagrams (set on the profile page). */
+  defaultPreset = $state<string | undefined>(undefined);
   /** The open editor dialog, if any. */
   dialog = $state<'export-options' | 'embed' | undefined>(undefined);
   showNavigator = $state(true);
@@ -96,6 +98,9 @@ export class ToolState {
   #store: WorkspaceStore | undefined;
   /** Documents deleted here or on another device, so merges do not bring them back. */
   #removed: RemovedDocument[] = [];
+  /** The settings as last stored or changed here, and when they changed. */
+  #settingsKey = '';
+  #settingsAt: string | undefined;
   #saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   parsed = $derived(parseModel(this.text));
@@ -293,15 +298,46 @@ export class ToolState {
       ...createWorkspace(this.documents[0]!),
       current: this.currentId,
       documents: this.documents.map((d) => ({ ...d })),
-      settings: {
-        liveText: this.liveText,
-        exportFormat: this.exportFormat,
-        pngDpi: this.pngDpi,
-        tikzStandalone: this.tikzStandalone,
-      },
+      settings: this.#settings(),
     };
     if (this.#removed.length > 0) workspace.removed = this.#removed.map((r) => ({ ...r }));
     return workspace;
+  }
+
+  /** The settings with the time they last changed here, so the newest settings win a merge. */
+  #settings(): WorkspaceSettings {
+    const values = this.#settingValues();
+    const key = JSON.stringify(values);
+    if (key !== this.#settingsKey) {
+      this.#settingsKey = key;
+      this.#settingsAt = now();
+    }
+    return this.#settingsAt ? { ...values, updatedAt: this.#settingsAt } : values;
+  }
+
+  #settingValues(): WorkspaceSettings {
+    const values: WorkspaceSettings = {
+      liveText: this.liveText,
+      exportFormat: this.exportFormat,
+      pngDpi: this.pngDpi,
+      tikzStandalone: this.tikzStandalone,
+    };
+    if (this.defaultPreset) values.defaultPreset = this.defaultPreset;
+    return values;
+  }
+
+  #applySettings(settings: WorkspaceSettings | undefined): void {
+    this.liveText = settings?.liveText ?? false;
+    this.exportFormat = isExportFormat(settings?.exportFormat) ? settings.exportFormat : 'svg';
+    this.pngDpi = PNG_SIZES.some((s) => s.dpi === settings?.pngDpi)
+      ? settings!.pngDpi!
+      : DEFAULT_PNG_DPI;
+    this.tikzStandalone = settings?.tikzStandalone ?? true;
+    this.defaultPreset = isPresetChoice(settings?.defaultPreset)
+      ? settings.defaultPreset
+      : undefined;
+    this.#settingsKey = JSON.stringify(this.#settingValues());
+    this.#settingsAt = settings?.updatedAt;
   }
 
   /**
@@ -313,6 +349,10 @@ export class ToolState {
     if (!this.ready) return;
     const merged = mergeWorkspaces(this.snapshot(), incoming);
     this.#removed = merged.removed ?? [];
+    // Settings changed later elsewhere (the profile page, another device) apply here too.
+    const settings = merged.settings;
+    if (settings?.updatedAt && settings.updatedAt > (this.#settingsAt ?? ''))
+      this.#applySettings(settings);
     const mine = Object.fromEntries(this.documents.map((d) => [d.id, d]));
     const same =
       merged.documents.length === this.documents.length &&
@@ -351,7 +391,7 @@ export class ToolState {
     return documentName(document.text);
   }
 
-  newDocument(text = NEW_DOCUMENT): void {
+  newDocument(text = starterText(this.defaultPreset)): void {
     const document = { id: newId(), text, updatedAt: now() };
     this.documents.push(document);
     this.switchTo(document.id);
@@ -373,7 +413,8 @@ export class ToolState {
   deleteCurrent(): void {
     const index = this.documents.findIndex((d) => d.id === this.currentId);
     if (index === -1) return;
-    this.#removed.push({ id: this.currentId, at: now() });
+    // The text stays with the record, so the profile can restore it for a while.
+    this.#removed.push({ id: this.currentId, at: now(), text: this.text });
     this.documents.splice(index, 1);
     if (this.documents.length === 0) this.newDocument();
     else this.switchTo(this.documents[Math.max(0, index - 1)]!.id);
@@ -409,13 +450,7 @@ export class ToolState {
   #apply(workspace: Workspace): void {
     this.documents = workspace.documents.map((d) => ({ ...d }));
     this.#removed = workspace.removed ? workspace.removed.map((r) => ({ ...r })) : [];
-    const settings = workspace.settings;
-    this.liveText = settings?.liveText ?? false;
-    this.exportFormat = isExportFormat(settings?.exportFormat) ? settings.exportFormat : 'svg';
-    this.pngDpi = PNG_SIZES.some((s) => s.dpi === settings?.pngDpi)
-      ? settings!.pngDpi!
-      : DEFAULT_PNG_DPI;
-    this.tikzStandalone = settings?.tikzStandalone ?? true;
+    this.#applySettings(workspace.settings);
     this.switchTo(workspace.current);
   }
 

@@ -4,10 +4,13 @@
   // numbers, then cloud save, the save file and signing out; the right side is their gallery.
   import { PROFILE_NAME_MAX, parseWorkspace, type Workspace } from '@xematics/core';
   import { onMount } from 'svelte';
+  import { PRESET_CHOICES } from '../tool/documents.ts';
+  import { EXPORT_FORMATS, PNG_SIZES } from '../tool/formats.ts';
   import Avatar from './Avatar.svelte';
   import CloudSave from './CloudSave.svelte';
   import Gallery from './Gallery.svelte';
   import type PicturePicker from './PicturePicker.svelte';
+  import type { SettingsPatch } from './library.ts';
   import type * as Render from './render.ts';
   import { finishDropbox, isDropboxReturn, startAutoSave } from './cloud.ts';
   import { loadRaw } from './idb.ts';
@@ -22,6 +25,7 @@
   let blocked = $state(false);
   let notice = $state('');
   let noticeError = $state(false);
+  let noticeUndo = $state.raw<(() => void) | null>(null);
   let picking = $state(false);
   let Picker = $state.raw<typeof PicturePicker | null>(null);
   let fileInput: HTMLInputElement | undefined = $state();
@@ -50,6 +54,15 @@
   );
   const since = $derived(profile?.createdAt ?? earliest);
   const welcome = $derived(loaded && !workspace);
+  const settings = $derived(workspace?.settings);
+
+  async function setDefault(patch: SettingsPatch) {
+    try {
+      await (await import('./library.ts')).updateSettings(patch);
+    } catch {
+      say('This browser blocks site storage, so the setting could not be kept.', true);
+    }
+  }
 
   async function reload() {
     const had = !!workspace;
@@ -64,9 +77,10 @@
     loaded = true;
   }
 
-  function say(message: string, error = false) {
+  function say(message: string, error = false, undo?: () => void) {
     notice = message;
     noticeError = error;
+    noticeUndo = undo ?? null;
   }
 
   async function openPicker() {
@@ -185,7 +199,20 @@
 />
 
 {#if notice}
-  <p class="notice" class:error={noticeError} role="status">{notice}</p>
+  <p class="notice" class:error={noticeError} role="status">
+    {notice}
+    {#if noticeUndo}
+      <button
+        type="button"
+        class="undo"
+        onclick={() => {
+          const undo = noticeUndo;
+          noticeUndo = null;
+          undo?.();
+        }}>Undo</button
+      >
+    {/if}
+  </p>
 {/if}
 
 {#if !loaded}
@@ -275,7 +302,9 @@
     </div>
 
     <div class="main">
-      <Gallery {documents} {render} now={visitor.now} />
+      {#if workspace}
+        <Gallery {workspace} {render} now={visitor.now} onnotice={say} />
+      {/if}
     </div>
 
     <div class="account">
@@ -291,6 +320,61 @@
           <button type="button" class="btn" onclick={download}>Download</button>
           <button type="button" class="btn quiet" onclick={() => fileInput?.click()}>Open…</button>
         </div>
+      </section>
+
+      <section class="card defaults" aria-labelledby="defaults-title">
+        <h2 id="defaults-title">Defaults</h2>
+        <label>
+          <span>Style for new diagrams</span>
+          <select
+            value={settings?.defaultPreset ?? 'classic'}
+            onchange={(e) => setDefault({ defaultPreset: e.currentTarget.value })}
+          >
+            {#each PRESET_CHOICES as p (p.id)}<option value={p.id}>{p.label}</option>{/each}
+          </select>
+        </label>
+        <label>
+          <span>Export button</span>
+          <select
+            value={settings?.exportFormat ?? 'svg'}
+            onchange={(e) => setDefault({ exportFormat: e.currentTarget.value })}
+          >
+            {#each EXPORT_FORMATS as f (f.id)}<option value={f.id}>{f.menu}</option>{/each}
+          </select>
+        </label>
+        <label>
+          <span>PNG resolution</span>
+          <select
+            value={settings?.pngDpi ?? 300}
+            onchange={(e) => setDefault({ pngDpi: Number(e.currentTarget.value) })}
+          >
+            {#each PNG_SIZES as size (size.dpi)}<option value={size.dpi}>{size.label}</option
+              >{/each}
+          </select>
+        </label>
+        <label>
+          <span>Text in SVG</span>
+          <select
+            value={settings?.liveText ? 'live' : 'outline'}
+            onchange={(e) => setDefault({ liveText: e.currentTarget.value === 'live' })}
+          >
+            <option value="outline">Outlined</option>
+            <option value="live">Editable</option>
+          </select>
+        </label>
+        <label>
+          <span>TikZ</span>
+          <select
+            value={settings?.tikzStandalone === false ? 'picture' : 'standalone'}
+            onchange={(e) => setDefault({ tikzStandalone: e.currentTarget.value === 'standalone' })}
+          >
+            <option value="standalone">Standalone document</option>
+            <option value="picture">Picture only</option>
+          </select>
+        </label>
+        <p class="small">
+          Used by the editor, and saved with your diagrams for your other devices.
+        </p>
       </section>
 
       <section class="card" aria-labelledby="browser-title">
@@ -338,6 +422,53 @@
     padding: 10px 14px;
     border-left: 3px solid var(--accent);
     background: var(--surface-2);
+  }
+
+  .undo {
+    margin-left: 10px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .defaults {
+    display: grid;
+    gap: 10px;
+  }
+
+  .defaults h2 {
+    margin-bottom: 0;
+  }
+
+  .defaults label {
+    display: grid;
+    gap: 3px;
+    font-size: 0.85rem;
+  }
+
+  .defaults label span {
+    color: var(--muted);
+  }
+
+  .defaults select {
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.9rem;
+  }
+
+  .defaults .small {
+    color: var(--muted);
+    font-size: 0.8rem;
   }
 
   .notice.error {

@@ -56,7 +56,12 @@
   }
 
   function remove(document: WorkspaceDocument) {
-    if (!confirm(`Delete "${tool.documentName(document)}"? This cannot be undone.`)) return;
+    if (
+      !confirm(
+        `Delete "${tool.documentName(document)}"? You can restore it from your profile for 30 days.`,
+      )
+    )
+      return;
     tool.switchTo(document.id);
     tool.deleteCurrent();
   }
