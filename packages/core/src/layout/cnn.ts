@@ -5,7 +5,7 @@
 // Pure and deterministic: only + - * / and sqrt.
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
-import { isMlp, type DenseLayer, type Layer, type Model } from '../model/schema.ts';
+import { familyOf, type DenseLayer, type Layer, type Model } from '../model/schema.ts';
 import { inferShapes, pair, shapeText, type Shape } from '../model/shapes.ts';
 import { SCENE_VERSION, type Paint, type SceneItem } from '../scene.ts';
 import type { Role, TextStyle, Theme } from '../style/theme.ts';
@@ -25,6 +25,7 @@ import {
   type LayoutResult,
   type Slot,
 } from './mlp.ts';
+import { sequenceAutoNames } from './rnn.ts';
 
 /** Space between a layer and the arrow next to it, and the arrow head size. */
 const ARROW_GAP = 8;
@@ -65,6 +66,8 @@ export function cnnAutoNames(layers: readonly Layer[]): string[] {
         return 'Global pool';
       case 'input':
         return 'Input';
+      default:
+        return '';
     }
   });
 }
@@ -630,5 +633,12 @@ export function describeCnn(model: Model): string {
 /** The automatic name of every layer, for fully connected and convolutional models alike. */
 export function autoNames(model: Model): string[] {
   const count = model.layers.length;
-  return isMlp(model) ? model.layers.map((_, i) => autoName(i, count)) : cnnAutoNames(model.layers);
+  switch (familyOf(model)) {
+    case 'mlp':
+      return model.layers.map((_, i) => autoName(i, count));
+    case 'cnn':
+      return cnnAutoNames(model.layers);
+    default:
+      return sequenceAutoNames(model.layers);
+  }
 }

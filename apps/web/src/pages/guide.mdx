@@ -160,6 +160,102 @@ connections, or bars with Layer boxes.
 When a window does not fit its input, or a convolution follows a flat layer, the editor warns
 you and still draws the figure.
 
+## Recurrent networks
+
+Start with a sequence, then add recurrent layers. The network is unrolled over time: one cell per
+step, the input below, the output on top and the state passed along. LSTM draws two state lines,
+the cell state and the output.
+
+```text
+seq(20x32)-lstm(64)-fc(10):softmax
+```
+
+<Figure id="g-rnn" source="seq(20x32)-lstm(64)-fc(10):softmax" caption="An LSTM over 20 steps" />
+
+| Shorthand        | Layer                                                         |
+| ---------------- | ------------------------------------------------------------- |
+| `seq(20x32)`     | A sequence of 20 steps with 32 numbers each.                  |
+| `rnn(64)`        | A plain recurrent layer of 64 units.                          |
+| `lstm(64)`       | An LSTM layer. `gru(64)` for a GRU.                           |
+| `bilstm(64)`     | Reads the sequence both ways; drawn as two rows.              |
+| `gru(64,last)`   | Passes on only the last step (many to one).                   |
+| `tokens(50)`     | Text as 50 tokens, followed by `embed(128)` for word vectors. |
+| `fc(10)` or `10` | A dense layer, applied at every step it receives.             |
+
+Long sequences draw the first steps, an ellipsis and the last step; set how many with Steps
+shown in the Network group of the Home tab, or `style: { steps: 6 }`. Two more switches sit
+there: Neurons per step (`recurrent: neurons`) draws each step as a small network of neurons,
+and Cell gates (`cell: true`) draws the gates inside one LSTM, GRU or RNN cell instead of the
+whole network.
+
+<Figure
+  id="g-cell"
+  source={'layers: seq(20x32)-lstm(64)-fc(10)\nstyle: { cell: true }'}
+  caption="The gates of an LSTM cell"
+/>
+
+In YAML: `{ type: lstm, units: 64, bidirectional: true, last: true }` and
+`{ type: sequence, steps: 20, features: 32 }`.
+
+## Transformers
+
+Transformers are drawn from left to right: tokens, the embedding with its positional encoding,
+each stack of blocks in a frame with its count, and the head.
+
+```text
+tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax
+```
+
+<Figure
+  id="g-transformer"
+  source="tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax"
+  caption="A decoder-only language model"
+/>
+
+| Shorthand           | Layer                                                           |
+| ------------------- | --------------------------------------------------------------- |
+| `tokens(512)`       | Text as 512 tokens. It comes first.                             |
+| `embed(512)`        | Each token as 512 numbers, with positional encoding.            |
+| `encoder(6,8)`      | Six encoder blocks with 8 attention heads.                      |
+| `decoder(6,8,2048)` | Six decoder blocks; the third number is the feed-forward width. |
+
+An encoder followed by a decoder gets two rows, the encoder on top, its output feeding the
+decoder's cross attention. In YAML: `{ type: encoder, blocks: 6, heads: 8, ff: 2048 }`.
+
+## GANs and autoencoders
+
+A GAN holds two networks: the generator, from noise to a fake sample, and the discriminator, from
+a sample to its score. Write them on either side of a bar.
+
+```text
+gan(100-256-512-784:tanh | 784-512-256-1:sigmoid)
+```
+
+<Figure
+  id="g-gan"
+  source="gan(100-256-512-784:tanh | 784-512-256-1:sigmoid)"
+  caption="Generator and discriminator"
+/>
+
+Each network is a funnel with its neurons inside; Neurons in funnels on the Home tab (or
+`style: { funnel: plain }`) shows only their names.
+
+An autoencoder narrows its input to a latent space and widens it back out. Write the encoder;
+the decoder mirrors it, or give your own after a bar: `ae(784-256-32 | 32-128-784)`.
+`vae(784-256-32)` draws a variational autoencoder, with a mean and a spread before the sampled
+latent.
+
+```text
+ae(784-256-64-16)
+```
+
+<Figure id="g-ae" source="ae(784-256-64-16)" caption="An autoencoder" />
+
+A plain network such as `8-4-2-4-8` can be drawn the same way: turn on Draw as autoencoder
+(`style: { autoencoder: true }`), and its smallest layer becomes the latent space. In YAML:
+`{ type: gan, generator: [100, 256, 784], discriminator: [784, 256, 1] }` and
+`{ type: autoencoder, encoder: [784, 256, 32], vae: true }`.
+
 ## Styles and presets
 
 A preset sets every color and shape at once. Pick one in the Home tab, or write it:

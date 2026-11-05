@@ -72,9 +72,11 @@ export interface TextItem extends ItemBase {
   readonly font: { readonly family: string; readonly weight: number; readonly size: number };
   /** Measured advance width in px. */
   readonly width: number;
-  /** The same text as SVG path data, already positioned. */
+  /** The same text as SVG path data, already positioned (and rotated). */
   readonly outline: string;
   readonly paint: Paint;
+  /** Turned by `angle` degrees (clockwise, as in SVG) around (cx, cy); names in slim boxes use -90. */
+  readonly rotate?: { readonly angle: number; readonly cx: number; readonly cy: number };
 }
 
 /** A typeset formula (from TeX). Always drawn as outlines; `tex` keeps the source for other exporters. */
@@ -104,4 +106,6 @@ export interface Scene {
   readonly title: string;
   readonly description: string;
   readonly items: readonly SceneItem[];
+  /** Set for recurrent, GAN and Transformer diagrams: exporters draw their items generically. */
+  readonly family?: 'rnn' | 'gan' | 'transformer' | 'autoencoder';
 }

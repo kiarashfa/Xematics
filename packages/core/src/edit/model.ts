@@ -1,7 +1,14 @@
 // Pure, immutable edits on the canonical model. Editors call these, then write the result back
 // to the source text with updateText (see ./text.ts).
 
-import type { AnimationOptions, Layer, LayerType, Model, StyleOptions } from '../model/schema.ts';
+import {
+  LIMITS,
+  type AnimationOptions,
+  type Layer,
+  type LayerType,
+  type Model,
+  type StyleOptions,
+} from '../model/schema.ts';
 import {
   joinTokens,
   layerToken,
@@ -70,6 +77,42 @@ export function defaultLayer(type: LayerType): Layer {
     case 'gap':
     case 'flatten':
       return { type };
+    case 'sequence':
+      return { type, steps: 20, features: 32 };
+    case 'rnn':
+    case 'lstm':
+    case 'gru':
+      return { type, units: 64 };
+    case 'tokens':
+      return { type, length: 512 };
+    case 'embed':
+      return { type, width: 512 };
+    case 'encoder':
+    case 'decoder':
+      return { type, blocks: 6, heads: 8 };
+    case 'gan':
+      return {
+        type,
+        generator: [
+          { type: 'dense', units: 100 },
+          { type: 'dense', units: 256 },
+          { type: 'dense', units: 784 },
+        ],
+        discriminator: [
+          { type: 'dense', units: 784 },
+          { type: 'dense', units: 256 },
+          { type: 'dense', units: 1 },
+        ],
+      };
+    case 'autoencoder':
+      return {
+        type,
+        encoder: [
+          { type: 'dense', units: 784 },
+          { type: 'dense', units: 128 },
+          { type: 'dense', units: 32 },
+        ],
+      };
   }
 }
 
@@ -80,7 +123,7 @@ export function changeLayerType(model: Model, index: number, type: LayerType): M
   const next: Record<string, unknown> = { ...defaultLayer(type) };
   if (old.name !== undefined) next['name'] = old.name;
   if (
-    (type === 'dense' || type === 'conv') &&
+    (type === 'dense' || type === 'conv' || type === 'rnn' || type === 'lstm' || type === 'gru') &&
     'activation' in old &&
     old.activation !== undefined
   ) {
@@ -166,14 +209,39 @@ export function structureOf(model: Model, format: ShorthandFormat = {}): string 
   return joinTokens(model.layers.map(layerToken), format);
 }
 
-/** The number a layer's plus and minus buttons change: neurons of dense layers, filters of convolutions. */
-export function layerCount(
-  layer: Layer,
-):
-  { readonly key: 'units' | 'filters'; readonly value: number; readonly noun: string } | undefined {
-  if (layer.type === 'dense') return { key: 'units', value: layer.units, noun: 'neurons' };
-  if (layer.type === 'conv') return { key: 'filters', value: layer.filters, noun: 'filters' };
-  return undefined;
+/**
+ * The number a layer's plus and minus buttons change: neurons of dense layers, filters of
+ * convolutions, units of recurrent layers, steps, tokens, widths and blocks.
+ */
+export function layerCount(layer: Layer):
+  | {
+      readonly key: 'units' | 'filters' | 'steps' | 'length' | 'width' | 'blocks';
+      readonly value: number;
+      readonly noun: string;
+      readonly max: number;
+    }
+  | undefined {
+  switch (layer.type) {
+    case 'dense':
+      return { key: 'units', value: layer.units, noun: 'neurons', max: LIMITS.units };
+    case 'conv':
+      return { key: 'filters', value: layer.filters, noun: 'filters', max: LIMITS.channels };
+    case 'rnn':
+    case 'lstm':
+    case 'gru':
+      return { key: 'units', value: layer.units, noun: 'units', max: LIMITS.units };
+    case 'sequence':
+      return { key: 'steps', value: layer.steps, noun: 'steps', max: LIMITS.steps };
+    case 'tokens':
+      return { key: 'length', value: layer.length, noun: 'tokens', max: LIMITS.steps };
+    case 'embed':
+      return { key: 'width', value: layer.width, noun: 'width', max: LIMITS.units };
+    case 'encoder':
+    case 'decoder':
+      return { key: 'blocks', value: layer.blocks, noun: 'blocks', max: LIMITS.blocks };
+    default:
+      return undefined;
+  }
 }
 
 export type AnimationPatch = Patch<AnimationOptions>;

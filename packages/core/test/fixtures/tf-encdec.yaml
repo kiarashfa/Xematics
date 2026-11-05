@@ -1,0 +1,2 @@
+layers: tokens(512)-embed(512)-encoder(6,8)-decoder(6,8)-fc(37000):softmax
+style: { preset: colorblind-dark }

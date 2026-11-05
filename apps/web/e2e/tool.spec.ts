@@ -121,6 +121,39 @@ test.describe('desktop editor', () => {
     await expect(page.locator('#pv-op-1')).not.toBeAttached();
   });
 
+  test('recurrent, GAN, Transformer and autoencoder figures match the Node goldens', async ({
+    page,
+  }) => {
+    await openEditor(page);
+    for (const name of ['rnn-lstm', 'gan', 'tf-gpt', 'ae']) {
+      const text = (await readFile(new URL(`../fixtures/${name}.txt`, GOLDEN), 'utf8')).trim();
+      await source(page).fill(text);
+      await expect(page.getByRole('img', { name: 'Neural network diagram' })).toBeVisible();
+      const download = page.waitForEvent('download');
+      await exportButton(page, 'Export SVG');
+      const file = await (await download).path();
+      expect(await readFile(file, 'utf8'), name).toBe(
+        await readFile(new URL(`${name}.svg`, GOLDEN), 'utf8'),
+      );
+    }
+  });
+
+  test('network switches and recurrent layer fields write the source', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('seq(3x3)-rnn(4)-fc(2)');
+    await expect(page.locator('#pv-box-1-0')).toBeAttached();
+    await page.getByRole('tab', { name: 'Home' }).click();
+    await page.getByRole('switch', { name: 'Neurons per step' }).check();
+    await expect(source(page)).toHaveValue(/recurrent: neurons/);
+    await expect(page.locator('#pv-frame-1-0')).toBeAttached();
+    await page.getByRole('switch', { name: 'Neurons per step' }).uncheck();
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await nav.getByRole('button', { name: /RNN/ }).click();
+    await page.getByRole('checkbox', { name: /Bidirectional/ }).check();
+    await expect(source(page)).toHaveValue(/type: rnn, units: 4, bidirectional: true/);
+    await expect(page.locator('#pv-box-1-0-b')).toBeAttached();
+  });
+
   test('Animate tab plays the preview and exports the same bytes as the Node golden', async ({
     page,
   }) => {

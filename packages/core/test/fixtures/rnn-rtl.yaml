@@ -1,0 +1,2 @@
+layers: seq(6x16)-lstm(32)-lstm(32)-fc(4)
+style: { direction: rtl, steps: 3 }

@@ -14,6 +14,10 @@ export {
   type LayoutResult,
 } from './layout/mlp.ts';
 export { autoNames, cnnAutoNames, describeCnn, opText } from './layout/cnn.ts';
+export { cellWord, describeSequence, sequenceAutoNames } from './layout/rnn.ts';
+export { describeGan } from './layout/gan.ts';
+export { describeTransformer } from './layout/transformer.ts';
+export { autoencoderParts, describeAutoencoder } from './layout/autoencoder.ts';
 export { inferShapes, pair, shapeText, type Shape, type ShapeResult } from './model/shapes.ts';
 export {
   ACTIVATION_PATTERN,
@@ -23,7 +27,23 @@ export {
   type AnimationOptions,
   type AnimationScene,
   isDense,
+  familyOf,
+  FUNNEL_LOOKS,
   isMlp,
+  isRecurrent,
+  RECURRENT_LOOKS,
+  RECURRENT_TYPES,
+  type AutoencoderLayer,
+  type BlockLayer,
+  type EmbedLayer,
+  type Family,
+  type FunnelLook,
+  type GanLayer,
+  type RecurrentLayer,
+  type RecurrentLook,
+  type RecurrentType,
+  type SequenceLayer,
+  type TokensLayer,
   LAYER_TYPES,
   LIMITS,
   MODEL_VERSION,

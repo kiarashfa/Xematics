@@ -166,6 +166,8 @@ function paint(
   }
   if (fill) ops.push(`${rgb(p.fill!)} rg`);
   if (stroke) ops.push(`${rgb(p.stroke!)} RG`, `${n(p.strokeWidth ?? 1)} w`);
+  if (stroke && p.dash && p.dash.length > 0)
+    ops.push(`[${p.dash.map(n).join(' ')}] ${n(p.dashOffset ?? 0)} d`);
   ops.push(...path, fill && stroke ? 'B' : fill ? 'f' : 'S', 'Q');
 }
 

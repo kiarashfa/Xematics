@@ -82,14 +82,60 @@ style: { preset: boxes }
   {
     slug: 'autoencoder',
     title: 'Autoencoder',
-    note: 'Compresses its input to a small code, then rebuilds it.',
+    note: 'The encoder squeezes the input into a small latent space; the decoder rebuilds it.',
     source: `title: Autoencoder
-layers:
-  - { units: 8, name: Input }
-  - 4
-  - { units: 2, name: Code }
-  - 4
-  - { units: 8, name: Reconstruction }
+layers: ae(784-256-64-16)
+`,
+  },
+  {
+    slug: 'lstm',
+    title: 'LSTM sequence model',
+    note: 'Unrolled over time: one cell per step, the cell state and output passed along.',
+    source: `title: LSTM sequence model
+layers: seq(20x32)-lstm(64)-fc(10):softmax
+`,
+  },
+  {
+    slug: 'sentiment',
+    title: 'Text classifier',
+    note: 'Words become vectors, a bidirectional GRU reads them both ways, the last step decides.',
+    source: `title: Text classifier
+layers: tokens(50)-embed(128)-bigru(64,last)-fc(2):softmax
+style: { preset: colorblind }
+`,
+  },
+  {
+    slug: 'lstm-cell',
+    title: 'Inside an LSTM cell',
+    note: 'The gates of one cell: forget, input, candidate and output.',
+    source: `title: Inside an LSTM cell
+layers: seq(20x32)-lstm(64)-fc(10)
+style: { cell: true }
+`,
+  },
+  {
+    slug: 'gan',
+    title: 'Generative adversarial network',
+    note: 'The generator turns noise into fakes; the discriminator tells them from real data.',
+    source: `title: GAN
+layers: gan(100-256-512-784:tanh | 784-512-256-1:sigmoid)
+`,
+  },
+  {
+    slug: 'gpt',
+    title: 'Decoder-only Transformer',
+    note: 'A GPT-style language model: twelve masked attention blocks predict the next token.',
+    source: `title: Decoder-only Transformer
+layers: tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax
+`,
+  },
+  {
+    slug: 'transformer',
+    title: 'Encoder-decoder Transformer',
+    note: 'The translation model: the encoder output feeds the decoder through cross attention.',
+    source: `title: Encoder-decoder Transformer
+layers: tokens(512)-embed(512)-encoder(6,8)-decoder(6,8)-fc(37000):softmax
+style: { preset: colorblind-dark }
 `,
   },
   {

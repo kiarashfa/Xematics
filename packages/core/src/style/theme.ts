@@ -1,6 +1,12 @@
 // Presets are data, not code: a preset is a complete Theme, and a model's style options override parts of it.
 
-import type { CollapseOptions, PresetId, StyleOptions } from '../model/schema.ts';
+import type {
+  CollapseOptions,
+  FunnelLook,
+  PresetId,
+  RecurrentLook,
+  StyleOptions,
+} from '../model/schema.ts';
 
 export type Role = 'input' | 'hidden' | 'output';
 
@@ -74,6 +80,14 @@ export interface Theme {
   };
   /** Draw connections by a learned weight (style.weights). */
   readonly weights: boolean;
+  /** Recurrent networks: the look, how many time steps to draw, and the cell-detail figure. */
+  readonly recurrent: RecurrentLook;
+  readonly steps: number;
+  readonly cell: boolean;
+  /** GANs: neurons inside the funnels, or only names. */
+  readonly funnel: FunnelLook;
+  /** Fully connected networks drawn as an autoencoder (funnels meeting at the smallest layer). */
+  readonly autoencoder: boolean;
   /** Convolutional models: feature maps drawn as stacks of sheets, one per channel. */
   readonly maps: {
     /** Pooling layers get their own tint; other maps use the role paints. */
@@ -93,6 +107,25 @@ export interface Theme {
     readonly nodeSpacing: number;
     /** Operation labels on the connectors (conv 3×3, max 2×2). */
     readonly opText: TextStyle;
+  };
+  /** Recurrent, GAN and Transformer parts: boxes with a name inside, frames, gates. */
+  readonly parts: {
+    readonly attention: RolePaint;
+    readonly norm: RolePaint;
+    readonly feedForward: RolePaint;
+    /** Gates inside a recurrent cell (σ, tanh). */
+    readonly gate: RolePaint;
+    readonly generator: RolePaint;
+    readonly discriminator: RolePaint;
+    /** Repeated blocks and the body of a cell drawn in detail. */
+    readonly frame: { readonly fill: string; readonly stroke: string };
+    /** State lines, residual paths and lines inside blocks. */
+    readonly line: { readonly color: string; readonly width: number };
+    /** Names inside boxes (fill-dependent color comes from the paint's text). */
+    readonly text: Omit<TextStyle, 'color'>;
+    /** The real and fake marks after a GAN's score. */
+    readonly real: string;
+    readonly fake: string;
   };
 }
 
@@ -133,6 +166,11 @@ const CLASSIC: Theme = {
     grayBorder: INK,
   },
   weights: false,
+  recurrent: 'unrolled',
+  steps: 4,
+  cell: false,
+  funnel: 'neurons',
+  autoencoder: false,
   maps: {
     pool: { fill: '#dfe3e8', stroke: '#4b5563' },
     window: '#aeb3b9',
@@ -144,6 +182,19 @@ const CLASSIC: Theme = {
     nodeRadius: 8,
     nodeSpacing: 5,
     opText: { family: 'Inter', weight: 400, size: 11, color: MUTED },
+  },
+  parts: {
+    attention: { fill: '#dcecf7', stroke: '#2f7fb5', text: INK },
+    norm: { fill: '#f8f3c8', stroke: '#9a8f16', text: INK },
+    feedForward: { fill: '#f1f2f4', stroke: '#4b5563', text: INK },
+    gate: { fill: '#dcecf7', stroke: '#2f7fb5', text: INK },
+    generator: { fill: '#e0f3ec', stroke: '#00845f', text: INK },
+    discriminator: { fill: '#f7eaf2', stroke: '#a8558a', text: INK },
+    frame: { fill: '#f8f9fa', stroke: MUTED },
+    line: { color: INK, width: 1.4 },
+    text: { family: 'Inter', weight: 500, size: 12 },
+    real: '#0072b2',
+    fake: '#d55e00',
   },
 };
 
@@ -184,6 +235,19 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
       ray: { color: '#4d4d4d', width: 0.7 },
       opText: { ...CLASSIC.maps.opText, color: '#4d4d4d' },
     },
+    parts: {
+      ...CLASSIC.parts,
+      attention: { fill: '#ececec', stroke: '#000000', text: '#000000' },
+      norm: { fill: '#d9d9d9', stroke: '#000000', text: '#000000' },
+      feedForward: { fill: '#ffffff', stroke: '#000000', text: '#000000' },
+      gate: { fill: '#ececec', stroke: '#000000', text: '#000000' },
+      generator: { fill: '#f2f2f2', stroke: '#000000', text: '#000000' },
+      discriminator: { fill: '#e3e3e3', stroke: '#000000', text: '#000000' },
+      frame: { fill: '#fafafa', stroke: '#4d4d4d' },
+      line: { color: '#000000', width: 1.3 },
+      real: '#000000',
+      fake: '#4d4d4d',
+    },
   },
   colorblind: {
     ...CLASSIC,
@@ -197,6 +261,15 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
       ...CLASSIC.maps,
       pool: { fill: '#d1d5db', stroke: '#6b7280' },
       window: '#b3b8bf',
+    },
+    parts: {
+      ...CLASSIC.parts,
+      attention: { fill: '#cfe8f7', stroke: '#0072b2', text: INK },
+      norm: { fill: '#f6efa6', stroke: '#8a7f00', text: INK },
+      feedForward: { fill: '#e5e7eb', stroke: '#6b7280', text: INK },
+      gate: { fill: '#cfe8f7', stroke: '#0072b2', text: INK },
+      generator: { fill: '#cdeee3', stroke: '#009e73', text: INK },
+      discriminator: { fill: '#f3dceb', stroke: '#a8558a', text: INK },
     },
   },
   'colorblind-dark': {
@@ -225,6 +298,19 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
       window: '#51575f',
       ray: { color: '#9aa3ae', width: 0.8 },
       opText: { ...CLASSIC.maps.opText, color: '#9aa3ae' },
+    },
+    parts: {
+      ...CLASSIC.parts,
+      attention: { fill: '#24506b', stroke: '#7cc4ee', text: '#e8eaed' },
+      norm: { fill: '#4f4b22', stroke: '#e6dc6a', text: '#e8eaed' },
+      feedForward: { fill: '#2b313b', stroke: '#9aa3ae', text: '#e8eaed' },
+      gate: { fill: '#24506b', stroke: '#7cc4ee', text: '#e8eaed' },
+      generator: { fill: '#153f35', stroke: '#3fd0a8', text: '#e8eaed' },
+      discriminator: { fill: '#432a3a', stroke: '#e3a7cb', text: '#e8eaed' },
+      frame: { fill: '#1c2128', stroke: '#6b7480' },
+      line: { color: '#e8eaed', width: 1.4 },
+      real: '#56b4e9',
+      fake: '#e8743b',
     },
   },
 };
@@ -269,6 +355,11 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
       ops: style.labels?.ops ?? base.labels.ops,
     },
     weights: style.weights ?? base.weights,
+    recurrent: style.recurrent ?? base.recurrent,
+    steps: style.steps ?? base.steps,
+    cell: style.cell ?? base.cell,
+    funnel: style.funnel ?? base.funnel,
+    autoencoder: style.autoencoder ?? base.autoencoder,
     maps: {
       ...base.maps,
       nodeRadius: style.nodeRadius ?? base.maps.nodeRadius,

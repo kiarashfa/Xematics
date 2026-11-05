@@ -5,9 +5,9 @@
 //   layer      = ( size | call | word ) [ ":" activation ] [ "*" count ]
 //   count      = digit { digit }                      1 .. LIMITS.layers (repeats the layer)
 //   size       = digit { digit }                      1 .. LIMITS.units
-//   call       = type "(" [ arg { "," arg } ] ")"
+//   call       = type "(" [ arg { "," arg } ] ")"  |  "gan(" model "|" model ")"
 //   word       = "flatten" | "gap"                    (a call without arguments, parentheses optional)
-//   arg        = dims | "s" dims | "same" | "valid"
+//   arg        = dims | "s" dims | "same" | "valid" | "last"
 //   dims       = size [ "x" size [ "x" size ] ]
 //   activation = ( letter | "_" ) { letter | digit | "_" }
 //
@@ -17,12 +17,21 @@
 //   conv | conv2d (filters, K [x K] [, sN] [, same | valid])
 //   pool | maxpool | avgpool (K [x K] [, sN] [, same | valid])
 //   gap, flatten
+//   seq | sequence (steps [x features])               a sequence input; features default to 1
+//   rnn | lstm | gru (units [, last])                 recurrent; a "bi" prefix reads both ways,
+//                                                     "last" passes on only the last step
+//   tokens (length), embed | embedding (width)        token ids, then their vectors
+//   encoder | decoder (blocks, heads [, ff])          transformer blocks
+//   gan (generator | discriminator)                   two fully connected networks
+//   ae | autoencoder | vae (encoder [| decoder])      the decoder mirrors the encoder by default
 //
 // Examples: 784-16-16-10   784-128*3-10   4-8:relu-3:softmax
 //           in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(10)
+//           seq(20x32)-lstm(64)-fc(10)   tokens(512)-embed(512)-encoder(6,8)-fc(2)
+//           gan(100-256-784:tanh | 784-256-1:sigmoid)
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
-import { LIMITS, type Layer, type Model } from '../model/schema.ts';
+import { LIMITS, type DenseLayer, type Layer, type Model } from '../model/schema.ts';
 
 /** A layer as the shorthand describes it: structure only (no names, labels or collapse rules). */
 export type ShorthandLayer = Layer;
@@ -32,7 +41,24 @@ export interface ShorthandResult {
   readonly diagnostics: readonly Diagnostic[];
 }
 
-type Kind = 'dense' | 'input' | 'conv' | 'maxpool' | 'avgpool' | 'gap' | 'flatten';
+type Kind =
+  | 'dense'
+  | 'input'
+  | 'conv'
+  | 'maxpool'
+  | 'avgpool'
+  | 'gap'
+  | 'flatten'
+  | 'sequence'
+  | 'rnn'
+  | 'lstm'
+  | 'gru'
+  | 'tokens'
+  | 'embed'
+  | 'encoder'
+  | 'decoder'
+  | 'gan'
+  | 'autoencoder';
 
 const TYPE_ALIASES: Readonly<Record<string, Kind>> = {
   dense: 'dense',
@@ -47,9 +73,26 @@ const TYPE_ALIASES: Readonly<Record<string, Kind>> = {
   avgpool: 'avgpool',
   gap: 'gap',
   flatten: 'flatten',
+  seq: 'sequence',
+  sequence: 'sequence',
+  rnn: 'rnn',
+  lstm: 'lstm',
+  gru: 'gru',
+  birnn: 'rnn',
+  bilstm: 'lstm',
+  bigru: 'gru',
+  tokens: 'tokens',
+  embed: 'embed',
+  embedding: 'embed',
+  encoder: 'encoder',
+  decoder: 'decoder',
+  gan: 'gan',
+  ae: 'autoencoder',
+  autoencoder: 'autoencoder',
+  vae: 'autoencoder',
 };
 
-const TAKES_ACTIVATION = new Set<Kind>(['dense', 'conv']);
+const TAKES_ACTIVATION = new Set<Kind>(['dense', 'conv', 'rnn', 'lstm', 'gru']);
 
 const isDigit = (c: string) => c >= '0' && c <= '9';
 const isIdentStart = (c: string) => /^[A-Za-z_]$/.test(c);
@@ -59,7 +102,8 @@ const isSpace = (c: string) => c === ' ' || c === '\t';
 type Arg =
   | { readonly kind: 'dims'; readonly values: readonly number[]; readonly at: number }
   | { readonly kind: 'stride'; readonly values: readonly number[]; readonly at: number }
-  | { readonly kind: 'padding'; readonly value: 'same' | 'valid'; readonly at: number };
+  | { readonly kind: 'padding'; readonly value: 'same' | 'valid'; readonly at: number }
+  | { readonly kind: 'last'; readonly at: number };
 
 class Failure {
   readonly result: ShorthandResult;
@@ -144,13 +188,14 @@ function parseLayers(source: string): ShorthandLayer[] {
         const ident = readWhile(isIdentChar);
         const lower = ident.toLowerCase();
         if (lower === 'same' || lower === 'valid') args.push({ kind: 'padding', value: lower, at });
+        else if (lower === 'last') args.push({ kind: 'last', at });
         else if (/^s\d/i.test(ident)) {
           pos = at + 1;
           args.push({ kind: 'stride', values: readDims(LIMITS.window, 'Stride'), at });
         } else {
           fail(
             'shorthand.unknown-option',
-            `Unknown option '${ident}' in ${word}( ). Options are sizes like 3x3, a stride like s2, and same or valid.`,
+            `Unknown option '${ident}' in ${word}( ). Options are sizes like 3x3, a stride like s2, same or valid, and last.`,
             at,
           );
         }
@@ -182,8 +227,50 @@ function parseLayers(source: string): ShorthandLayer[] {
     const dims = args.filter((a) => a.kind === 'dims');
     const stride = args.find((a) => a.kind === 'stride');
     const padding = args.find((a) => a.kind === 'padding');
+    const last = args.find((a) => a.kind === 'last');
     const reject = (arg: Arg | undefined, what: string) => {
       if (arg) fail('shorthand.unexpected-option', `${word}( ) does not take ${what}.`, arg.at);
+    };
+    if (kind !== 'rnn' && kind !== 'lstm' && kind !== 'gru') reject(last, "'last'");
+    /** Plain whole numbers (no 3x3 sizes), each within its range. */
+    const numbers = (
+      what: string,
+      ranges: readonly (readonly [string, number])[],
+      required: number,
+    ): number[] => {
+      const usage = `${word}(${ranges
+        .slice(0, required)
+        .map(([n]) => n)
+        .join(',')})`;
+      reject(stride, 'a stride');
+      reject(padding, 'padding');
+      if (dims.length < required) {
+        fail(
+          'shorthand.expected-size',
+          `Expected ${what} inside ${word}( ), like ${usage}.`,
+          dims[0]?.at ?? close,
+        );
+      }
+      if (dims.length > ranges.length) {
+        fail(
+          'shorthand.unexpected',
+          `${word}( ) takes at most ${ranges.length} numbers.`,
+          dims[ranges.length]!.at,
+        );
+      }
+      return dims.map((d, i) => {
+        if (d.values.length > 1)
+          fail('shorthand.unexpected', `${word}( ) takes plain numbers, like ${usage}.`, d.at);
+        const [label, max] = ranges[i]!;
+        if (d.values[0]! > max) {
+          fail(
+            'shorthand.size-range',
+            `${label} ${d.values[0]} is too large. The maximum is ${max}.`,
+            d.at,
+          );
+        }
+        return d.values[0]!;
+      });
     };
     const window = (values: readonly number[], at: number): number | [number, number] => {
       if (values.length > 2) {
@@ -313,7 +400,143 @@ function parseLayers(source: string): ShorthandLayer[] {
       case 'flatten':
         if (args[0]) fail('shorthand.unexpected-option', `${word} takes no options.`, args[0].at);
         return { type: kind };
+      case 'sequence': {
+        reject(stride, 'a stride');
+        reject(padding, 'padding');
+        const [shape, extra] = dims;
+        if (!shape || extra || shape.values.length > 2) {
+          return fail(
+            'shorthand.expected-shape',
+            `Expected steps and features inside ${word}( ), like ${word}(20x32).`,
+            (extra ?? shape)?.at ?? close,
+          );
+        }
+        const [steps, features = 1] = shape.values as [number, number?];
+        if (steps > LIMITS.steps) {
+          fail(
+            'shorthand.size-range',
+            `Step count ${steps} is too large. The maximum is ${LIMITS.steps}.`,
+            shape.at,
+          );
+        }
+        return { type: 'sequence', steps, features };
+      }
+      case 'rnn':
+      case 'lstm':
+      case 'gru': {
+        const [units] = numbers('a unit count', [['Unit count', LIMITS.units]], 1);
+        return {
+          type: kind,
+          units: units!,
+          ...(/^bi/i.test(word) ? { bidirectional: true } : {}),
+          ...(last ? { last: true } : {}),
+        };
+      }
+      case 'tokens': {
+        const [length] = numbers('a length', [['Token count', LIMITS.steps]], 1);
+        return { type: 'tokens', length: length! };
+      }
+      case 'embed': {
+        const [width] = numbers('a width', [['Width', LIMITS.units]], 1);
+        return { type: 'embed', width: width! };
+      }
+      case 'encoder':
+      case 'decoder': {
+        const [blocks, heads, ff] = numbers(
+          'blocks and heads',
+          [
+            ['Block count', LIMITS.blocks],
+            ['Head count', LIMITS.heads],
+            ['Feed-forward width', LIMITS.units],
+          ],
+          2,
+        );
+        return { type: kind, blocks: blocks!, heads: heads!, ...(ff ? { ff } : {}) };
+      }
+      case 'gan':
+      case 'autoencoder':
+        return fail('shorthand.unexpected', `Expected ${word}( ) with layer sizes inside.`, close);
     }
+  };
+
+  /**
+   * gan(100-256-784 | 784-256-1) and ae(784-256-32 [| 32-256-784]): fully connected networks,
+   * each parsed like a whole shorthand.
+   */
+  const networksCall = (word: string, open: number, kind: 'gan' | 'autoencoder'): Layer => {
+    const roles = kind === 'gan' ? ['generator', 'discriminator'] : ['encoder', 'decoder'];
+    const usage = kind === 'gan' ? `${word}(100-256-784 | 784-256-1)` : `${word}(784-256-32)`;
+    let depth = 0;
+    let bar = -1;
+    let close = -1;
+    for (let i = open + 1; i < source.length; i++) {
+      const c = source[i];
+      if (c === '(') depth++;
+      else if (c === ')') {
+        if (depth === 0) {
+          close = i;
+          break;
+        }
+        depth--;
+      } else if (c === '|' && depth === 0) {
+        if (bar >= 0)
+          fail('shorthand.unexpected', `${word}( ) takes two networks separated by one '|'.`, i);
+        bar = i;
+      }
+    }
+    if (close < 0)
+      fail('shorthand.expected-paren', `Expected ')' to close ${word}(.`, source.length);
+    if (bar < 0 && kind === 'gan') {
+      fail(
+        'shorthand.expected-gan',
+        `Expected a generator and a discriminator separated by '|', like ${usage}.`,
+        close,
+      );
+    }
+    const part = (from: number, to: number, role: string) => {
+      const text = source.slice(from, to);
+      const lead = text.length - text.trimStart().length;
+      const result = parseShorthand(text.trim());
+      const error = result.diagnostics[0];
+      if (error) {
+        throw new Failure({
+          layers: [],
+          diagnostics: [
+            {
+              ...error,
+              column: from + lead + (error.column ?? 1),
+              message: `In the ${role}: ${error.message}`,
+            },
+          ],
+        });
+      }
+      const typedLayer = result.layers.find((l) => l.type !== 'dense');
+      if (typedLayer) {
+        fail(
+          'shorthand.gan-dense',
+          `The ${role} takes layer sizes only, like ${usage}.`,
+          from + lead,
+        );
+      }
+      if (result.layers.length < 2) {
+        fail(
+          'shorthand.gan-short',
+          `The ${role} needs at least two layers, like 100-784.`,
+          from + lead,
+        );
+      }
+      return result.layers as DenseLayer[];
+    };
+    const first = part(open + 1, bar < 0 ? close : bar, roles[0]!);
+    const second = bar < 0 ? undefined : part(bar + 1, close, roles[1]!);
+    pos = close + 1;
+    if (kind === 'gan') return { type: 'gan', generator: first, discriminator: second! };
+    return {
+      type: 'autoencoder',
+      encoder: first,
+      ...(second ? { decoder: second } : {}),
+      ...(/^vae$/i.test(word) ? { vae: true } : {}),
+    };
   };
 
   skipSpace();
@@ -360,16 +583,20 @@ function parseLayers(source: string): ShorthandLayer[] {
         if (!found) {
           return fail(
             'shorthand.unknown-type',
-            `Layer type '${word}' is not supported. Use a number, dense, in, conv, pool, avgpool, gap or flatten.`,
+            `Layer type '${word}' is not supported. Use a number, dense, in, conv, pool, avgpool, gap, flatten, seq, rnn, lstm, gru, tokens, embed, encoder, decoder, gan or ae.`,
             start,
           );
         }
         kind = found;
-        pos++;
-        const args = readArgs(word);
-        const close = pos;
-        pos++;
-        layer = typed(kind, word, args, close);
+        if (kind === 'gan' || kind === 'autoencoder') {
+          layer = networksCall(word, pos, kind);
+        } else {
+          pos++;
+          const args = readArgs(word);
+          const close = pos;
+          pos++;
+          layer = typed(kind, word, args, close);
+        }
       }
     } else {
       return fail(
@@ -456,6 +683,18 @@ function example(kind: Kind, word: string): string {
     case 'maxpool':
     case 'avgpool':
       return `${word}(2)`;
+    case 'sequence':
+      return `${word}(20x32)`;
+    case 'tokens':
+    case 'embed':
+      return `${word}(512)`;
+    case 'encoder':
+    case 'decoder':
+      return `${word}(6,8)`;
+    case 'gan':
+      return `${word}(100-256-784 | 784-256-1)`;
+    case 'autoencoder':
+      return `${word}(784-256-32)`;
     default:
       return `${word}(16)`;
   }
@@ -489,6 +728,25 @@ export function layerToken(layer: Layer): string {
     case 'gap':
     case 'flatten':
       return layer.type;
+    case 'sequence':
+      return `seq(${layer.features === 1 ? layer.steps : `${layer.steps}x${layer.features}`})`;
+    case 'rnn':
+    case 'lstm':
+    case 'gru':
+      return `${layer.bidirectional ? 'bi' : ''}${layer.type}(${layer.units}${layer.last ? ',last' : ''})${act}`;
+    case 'tokens':
+      return `tokens(${layer.length})`;
+    case 'embed':
+      return `embed(${layer.width})`;
+    case 'encoder':
+    case 'decoder':
+      return `${layer.type}(${layer.blocks},${layer.heads}${layer.ff === undefined ? '' : `,${layer.ff}`})`;
+    case 'gan':
+      return `gan(${layer.generator.map(layerToken).join('-')} | ${layer.discriminator.map(layerToken).join('-')})`;
+    case 'autoencoder': {
+      const decoder = layer.decoder ? ` | ${layer.decoder.map(layerToken).join('-')}` : '';
+      return `${layer.vae ? 'vae' : 'ae'}(${layer.encoder.map(layerToken).join('-')}${decoder})`;
+    }
   }
 }
 
@@ -511,6 +769,19 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
   for (const layer of model.layers) {
     if (layer.name !== undefined) return undefined;
     if (layer.type === 'dense' && (layer.collapse !== undefined || layer.nodeLabel !== undefined)) {
+      return undefined;
+    }
+    const inner =
+      layer.type === 'gan'
+        ? [...layer.generator, ...layer.discriminator]
+        : layer.type === 'autoencoder'
+          ? [...layer.encoder, ...(layer.decoder ?? [])]
+          : [];
+    if (
+      inner.some(
+        (l) => l.name !== undefined || l.collapse !== undefined || l.nodeLabel !== undefined,
+      )
+    ) {
       return undefined;
     }
     parts.push(layerToken(layer));

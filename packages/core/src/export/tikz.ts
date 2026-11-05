@@ -73,8 +73,17 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
     );
   }
 
+  // Recurrent, GAN, Transformer and autoencoder diagrams are drawn item by item in paint order.
+  const legacy = scene.family ? [] : scene.items;
+  if (scene.family) {
+    const generic = genericItems(scene, children, { color, style, n, font, paintStyle });
+    unicode ||= generic.unicode;
+    usesMath ||= generic.math;
+    body.push(...generic.lines);
+  }
+
   // Nodes first (edges refer to them by name); TikZ then draws edges between their borders.
-  const nodes = scene.items.filter((i) => i.kind === 'circle' && i.id.startsWith('node-'));
+  const nodes = legacy.filter((i) => i.kind === 'circle' && i.id.startsWith('node-'));
   if (nodes.length > 0) body.push('  % Neurons');
   for (const item of nodes) {
     if (item.kind !== 'circle') continue;
@@ -86,7 +95,7 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
     body.push(`  \\node[${s}] (${nodeName(item.id)}) at (${n(item.cx)},${n(item.cy)}) {};`);
   }
 
-  for (const item of scene.items) {
+  for (const item of legacy) {
     if (item.kind === 'group' && item.id.startsWith('edges-')) {
       const kids = children.get(item.id) ?? [];
       body.push(`  % Connections ${item.id.slice('edges-'.length)}`);
@@ -119,13 +128,13 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
 
   // The front sheet of each feature map has the heaviest outline; the sheets behind it are lighter.
   const frontStroke = new Map<string, number>();
-  for (const item of scene.items) {
+  for (const item of legacy) {
     if (item.kind !== 'path' || !item.id.startsWith('sheet-') || !item.parent) continue;
     const w = item.paint.strokeWidth ?? 0;
     frontStroke.set(item.parent, Math.max(w, frontStroke.get(item.parent) ?? 0));
   }
   const extras: string[] = [];
-  for (const item of scene.items) {
+  for (const item of legacy) {
     if (item.kind === 'rect' && item.id.startsWith('box-')) {
       const role = roleOf(item, 'box');
       const s = style(
@@ -160,7 +169,7 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
 
   // Labels: one TikZ node per label, at the label's baseline center (or the neuron's center).
   const labels: string[] = [];
-  for (const item of scene.items) {
+  for (const item of legacy) {
     const isLabel = /^(name|size|op)-\d+$/.test(item.id);
     const isNodeLabel = /^nodelabel-\d+-\d+$/.test(item.id);
     if (!isLabel && !isNodeLabel) continue;
@@ -233,6 +242,168 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
 }
 
 type Part = TextItem | MathItem;
+
+interface Helpers {
+  readonly color: (hex: string) => string;
+  readonly style: (name: string, body: string) => string;
+  readonly n: (value: number) => string;
+  readonly font: (size: number) => string;
+  readonly paintStyle: (p: Paint) => string;
+}
+
+/** Symbols the new diagrams use, written so pdfLaTeX needs no Unicode setup. */
+const SYMBOLS: Readonly<Record<string, string>> = {
+  '×': '\\ensuremath{\\times}',
+  μ: '\\ensuremath{\\mu}',
+  σ: '\\ensuremath{\\sigma}',
+  '→': '\\ensuremath{\\rightarrow}',
+  '←': '\\ensuremath{\\leftarrow}',
+  '−': '\\ensuremath{-}',
+  '·': '\\ensuremath{\\cdot}',
+  '…': '\\ldots{}',
+};
+
+/** Every item of a recurrent, GAN, Transformer or autoencoder scene, in paint order. */
+function genericItems(
+  scene: Scene,
+  children: ReadonlyMap<string, readonly SceneItem[]>,
+  h: Helpers,
+): { lines: string[]; unicode: boolean; math: boolean } {
+  const { color, style, n, font } = h;
+  const lines: string[] = ['  % Diagram'];
+  let unicode = false;
+  let math = false;
+  const PT = PT_PER_PX;
+  /** Fill, outline, width, opacity and dashes; 'none' means no fill. */
+  const look = (p: Paint) => {
+    const parts: string[] = [];
+    if (p.fill && p.fill !== 'none') parts.push(`fill=${color(p.fill)}`);
+    if (p.stroke && p.stroke !== 'none')
+      parts.push(`draw=${color(p.stroke)}`, `line width=${n((p.strokeWidth ?? 1) * PT)}pt`);
+    if (p.opacity !== undefined && p.opacity < 1) parts.push(`opacity=${n(p.opacity)}`);
+    if (p.dash && p.dash.length >= 2)
+      parts.push(`dash pattern=on ${n(p.dash[0]! * PT)}pt off ${n(p.dash[1]! * PT)}pt`);
+    return parts.join(', ');
+  };
+  const named = (item: SceneItem, body: string) => {
+    const cls = item.classes?.[0] ?? item.kind;
+    return style(`xm ${cls} ${body.length > 0 ? styleKey(body) : ''}`.trim(), body);
+  };
+  const text = (value: string) =>
+    [...value]
+      .map((c) => {
+        if (SYMBOLS[c]) return SYMBOLS[c];
+        if (/[^\x20-\x7e]/.test(c)) unicode = true;
+        return escapeLatex(c);
+      })
+      .join('');
+  const labelGroup = (item: SceneItem) => {
+    // A label made of several runs (text and formulas) is a group inside the top-level labels group.
+    if (item.kind !== 'group' || item.parent === undefined) return undefined;
+    const kids = children.get(item.id) ?? [];
+    return kids.length > 0 && kids.every((k) => k.kind === 'text' || k.kind === 'math')
+      ? kids
+      : undefined;
+  };
+  const skip = new Set<string>();
+  for (const item of scene.items) {
+    if (skip.has(item.id) || (item.parent && skip.has(item.parent))) continue;
+    const group = labelGroup(item);
+    if (item.kind === 'text' || item.kind === 'math' || group) {
+      if (group) skip.add(item.id);
+      const parts = labelParts(item, group ?? []);
+      if (parts.length === 0) continue;
+      const content = parts
+        .map((p) => {
+          if (p.kind === 'math') {
+            math = true;
+            return `$${p.tex}$`;
+          }
+          return text(p.text);
+        })
+        .join('');
+      const first = parts[0]!;
+      const size = first.kind === 'math' ? first.size / 1.1 : first.font.size;
+      const fill = first.paint.fill ?? '#000000';
+      const s = style(`xm text ${color(fill)}`, `text=${color(fill)}, inner sep=0`);
+      if (first.kind === 'text' && first.rotate) {
+        const { cx, cy } = first.rotate;
+        lines.push(
+          `  \\node[${s}, ${font(size)}, anchor=center, rotate=90] at (${n(cx)},${n(cy)}) {${content}};`,
+        );
+      } else {
+        const [x, y] = labelAnchor(item, parts);
+        lines.push(`  \\node[${s}, ${font(size)}, anchor=base] at (${n(x)},${n(y)}) {${content}};`);
+      }
+      continue;
+    }
+    switch (item.kind) {
+      case 'rect': {
+        const rounded = item.rx ? `, rounded corners=${n(item.rx * PT)}pt` : '';
+        lines.push(
+          `  \\path[${named(item, look(item.paint) + rounded)}] (${n(item.x)},${n(item.y)}) rectangle ++(${n(item.width)},${n(item.height)});`,
+        );
+        break;
+      }
+      case 'circle':
+        lines.push(
+          `  \\path[${named(item, look(item.paint))}] (${n(item.cx)},${n(item.cy)}) circle[radius=${n(item.r)}];`,
+        );
+        break;
+      case 'line':
+        lines.push(
+          `  \\path[${named(item, look(item.paint))}] (${n(item.x1)},${n(item.y1)}) -- (${n(item.x2)},${n(item.y2)});`,
+        );
+        break;
+      case 'path':
+        lines.push(
+          `  \\path[${named(item, `${look(item.paint)}, line join=round`)}] ${tikzCurve(item.d, n)};`,
+        );
+        break;
+      default:
+        break;
+    }
+  }
+  return { lines, unicode, math };
+}
+
+/** A short stable key for a style body, so equal looks share one style name. */
+function styleKey(body: string): string {
+  let h = 0;
+  for (let i = 0; i < body.length; i++) h = (Math.imul(h, 31) + body.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+
+/** Converts absolute path data (M, L, C, Q, Z) to a TikZ path with curves. */
+function tikzCurve(d: string, n: (value: number) => string): string {
+  const out: string[] = [];
+  const at = (x: number, y: number) => `(${n(x)},${n(y)})`;
+  let x = 0;
+  let y = 0;
+  for (const match of d.matchAll(/([MLCQZ])([^MLCQZ]*)/g)) {
+    const op = match[1]!;
+    const v = (match[2]!.match(/-?\d*\.?\d+(?:e-?\d+)?/g) ?? []).map(Number);
+    if (op === 'M') {
+      out.push(at(v[0]!, v[1]!));
+      [x, y] = [v[0]!, v[1]!];
+    } else if (op === 'L') {
+      out.push(`-- ${at(v[0]!, v[1]!)}`);
+      [x, y] = [v[0]!, v[1]!];
+    } else if (op === 'C') {
+      out.push(`.. controls ${at(v[0]!, v[1]!)} and ${at(v[2]!, v[3]!)} .. ${at(v[4]!, v[5]!)}`);
+      [x, y] = [v[4]!, v[5]!];
+    } else if (op === 'Q') {
+      const [qx, qy, ex, ey] = v as [number, number, number, number];
+      const c1 = at(x + (2 / 3) * (qx - x), y + (2 / 3) * (qy - y));
+      const c2 = at(ex + (2 / 3) * (qx - ex), ey + (2 / 3) * (qy - ey));
+      out.push(`.. controls ${c1} and ${c2} .. ${at(ex, ey)}`);
+      [x, y] = [ex, ey];
+    } else {
+      out.push('-- cycle');
+    }
+  }
+  return out.join(' ');
+}
 
 /** A label's text and math parts in reading (logical) order. */
 function labelParts(item: SceneItem, kids: readonly SceneItem[]): Part[] {

@@ -18,10 +18,42 @@ export const LIMITS = {
   side: 100_000,
   channels: 100_000,
   window: 1000,
+  /** Time steps of a sequence, tokens in a text. */
+  steps: 100_000,
+  /** Transformer blocks and attention heads. */
+  blocks: 1000,
+  heads: 1000,
+  /** Time steps an unrolled recurrent diagram draws. */
+  drawnSteps: 12,
+  /** Layers inside each network of a GAN. */
+  ganLayers: 64,
 } as const;
 
 export const PRESET_IDS = ['classic', 'boxes', 'mono', 'colorblind', 'colorblind-dark'] as const;
-export const LAYER_TYPES = ['dense', 'input', 'conv', 'pool', 'gap', 'flatten'] as const;
+export const LAYER_TYPES = [
+  'dense',
+  'input',
+  'conv',
+  'pool',
+  'gap',
+  'flatten',
+  'sequence',
+  'rnn',
+  'lstm',
+  'gru',
+  'tokens',
+  'embed',
+  'encoder',
+  'decoder',
+  'gan',
+  'autoencoder',
+] as const;
+/** Recurrent layer types (one cell per time step). */
+export const RECURRENT_TYPES = ['rnn', 'lstm', 'gru'] as const;
+/** How recurrent networks are drawn: one cell per step, or each step as a small network of neurons. */
+export const RECURRENT_LOOKS = ['unrolled', 'neurons'] as const;
+/** How a GAN's networks are drawn inside their funnels. */
+export const FUNNEL_LOOKS = ['neurons', 'plain'] as const;
 export const PADDINGS = ['same', 'valid'] as const;
 export const POOL_MODES = ['max', 'avg'] as const;
 export const DIRECTIONS = ['ltr', 'rtl'] as const;
@@ -164,6 +196,95 @@ export const FlattenLayerSchema = v.strictObject(
   'must be an object like { type: flatten }.',
 );
 
+/** A sequence input: steps × features (a sentence of word vectors, a time series). */
+export const SequenceLayerSchema = v.strictObject(
+  {
+    type: v.literal('sequence'),
+    steps: wholeNumber(1, LIMITS.steps),
+    features: wholeNumber(1, LIMITS.units),
+    name: name(),
+  },
+  'must be an object like { type: sequence, steps: 20, features: 32 }.',
+);
+
+function recurrentSchema<T extends (typeof RECURRENT_TYPES)[number]>(type: T) {
+  return v.strictObject(
+    {
+      type: v.literal(type),
+      units: wholeNumber(1, LIMITS.units),
+      /** Reads the sequence both ways; the output joins both directions. */
+      bidirectional: v.optional(flag()),
+      /** Only the last step's output goes on (many to one). */
+      last: v.optional(flag()),
+      name: name(),
+      activation: activation(),
+    },
+    `must be an object like { type: ${type}, units: 64 }.`,
+  );
+}
+export const RnnLayerSchema = recurrentSchema('rnn');
+export const LstmLayerSchema = recurrentSchema('lstm');
+export const GruLayerSchema = recurrentSchema('gru');
+
+/** Text as a sequence of token ids. */
+export const TokensLayerSchema = v.strictObject(
+  { type: v.literal('tokens'), length: wholeNumber(1, LIMITS.steps), name: name() },
+  'must be an object like { type: tokens, length: 512 }.',
+);
+
+/** Token embedding (with positional encoding): every token becomes a vector of `width` numbers. */
+export const EmbedLayerSchema = v.strictObject(
+  { type: v.literal('embed'), width: wholeNumber(1, LIMITS.units), name: name() },
+  'must be an object like { type: embed, width: 512 }.',
+);
+
+function blockSchema<T extends 'encoder' | 'decoder'>(type: T) {
+  return v.strictObject(
+    {
+      type: v.literal(type),
+      blocks: wholeNumber(1, LIMITS.blocks),
+      heads: wholeNumber(1, LIMITS.heads),
+      /** Width of the feed-forward layer inside each block (default 4 × the model width). */
+      ff: v.optional(wholeNumber(1, LIMITS.units)),
+      name: name(),
+    },
+    `must be an object like { type: ${type}, blocks: 6, heads: 8 }.`,
+  );
+}
+export const EncoderLayerSchema = blockSchema('encoder');
+export const DecoderLayerSchema = blockSchema('decoder');
+
+const ganNetwork = (example: string) =>
+  v.pipe(
+    v.array(DenseLayerSchema, `must be a list of layer sizes, like ${example}.`),
+    v.minLength(2, 'must have at least two layers.'),
+    v.maxLength(LIMITS.ganLayers, `must have at most ${LIMITS.ganLayers} layers.`),
+  );
+
+/** A generative adversarial network: a generator and a discriminator, both fully connected. */
+export const GanLayerSchema = v.strictObject(
+  {
+    type: v.literal('gan'),
+    generator: ganNetwork('[100, 256, 784]'),
+    discriminator: ganNetwork('[784, 256, 1]'),
+    name: name(),
+  },
+  'must be an object like { type: gan, generator: [100, 256, 784], discriminator: [784, 256, 1] }.',
+);
+
+/** An autoencoder: the encoder narrows to the latent space, the decoder (a mirror by default) widens out. */
+export const AutoencoderLayerSchema = v.strictObject(
+  {
+    type: v.literal('autoencoder'),
+    encoder: ganNetwork('[784, 256, 32]'),
+    decoder: v.optional(ganNetwork('[32, 256, 784]')),
+    /** Variational: the encoder gives a mean and a spread, and the latent is sampled from them. */
+    vae: v.optional(flag()),
+    name: name(),
+  },
+  'must be an object like { type: autoencoder, encoder: [784, 256, 32] }.',
+);
+
 export const LAYER_SCHEMAS = {
   dense: DenseLayerSchema,
   input: InputLayerSchema,
@@ -171,6 +292,16 @@ export const LAYER_SCHEMAS = {
   pool: PoolLayerSchema,
   gap: GapLayerSchema,
   flatten: FlattenLayerSchema,
+  sequence: SequenceLayerSchema,
+  rnn: RnnLayerSchema,
+  lstm: LstmLayerSchema,
+  gru: GruLayerSchema,
+  tokens: TokensLayerSchema,
+  embed: EmbedLayerSchema,
+  encoder: EncoderLayerSchema,
+  decoder: DecoderLayerSchema,
+  gan: GanLayerSchema,
+  autoencoder: AutoencoderLayerSchema,
 } as const;
 
 export const LayerSchema = v.variant(
@@ -182,6 +313,16 @@ export const LayerSchema = v.variant(
     PoolLayerSchema,
     GapLayerSchema,
     FlattenLayerSchema,
+    SequenceLayerSchema,
+    RnnLayerSchema,
+    LstmLayerSchema,
+    GruLayerSchema,
+    TokensLayerSchema,
+    EmbedLayerSchema,
+    EncoderLayerSchema,
+    DecoderLayerSchema,
+    GanLayerSchema,
+    AutoencoderLayerSchema,
   ],
   (issue) =>
     issue.received === 'undefined' || !issue.path?.length || issue.path.at(-1)?.key !== 'type'
@@ -214,6 +355,18 @@ export const StyleSchema = v.strictObject(
     direction: v.optional(v.picklist(DIRECTIONS, `must be one of: ${DIRECTIONS.join(', ')}.`)),
     /** Color connections by a learned weight (sign and strength), the still frame of 'learning'. */
     weights: v.optional(flag()),
+    /** Recurrent networks: one cell per time step, or each step as a small network of neurons. */
+    recurrent: v.optional(
+      v.picklist(RECURRENT_LOOKS, `must be one of: ${RECURRENT_LOOKS.join(', ')}.`),
+    ),
+    /** Time steps drawn when a sequence is longer (the last one is drawn after an ellipsis). */
+    steps: v.optional(wholeNumber(2, LIMITS.drawnSteps)),
+    /** Draw the gates inside one recurrent cell instead of the whole network. */
+    cell: v.optional(flag()),
+    /** GANs: draw each network's neurons inside its funnel, or only its name. */
+    funnel: v.optional(v.picklist(FUNNEL_LOOKS, `must be one of: ${FUNNEL_LOOKS.join(', ')}.`)),
+    /** Draw a fully connected network as an autoencoder: funnels meeting at its smallest layer. */
+    autoencoder: v.optional(flag()),
   },
   'must be an object like { preset: classic }.',
 );
@@ -255,6 +408,16 @@ export type DenseLayer = Extract<Layer, { type: 'dense' }>;
 export type InputLayer = Extract<Layer, { type: 'input' }>;
 export type ConvLayer = Extract<Layer, { type: 'conv' }>;
 export type PoolLayer = Extract<Layer, { type: 'pool' }>;
+export type SequenceLayer = Extract<Layer, { type: 'sequence' }>;
+export type RecurrentType = (typeof RECURRENT_TYPES)[number];
+export type RecurrentLayer = Extract<Layer, { type: RecurrentType }>;
+export type TokensLayer = Extract<Layer, { type: 'tokens' }>;
+export type EmbedLayer = Extract<Layer, { type: 'embed' }>;
+export type BlockLayer = Extract<Layer, { type: 'encoder' | 'decoder' }>;
+export type GanLayer = Extract<Layer, { type: 'gan' }>;
+export type AutoencoderLayer = Extract<Layer, { type: 'autoencoder' }>;
+export type RecurrentLook = (typeof RECURRENT_LOOKS)[number];
+export type FunnelLook = (typeof FUNNEL_LOOKS)[number];
 export type Padding = (typeof PADDINGS)[number];
 export type PoolMode = (typeof POOL_MODES)[number];
 
@@ -263,6 +426,21 @@ export const isDense = (layer: Layer): layer is DenseLayer => layer.type === 'de
 export type MlpModel = Omit<Model, 'layers'> & { readonly layers: readonly DenseLayer[] };
 /** True when every layer is dense: the model is drawn as a plain fully connected network. */
 export const isMlp = (model: Model): model is Model & MlpModel => model.layers.every(isDense);
+export const isRecurrent = (layer: Layer): layer is RecurrentLayer =>
+  (RECURRENT_TYPES as readonly string[]).includes(layer.type);
+
+/** Which layout draws a model. */
+export type Family = 'mlp' | 'cnn' | 'rnn' | 'transformer' | 'gan' | 'autoencoder';
+
+export function familyOf(model: Pick<Model, 'layers'>): Family {
+  const types = new Set(model.layers.map((l) => l.type));
+  if (types.has('gan')) return 'gan';
+  if (types.has('autoencoder')) return 'autoencoder';
+  if (types.has('encoder') || types.has('decoder')) return 'transformer';
+  if (model.layers.some(isRecurrent) || types.has('sequence')) return 'rnn';
+  if (types.has('tokens') || types.has('embed')) return 'transformer';
+  return model.layers.every(isDense) ? 'mlp' : 'cnn';
+}
 export type StyleOptions = v.InferOutput<typeof StyleSchema>;
 export type AnimationOptions = v.InferOutput<typeof AnimationSchema>;
 export type AnimationLook = (typeof ANIMATION_LOOKS)[number];

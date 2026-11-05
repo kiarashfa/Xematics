@@ -2,12 +2,12 @@ import type { Diagnostic } from './diagnostics.ts';
 import { splitMath, nodeLabelText } from './layout/label.ts';
 import { cnnLabels } from './layout/cnn.ts';
 import { cleanLabel, layoutModel, nameText, slotsOf } from './layout/mlp.ts';
-import { isMlp, type MlpModel, type Model } from './model/schema.ts';
+import { familyOf, isMlp, type MlpModel, type Model } from './model/schema.ts';
 import { parseModelAsync, type InputFormat } from './parse/parse.ts';
 import { renderSvg, type SvgOptions } from './render/svg.ts';
 import type { Scene } from './scene.ts';
 import { resolveTheme, type TextStyle } from './style/theme.ts';
-import type { TextEngine, TextRequest } from './text/engine.ts';
+import type { ShapedText, TextEngine, TextRequest } from './text/engine.ts';
 
 export interface RenderResult {
   readonly svg?: string;
@@ -26,6 +26,11 @@ export interface RenderOptions extends SvgOptions {
 export function labelContent(model: Model): { text: TextRequest[]; math: string[] } {
   const theme = resolveTheme(model.style);
   const count = model.layers.length;
+  const family = familyOf(model);
+  const autoencoder = family === 'autoencoder' || (theme.autoencoder && model.layers.length >= 3);
+  if (family === 'rnn' || family === 'transformer' || family === 'gan' || autoencoder) {
+    return recordLabels(model);
+  }
   const text: TextRequest[] = [];
   const math: string[] = [];
   const add = (label: string, style: TextStyle) => {
@@ -67,6 +72,42 @@ export function labelContent(model: Model): { text: TextRequest[]; math: string[
     }
   });
   return { text, math };
+}
+
+/**
+ * Every text and formula the recurrent, GAN and Transformer layouts would draw, found by running
+ * the layout once with an engine that only takes notes.
+ */
+function recordLabels(model: Model): { text: TextRequest[]; math: string[] } {
+  const text: TextRequest[] = [];
+  const math: string[] = [];
+  const engine: TextEngine = {
+    shape(value, font, size): ShapedText {
+      text.push({ text: value, font: { family: font.family, weight: font.weight } });
+      return {
+        text: value,
+        font,
+        size,
+        direction: 'ltr',
+        width: value.length * size * 0.5,
+        ascent: size * 0.8,
+        descent: size * 0.2,
+        glyphs: [],
+        missing: [],
+        pending: [],
+      };
+    },
+    outline: () => '',
+    load: async () => false,
+    loadMath: async () => false,
+    math(tex) {
+      math.push(tex);
+      return undefined;
+    },
+    embed: async () => ({ faces: [], stacks: {} }),
+  };
+  layoutModel(model, engine);
+  return { text: text.filter((t) => t.text !== ''), math: [...new Set(math)] };
 }
 
 /** Loads the fonts and formulas a model needs. Resolves true when anything new was loaded. */

@@ -38,7 +38,7 @@ describe('parseShorthand', () => {
     ['1-2000000', 3, 'shorthand.size-range'],
     ['3.5-2', 2, 'shorthand.size-whole'],
     ['relu-3', 1, 'shorthand.unknown-word'],
-    ['lstm(16)-10', 1, 'shorthand.unknown-type'],
+    ['capsule(16)-10', 1, 'shorthand.unknown-type'],
     ['conv(16)-10', 6, 'shorthand.expected-kernel'],
     ['dense()', 7, 'shorthand.expected-size'],
     ['dense(4', 8, 'shorthand.expected-paren'],

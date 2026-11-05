@@ -1,0 +1,2 @@
+layers: gan(2-4-6 | 6-4-1)
+style: { funnel: plain, preset: boxes }

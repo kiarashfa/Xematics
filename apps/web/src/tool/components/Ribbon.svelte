@@ -534,6 +534,40 @@
         'stack numbers',
         gHome4,
       )}
+      {#if tool.family === 'rnn' || tool.family === 'gan' || tool.family === 'mlp'}
+        {#snippet gHome5()}
+          {#if tool.family === 'rnn'}
+            {@render toggle('Neurons per step', tool.network.neurons, (on) =>
+              tool.setNetwork({ recurrent: on ? 'neurons' : undefined }),
+            )}
+            {@render toggle('Cell gates', tool.network.cell, (on) =>
+              tool.setNetwork({ cell: on || undefined }),
+            )}
+            <label
+              >Steps shown <input
+                type="number"
+                min="2"
+                max="12"
+                value={tool.network.steps}
+                onchange={(e) => {
+                  const v = Number(e.currentTarget.value);
+                  if (Number.isInteger(v) && v >= 2 && v <= 12)
+                    tool.setNetwork({ steps: v === 4 ? undefined : v });
+                }}
+              /></label
+            >
+          {:else if tool.family === 'gan'}
+            {@render toggle('Neurons in funnels', !tool.network.plainFunnel, (on) =>
+              tool.setNetwork({ funnel: on ? undefined : 'plain' }),
+            )}
+          {:else}
+            {@render toggle('Draw as autoencoder', tool.network.autoencoder, (on) =>
+              tool.setNetwork({ autoencoder: on || undefined }),
+            )}
+          {/if}
+        {/snippet}
+        {@render group(5, 'Network', 'layers', 'Network', 'Network', 'stack three numbers', gHome5)}
+      {/if}
     {:else if active === 'View'}
       {#snippet gView0()}
         {@render big('fit', 'Fit', () => (tool.zoom = 'fit'))}
@@ -677,6 +711,7 @@
       {#snippet gHelp0()}
         {@render manualButton('shorthand', 'shorthand', 'Shorthand')}
         {@render manualButton('convolutions', 'convolution', 'Convolutions')}
+        {@render manualButton('networks', 'layers', 'More networks')}
         {@render manualButton('yaml', 'braces', 'YAML')}
         {@render manualButton('keyboard', 'keyboard', 'Keyboard')}
       {/snippet}

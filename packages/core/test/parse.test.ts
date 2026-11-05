@@ -95,8 +95,8 @@ describe('parseModel', () => {
     expect(errors('layers:\n  - { units: 4.5 }')[0]?.message).toBe(
       "Layer 1: 'units' must be a whole number.",
     );
-    expect(errors('layers:\n  - { type: lstm, units: 4 }')[0]?.message).toBe(
-      "Layer 1: 'type' 'lstm' is not a layer type. Layer types: dense, input, conv, pool, gap, flatten.",
+    expect(errors('layers:\n  - { type: capsule, units: 4 }')[0]?.message).toBe(
+      "Layer 1: 'type' 'capsule' is not a layer type. Layer types: dense, input, conv, pool, gap, flatten, sequence, rnn, lstm, gru, tokens, embed, encoder, decoder, gan, autoencoder.",
     );
     expect(errors('layers:\n  - { name: x }')[0]?.message).toBe("Layer 1 is missing 'units'.");
     expect(errors('layers: []')[0]?.message).toBe("'layers' must contain at least one layer.");

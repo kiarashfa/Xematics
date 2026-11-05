@@ -4,6 +4,7 @@
   const TITLES = {
     shorthand: 'Shorthand',
     convolutions: 'Convolutions',
+    networks: 'More networks',
     yaml: 'YAML',
     keyboard: 'Keyboard',
   } as const;
@@ -93,6 +94,49 @@
       The image comes first and only first. Sizes that do not fit, such as a kernel larger than its
       map, are reported as warnings under the diagram. Select a layer to see its output size in the
       format pane.
+    </p>
+  {:else if tool.manual === 'networks'}
+    <p>Recurrent networks, Transformers, GANs and autoencoders are written the same way.</p>
+    <h3>Recurrent networks</h3>
+    <dl>
+      <dt><code>seq(20x32)</code></dt>
+      <dd>A sequence of 20 steps, 32 numbers each. It comes first.</dd>
+      <dt><code>lstm(64)</code></dt>
+      <dd>
+        An LSTM layer of 64 units; <code>rnn</code> and <code>gru</code> work the same way. Add
+        <code>bi</code> in front to read both ways, and <code>,last</code> to pass on only the last
+        step: <code>bigru(64,last)</code>.
+      </dd>
+    </dl>
+    <p><code>seq(20x32)-lstm(64)-fc(10)</code> draws one cell per time step.</p>
+    <h3>Transformers</h3>
+    <dl>
+      <dt><code>tokens(512)</code></dt>
+      <dd>Text as 512 tokens. It comes first.</dd>
+      <dt><code>embed(768)</code></dt>
+      <dd>Turns each token into 768 numbers, with positional encoding.</dd>
+      <dt><code>encoder(6,8)</code></dt>
+      <dd>
+        Six encoder blocks with 8 attention heads; a third number sets the feed-forward width.
+        <code>decoder(6,8)</code> uses masked attention. An encoder before a decoder adds cross attention.
+      </dd>
+    </dl>
+    <p><code>tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax</code></p>
+    <h3>GANs</h3>
+    <p>
+      <code>gan(100-256-784 | 784-256-1)</code>: the generator before the bar, starting with the
+      noise size, and the discriminator after it, ending with the score.
+    </p>
+    <h3>Autoencoders</h3>
+    <p>
+      <code>ae(784-256-32)</code> writes the encoder down to the latent space; the decoder mirrors
+      it. Give your own decoder after a bar: <code>ae(784-256-32 | 32-128-784)</code>.
+      <code>vae(784-256-32)</code> draws a variational autoencoder.
+    </p>
+    <h3>Switches</h3>
+    <p>
+      Home, Network: draw recurrent steps as neurons, show the gates of one cell, choose how many
+      steps to draw, hide the neurons inside GAN funnels, or draw a plain network as an autoencoder.
     </p>
   {:else if tool.manual === 'yaml'}
     <p>

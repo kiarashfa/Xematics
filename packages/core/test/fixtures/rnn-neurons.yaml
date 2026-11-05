@@ -1,0 +1,2 @@
+layers: seq(3x3)-rnn(4)-fc(2)
+style: { recurrent: neurons, preset: mono }

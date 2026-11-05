@@ -1,0 +1,2 @@
+layers: tokens(512)-embed(768)-encoder(12,12)-fc(2):softmax
+style: { direction: rtl }

@@ -1,0 +1,2 @@
+layers: seq(20x32)-lstm(64)-fc(10)
+style: { cell: true }

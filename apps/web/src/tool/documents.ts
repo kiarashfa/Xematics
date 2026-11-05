@@ -7,7 +7,7 @@ export const EXAMPLES = [
     name: 'MNIST classifier',
     text: 'title: MNIST classifier\nlayers:\n  - { units: 784, name: Pixels }\n  - { units: 16, activation: relu }\n  - { units: 16, activation: relu }\n  - { units: 10, name: Digits }\n',
   },
-  { name: 'Autoencoder', text: '8-4-2-4-8' },
+  { name: 'Autoencoder', text: 'ae(8-4-2)' },
 ] as const;
 
 /** A short name for a document: its title, or the start of its source. */

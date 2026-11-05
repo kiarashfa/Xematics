@@ -118,8 +118,13 @@ export function renderSvg(scene: Scene, options: SvgOptions = {}): string {
         ];
         const anchor = item.anchor === 'start' ? [] : [`text-anchor="${item.anchor}"`];
         const direction = item.direction === 'rtl' ? ['direction="rtl"'] : [];
+        const turn = item.rotate
+          ? [
+              `transform="rotate(${num(item.rotate.angle)} ${num(item.rotate.cx)} ${num(item.rotate.cy)})"`,
+            ]
+          : [];
         out.push(
-          `${pad}<text ${[...attrs, `x="${num(item.x)}"`, `y="${num(item.y)}"`, ...anchor, ...direction, ...font, ...paint].join(' ')}>${escapeXml(item.text)}</text>`,
+          `${pad}<text ${[...attrs, `x="${num(item.x)}"`, `y="${num(item.y)}"`, ...anchor, ...direction, ...font, ...turn, ...paint].join(' ')}>${escapeXml(item.text)}</text>`,
         );
         return;
       }

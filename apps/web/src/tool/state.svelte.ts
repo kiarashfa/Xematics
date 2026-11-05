@@ -17,6 +17,7 @@ import {
   defaultLayer,
   decodeShare,
   encodeShare,
+  familyOf,
   inferShapes,
   insertLayer,
   isYamlLoaded,
@@ -40,6 +41,8 @@ import {
   structureOf,
   updateText,
   type Diagnostic,
+  type Family,
+  type StylePatch,
   type Model,
   type Scene,
   type PresetId,
@@ -85,7 +88,9 @@ export class ToolState {
   showNavigator = $state(true);
   showFormat = $state(true);
   /** The manual page shown in the right pane instead of the format pane (set from the Help tab). */
-  manual = $state<'shorthand' | 'convolutions' | 'yaml' | 'keyboard' | undefined>(undefined);
+  manual = $state<'shorthand' | 'convolutions' | 'networks' | 'yaml' | 'keyboard' | undefined>(
+    undefined,
+  );
   canUndo = $state(false);
   canRedo = $state(false);
   notice = $state('');
@@ -305,6 +310,15 @@ export class ToolState {
   transparent = $derived(this.model?.style?.background === 'transparent');
   rightToLeft = $derived(this.model?.style?.direction === 'rtl');
   weights = $derived(this.model?.style?.weights === true);
+  /** Which layout draws the diagram, and its switches (recurrent look, steps, cell, funnels, autoencoder). */
+  family = $derived<Family>(this.model ? familyOf(this.model) : 'mlp');
+  network = $derived({
+    neurons: this.model?.style?.recurrent === 'neurons',
+    cell: this.model?.style?.cell === true,
+    steps: this.model?.style?.steps ?? 4,
+    plainFunnel: this.model?.style?.funnel === 'plain',
+    autoencoder: this.model?.style?.autoencoder === true,
+  });
   preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');
 
   // Settings equal to the preset default are removed, so the source stays short.
@@ -312,6 +326,11 @@ export class ToolState {
     this.edit((model) =>
       patchStyle(model, { labels: { [key]: on === DEFAULTS.labels[key] ? undefined : on } }),
     );
+  }
+
+  /** Changes a network switch; pass undefined for the default. */
+  setNetwork(patch: StylePatch): void {
+    this.edit((model) => patchStyle(model, patch));
   }
 
   setWeights(on: boolean): void {

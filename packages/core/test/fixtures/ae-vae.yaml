@@ -1,0 +1,2 @@
+layers: vae(784-256-32)
+style: { preset: mono }

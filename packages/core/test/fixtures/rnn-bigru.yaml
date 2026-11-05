@@ -1,0 +1,2 @@
+layers: tokens(50)-embed(128)-bigru(64,last)-fc(32):relu-fc(2):softmax
+style: { preset: colorblind-dark }

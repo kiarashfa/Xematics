@@ -2,7 +2,7 @@
 // neighbouring layers, labels under each column. Pure and deterministic: only + - * / and sqrt.
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
-import { isMlp, type DenseLayer, type MlpModel, type Model } from '../model/schema.ts';
+import { familyOf, type DenseLayer, type MlpModel, type Model } from '../model/schema.ts';
 import { SCENE_VERSION, type Paint, type Scene, type SceneItem } from '../scene.ts';
 import {
   mergeCollapse,
@@ -16,6 +16,10 @@ import { stripInvalidXml } from '../util/xml.ts';
 import { layoutBoxes } from './boxes.ts';
 import { applyWeights } from '../animate/weights.ts';
 import { layoutCnn } from './cnn.ts';
+import { layoutAutoencoder } from './autoencoder.ts';
+import { layoutGan } from './gan.ts';
+import { layoutRnn } from './rnn.ts';
+import { layoutTransformer } from './transformer.ts';
 import { buildLabel, labelItems, nodeLabelText, type Label, type LabelIssue } from './label.ts';
 
 /** Layers with more neurons than this are always collapsed, even when collapse is turned off. */
@@ -128,8 +132,15 @@ export function layoutModel(input: Model, engine: TextEngine): LayoutResult {
 }
 
 function layoutPlain(input: Model, theme: Theme, engine: TextEngine): LayoutResult {
-  if (!isMlp(input)) return layoutCnn(input, theme, engine);
-  const model: MlpModel = input;
+  const family = familyOf(input);
+  if (family === 'rnn') return layoutRnn(input, theme, engine);
+  if (family === 'transformer') return layoutTransformer(input, theme, engine);
+  if (family === 'gan') return layoutGan(input, theme, engine);
+  if (family === 'autoencoder' || (theme.autoencoder && input.layers.length >= 3)) {
+    return layoutAutoencoder(input, theme, engine);
+  }
+  if (family === 'cnn') return layoutCnn(input, theme, engine);
+  const model = input as MlpModel;
   if (theme.mode === 'boxes') return layoutBoxes(model, theme, engine);
   const diagnostics: Diagnostic[] = [];
   const count = model.layers.length;

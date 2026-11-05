@@ -84,6 +84,27 @@ function normalizeLayers(items: readonly unknown[]): unknown[] {
     if (!isPlainObject(item)) return item;
     const layer: Record<string, unknown> = { type: 'dense', ...item };
     if (layer['collapse'] === true) delete layer['collapse'];
+    const networks =
+      layer['type'] === 'gan'
+        ? ['generator', 'discriminator']
+        : layer['type'] === 'autoencoder'
+          ? ['encoder', 'decoder']
+          : [];
+    {
+      // Each network is a list of sizes or layers, or a shorthand like 100-256-784:tanh.
+      for (const key of networks) {
+        if (layer[key] === undefined) continue;
+        const network = layer[key];
+        if (typeof network === 'string') {
+          const parsed = parseShorthand(network);
+          if (parsed.diagnostics.length === 0) layer[key] = [...parsed.layers];
+        } else if (typeof network === 'number') {
+          layer[key] = normalizeLayers([network]);
+        } else if (Array.isArray(network)) {
+          layer[key] = normalizeLayers(network);
+        }
+      }
+    }
     return layer;
   });
 }

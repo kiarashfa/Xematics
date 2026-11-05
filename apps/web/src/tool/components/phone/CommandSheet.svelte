@@ -219,6 +219,22 @@
       {@render toggle('left', 'Flow right to left', tool.rightToLeft, (on) =>
         tool.setRightToLeft(on),
       )}
+      {#if tool.family === 'rnn'}
+        {@render toggle('layers', 'Neurons per step', tool.network.neurons, (on) =>
+          tool.setNetwork({ recurrent: on ? 'neurons' : undefined }),
+        )}
+        {@render toggle('layers', 'Cell gates', tool.network.cell, (on) =>
+          tool.setNetwork({ cell: on || undefined }),
+        )}
+      {:else if tool.family === 'gan'}
+        {@render toggle('layers', 'Neurons in funnels', !tool.network.plainFunnel, (on) =>
+          tool.setNetwork({ funnel: on ? undefined : 'plain' }),
+        )}
+      {:else if tool.family === 'mlp'}
+        {@render toggle('layers', 'Draw as autoencoder', tool.network.autoencoder, (on) =>
+          tool.setNetwork({ autoencoder: on || undefined }),
+        )}
+      {/if}
       <li class="ph-rule" aria-hidden="true"></li>
       {@render stepper('Collapse above', 'above')}
       {@render stepper('Show first', 'first')}

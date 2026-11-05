@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { layerCount, LIMITS, patchLayer, shapeText } from '@xematics/core';
+  import { layerCount, patchLayer, shapeText } from '@xematics/core';
   import { copyShareLink } from '../../actions.ts';
   import { tool } from '../../state.svelte.ts';
   import Canvas from '../Canvas.svelte';
@@ -43,7 +43,7 @@
   function step(delta: number) {
     if (!count) return;
     const value = count.value + delta;
-    const max = count.key === 'units' ? LIMITS.units : LIMITS.channels;
+    const max = count.max;
     if (value >= 1 && value <= max) tool.edit((m) => patchLayer(m, index, { [count.key]: value }));
   }
 </script>
