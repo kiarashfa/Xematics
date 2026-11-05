@@ -1,4 +1,4 @@
-import { isMap, isNode, isScalar, LineCounter, parseDocument } from 'yaml';
+import type { Document } from 'yaml';
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
 import { LIMITS, type Model } from '../model/schema.ts';
 import {
@@ -7,6 +7,7 @@ import {
   type ModelPath,
   type SourcePosition,
 } from '../model/validate.ts';
+import { isYamlLoaded, loadYaml, yaml } from './yaml.ts';
 
 export type InputFormat = 'shorthand' | 'yaml' | 'json';
 
@@ -14,9 +15,11 @@ export interface ParseResult {
   readonly model?: Model;
   readonly format: InputFormat;
   readonly diagnostics: readonly Diagnostic[];
+  /** The source is YAML or JSON and the YAML reader is still loading (see parseModelAsync). */
+  readonly pending?: true;
 }
 
-type YamlDocument = ReturnType<typeof parseDocument>;
+type YamlDocument = Document.Parsed;
 
 /**
  * Guesses the input format. A single line without YAML markers is shorthand; text starting with
@@ -55,6 +58,8 @@ export function parseModel(text: string): ParseResult {
     };
   }
 
+  if (!isYamlLoaded()) return { format, diagnostics: [], pending: true };
+  const { LineCounter, parseDocument } = yaml();
   const lineCounter = new LineCounter();
   const doc = parseDocument(text, {
     lineCounter,
@@ -110,12 +115,19 @@ export function parseModel(text: string): ParseResult {
     : { format, diagnostics: all };
 }
 
+/** Like parseModel, but first loads the YAML reader when the source needs it. */
+export async function parseModelAsync(text: string): Promise<ParseResult> {
+  if (detectFormat(text) !== 'shorthand') await loadYaml();
+  return parseModel(text);
+}
+
 function locateInDocument(
   doc: YamlDocument,
   path: ModelPath,
   key: string | undefined,
   at: (offset: number) => SourcePosition,
 ): SourcePosition | undefined {
+  const { isMap, isNode, isScalar } = yaml();
   for (let depth = path.length; depth >= 0; depth--) {
     const node = depth === 0 ? doc.contents : doc.getIn(path.slice(0, depth), true);
     if (key !== undefined && depth === path.length && isMap(node)) {

@@ -2,7 +2,12 @@
 // to the source text with updateText (see ./text.ts).
 
 import type { AnimationOptions, Layer, LayerType, Model, StyleOptions } from '../model/schema.ts';
-import { layerToken, type ShorthandLayer } from '../parse/shorthand.ts';
+import {
+  joinTokens,
+  layerToken,
+  type ShorthandFormat,
+  type ShorthandLayer,
+} from '../parse/shorthand.ts';
 
 /** A partial update; a key set to undefined removes it. */
 export type Patch<T> = { [K in keyof T]?: T[K] | undefined };
@@ -157,8 +162,8 @@ export function applyStructure(model: Model, structure: readonly ShorthandLayer[
 }
 
 /** Sizes and activations as shorthand, whether or not the whole model fits the shorthand. */
-export function structureOf(model: Model): string {
-  return model.layers.map(layerToken).join('-');
+export function structureOf(model: Model, format: ShorthandFormat = {}): string {
+  return joinTokens(model.layers.map(layerToken), format);
 }
 
 /** The number a layer's plus and minus buttons change: neurons of dense layers, filters of convolutions. */

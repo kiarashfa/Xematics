@@ -52,11 +52,19 @@ export {
   type SourcePosition,
   type ValidationResult,
 } from './model/validate.ts';
-export { detectFormat, parseModel, type InputFormat, type ParseResult } from './parse/parse.ts';
+export {
+  detectFormat,
+  parseModel,
+  parseModelAsync,
+  type InputFormat,
+  type ParseResult,
+} from './parse/parse.ts';
+export { isYamlLoaded, loadYaml, YamlNotLoadedError } from './parse/yaml.ts';
 export {
   formatShorthand,
   layerToken,
   parseShorthand,
+  type ShorthandFormat,
   type ShorthandLayer,
   type ShorthandResult,
 } from './parse/shorthand.ts';

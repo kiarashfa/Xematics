@@ -3,6 +3,7 @@
 // through the merging store, so an open editor or another device picks it up like any edit.
 
 import {
+  loadYaml,
   parseModel,
   updateText,
   type Workspace,
@@ -20,6 +21,8 @@ let queue: Promise<unknown> = Promise.resolve();
 
 function change(edit: (workspace: Workspace, at: string) => Workspace): Promise<Workspace> {
   const run = queue.then(async () => {
+    // Retitling writes YAML, and reading YAML sources needs the reader too.
+    await loadYaml();
     const workspace = await browserStore.load();
     if (!workspace) throw new Error('Nothing is saved in this browser.');
     return browserStore.save(edit(workspace, stamp()));

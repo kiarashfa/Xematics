@@ -113,6 +113,18 @@ export async function openSourceFile(file: File): Promise<void> {
   tool.flash(`Opened ${file.name} as a new document.`);
 }
 
+/** Asks for a diagram source file and opens it as a new document (Ctrl+O). */
+export function chooseSourceFile(): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.yaml,.yml,.json,.txt';
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (file) void openSourceFile(file);
+  };
+  input.click();
+}
+
 /** Downloads the save file: what this browser stores (with the profile), after the latest edits. */
 export async function saveWorkspace(): Promise<void> {
   let workspace = tool.snapshot();

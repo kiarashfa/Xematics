@@ -127,6 +127,16 @@ describe('updateText', () => {
     );
   });
 
+  test('shorthand keeps repeats when the text has them', () => {
+    expect(edit('784-128*3-10', (m) => patchLayer(m, 2, { units: 64 })).text).toBe(
+      '784-128-64-128-10',
+    );
+    expect(edit('784-128*3-10', (m) => patchLayer(m, 3, { units: 64 })).text).toBe(
+      '784-128*2-64-10',
+    );
+    expect(edit('784-16-16-10', (m) => patchLayer(m, 0, { units: 8 })).text).toBe('8-16-16-10');
+  });
+
   test('shorthand becomes readable YAML when it cannot express the change', () => {
     const result = edit('784-16-10', (m) => patchLayer(m, 0, { name: 'Pixels' }));
     expect(result.format).toBe('yaml');

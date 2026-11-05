@@ -2,7 +2,7 @@
   // /user/: the visitor's profile. With nothing in this browser yet it welcomes them: start a
   // profile, or bring a save (the "login"). Otherwise the left column holds the picture, name and
   // numbers, then cloud save, the save file and signing out; the right side is their gallery.
-  import { PROFILE_NAME_MAX, parseWorkspace, type Workspace } from '@xematics/core';
+  import { loadYaml, PROFILE_NAME_MAX, parseWorkspace, type Workspace } from '@xematics/core';
   import { onMount } from 'svelte';
   import { PRESET_CHOICES } from '../tool/documents.ts';
   import { EXPORT_FORMATS, PNG_SIZES } from '../tool/formats.ts';
@@ -179,7 +179,8 @@
       startAutoSave();
       void import('./signout.ts').then((m) => m.warmUp());
     }
-    void import('./render.ts').then((m) => (render = m));
+    // Facts and previews read YAML sources, so the YAML reader comes with them.
+    void Promise.all([import('./render.ts'), loadYaml()]).then(([m]) => (render = m));
     return off;
   });
 </script>

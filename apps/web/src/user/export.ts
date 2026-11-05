@@ -3,7 +3,7 @@
 
 import {
   layoutModel,
-  parseModel,
+  parseModelAsync,
   pngSize,
   prepareModel,
   renderPdf,
@@ -58,7 +58,7 @@ export async function exportAll(
 
   for (const [index, { name, text }] of diagrams.entries()) {
     progress(index, diagrams.length);
-    const parsed = parseModel(text);
+    const parsed = await parseModelAsync(text);
     const model = parsed.model;
     if (!model) {
       skipped.push(name);

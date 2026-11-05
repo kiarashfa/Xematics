@@ -88,3 +88,42 @@ describe('formatShorthand', () => {
     expect(formatShorthand({ version: 1, layers, style: { preset: 'classic' } })).toBeUndefined();
   });
 });
+
+describe('repeats', () => {
+  test.each([
+    ['784-128*3-10', [784, 128, 128, 128, 10]],
+    ['784 - 128 * 2 - 10', [784, 128, 128, 10]],
+    ['4*1-2', [4, 2]],
+    ['16:relu*2', [16, 16]],
+  ])('%s', (text, expected) => {
+    expect(parseShorthand(text).diagnostics).toEqual([]);
+    expect(sizes(text)).toEqual(expected);
+  });
+
+  test('repeat typed layers with their activation', () => {
+    const { layers } = parseShorthand('in(28x28)-conv(8,3x3):relu*2-flatten*1-fc(10)');
+    expect(layers.map((l) => l.type)).toEqual(['input', 'conv', 'conv', 'flatten', 'dense']);
+    expect(layers[2]).toEqual({ type: 'conv', filters: 8, kernel: 3, activation: 'relu' });
+  });
+
+  test.each([
+    ['784-128*-10', 'shorthand.expected-count', 9],
+    ['784-128*0-10', 'shorthand.size-range', 9],
+    ['784-128*999', 'shorthand.size-range', 9],
+    ['784-128*3x', 'shorthand.unexpected', 10],
+    ['784-128*2.5', 'shorthand.size-whole', 10],
+  ])('%s fails with %s', (text, code, column) => {
+    expect(parseShorthand(text).diagnostics[0]).toMatchObject({ code, column });
+  });
+
+  test('repeats count toward the layer limit', () => {
+    expect(parseShorthand('2*128-2*128').diagnostics).toEqual([]);
+    expect(parseShorthand('2*128-2*129').diagnostics[0]?.code).toBe('shorthand.too-many');
+  });
+
+  test('formatShorthand folds runs only when asked', () => {
+    const model = parseModel('784-128*3-10-10:relu-10').model!;
+    expect(formatShorthand(model)).toBe('784-128-128-128-10-10:relu-10');
+    expect(formatShorthand(model, { repeat: true })).toBe('784-128*3-10-10:relu-10');
+  });
+});

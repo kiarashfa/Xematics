@@ -7,6 +7,8 @@
 
   function onKey(event: KeyboardEvent) {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    // Alt with an arrow moves the layer (an editor shortcut), so leave it alone.
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
     event.preventDefault();
     const current = tool.selection.kind === 'layer' ? tool.selection.index : -1;
     const next = Math.max(

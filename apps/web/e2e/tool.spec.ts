@@ -235,6 +235,46 @@ test.describe('desktop editor', () => {
     expect(await readFile(file, 'utf8')).toBe(await readFile(new URL('boxes.svg', GOLDEN), 'utf8'));
   });
 
+  test('shorthand repeats layers and the bar keeps the repeat', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('784-128*3-10');
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await expect(nav.getByRole('button', { name: /Hidden 3/ })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /Layer sizes/ })).toHaveValue('784-128*3-10');
+    await nav.getByRole('button', { name: /Hidden 3/ }).click();
+    await page.getByRole('spinbutton', { name: 'Neurons' }).fill('64');
+    await page.getByRole('spinbutton', { name: 'Neurons' }).press('Enter');
+    await expect(source(page)).toHaveValue('784-128*2-64-10');
+  });
+
+  test('keyboard shortcuts edit layers, save and undo', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('3-5-2');
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await nav.getByRole('button', { name: /^Hidden/ }).click();
+    await page.keyboard.press('Control+Enter');
+    await expect(source(page)).toHaveValue(/^3-5-\d+-2$/);
+    await page.keyboard.press('Delete');
+    await expect(source(page)).toHaveValue('3-5-2');
+    // The selection moved to the output layer.
+    await page.keyboard.press('Alt+ArrowUp');
+    await expect(source(page)).toHaveValue('3-2-5');
+    await page.keyboard.press('Control+z');
+    await expect(source(page)).toHaveValue('3-5-2');
+    await page.keyboard.press('Control+y');
+    await expect(source(page)).toHaveValue('3-2-5');
+    await page.keyboard.press('Escape');
+    await expect(nav.getByRole('button', { name: /Diagram|Neural/ }).first()).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+    await page.keyboard.press('Control+s');
+    await expect(page.getByText('Every change is also saved by itself')).toBeVisible();
+    const download = page.waitForEvent('download');
+    await page.keyboard.press('Control+e');
+    expect((await download).suggestedFilename()).toMatch(/\.svg$/);
+  });
+
   test('errors show their position and keep the last figure', async ({ page }) => {
     await openEditor(page);
     await source(page).fill('784-16x');
@@ -242,6 +282,38 @@ test.describe('desktop editor', () => {
     await expect(page.getByRole('button', { name: /1:7 Unexpected 'x' after 16/ })).toBeVisible();
     await expect(page.getByRole('img', { name: 'MNIST classifier' })).toBeVisible();
   });
+});
+
+test('the YAML reader loads only when a source needs it', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Ribbon layout is desktop only');
+  // The first visit opens the MNIST example (YAML), so the reader's chunk shows up here.
+  const yamlChunks = new Set<string>();
+  page.on('response', async (response) => {
+    if (!response.url().endsWith('.js')) return;
+    if ((await response.text().catch(() => '')).includes('YAMLParseError'))
+      yamlChunks.add(response.url());
+  });
+  await openEditor(page);
+  await expect.poll(() => yamlChunks.size).toBeGreaterThan(0);
+  await source(page).fill('784-128*2-10');
+  await expect(page.getByText('Saved in this browser')).toBeVisible();
+  // After a reload the open document is shorthand: nothing needs the YAML reader.
+  let yamlLoaded = false;
+  page.on('request', (request) => {
+    if (yamlChunks.has(request.url())) yamlLoaded = true;
+  });
+  await page.reload();
+  await expect(page.getByRole('img', { name: 'Neural network diagram' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: /Layer sizes/ })).toHaveValue('784-128*2-10');
+  expect(yamlLoaded).toBe(false);
+  // A style change turns shorthand into YAML, which loads the reader first.
+  await page
+    .getByRole('group', { name: 'Preset' })
+    .getByRole('button', { name: 'Layer boxes' })
+    .click();
+  await expect(source(page)).toHaveValue(/preset: boxes/);
+  await expect(page.locator('#pv-box-0')).toBeAttached();
+  expect(yamlLoaded).toBe(true);
 });
 
 test('editor loads only from its own origin', async ({ page }) => {

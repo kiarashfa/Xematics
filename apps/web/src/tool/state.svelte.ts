@@ -19,6 +19,9 @@ import {
   encodeShare,
   inferShapes,
   insertLayer,
+  isYamlLoaded,
+  loadYaml,
+  YamlNotLoadedError,
   isShareFragment,
   labelContent,
   layoutModel,
@@ -112,7 +115,20 @@ export class ToolState {
   #settingsAt: string | undefined;
   #saveTimer: ReturnType<typeof setTimeout> | undefined;
 
-  parsed = $derived(parseModel(this.text));
+  /** The YAML reader loads on first need: shorthand-only sessions never fetch it. */
+  yamlReady = $state(isYamlLoaded());
+  yamlError = $state(false);
+  parsed = $derived.by(() => {
+    void this.yamlReady;
+    const parsed = parseModel(this.text);
+    if (!parsed.pending) return parsed;
+    if (!this.yamlError) {
+      void this.loadYaml();
+      return parsed;
+    }
+    const message = 'The YAML reader could not load. Check the connection and reload the page.';
+    return { ...parsed, diagnostics: [{ severity: 'error' as const, code: 'yaml.load', message }] };
+  });
   /** The last valid model, so the preview stays visible while the text has errors. */
   model = $derived.by(() => {
     const model = this.parsed.model;
@@ -148,7 +164,10 @@ export class ToolState {
         )
       : '',
   );
-  structure = $derived(this.model ? structureOf(this.model) : '');
+  /** The shorthand bar keeps repeats like 128*3 while the source uses them. */
+  structure = $derived(
+    this.model ? structureOf(this.model, { repeat: this.text.includes('*') }) : '',
+  );
   /** What each layer outputs (28×28×8 for feature maps, 784 for vectors). */
   shapes = $derived(this.model ? inferShapes(this.model).shapes : []);
   autoNames = $derived(this.model ? autoNames(this.model) : []);
@@ -211,8 +230,28 @@ export class ToolState {
     }
     const after = change(before);
     if (after === before) return false;
-    this.setText(updateText(this.text, this.parsed.format, before, after).text, typing);
+    let text: string;
+    try {
+      text = updateText(this.text, this.parsed.format, before, after).text;
+    } catch (error) {
+      // Shorthand that turns into YAML needs the YAML writer: apply the edit once it is here.
+      if (!(error instanceof YamlNotLoadedError)) throw error;
+      void this.loadYaml().then((ok) => ok && this.edit(change, typing));
+      return true;
+    }
+    this.setText(text, typing);
     return true;
+  }
+
+  /** Loads the YAML reader once; resolves false (and shows an error) when it cannot load. */
+  loadYaml(): Promise<boolean> {
+    return loadYaml().then(
+      () => (this.yamlReady = true),
+      () => {
+        this.yamlError = true;
+        return false;
+      },
+    );
   }
 
   /** Applies a structure shorthand (sizes and activations) from the shorthand bar. */
@@ -429,6 +468,21 @@ export class ToolState {
         () => (this.saveStatus = 'error'),
       );
     }, SAVE_DELAY_MS);
+  }
+
+  /** Saves right away (Ctrl+S); every change is saved shortly after anyway. */
+  async saveNow(): Promise<void> {
+    if (!this.ready || !this.#store) return;
+    clearTimeout(this.#saveTimer);
+    this.saveStatus = 'saving';
+    try {
+      await this.#store.save(this.snapshot());
+      this.saveStatus = 'saved';
+      this.flash('Saved. Every change is also saved by itself.');
+    } catch {
+      this.saveStatus = 'error';
+      this.flash('This browser blocks storage. Use Download save file in the File tab.');
+    }
   }
 
   /** A short name for a document: its title, or the start of its source. */

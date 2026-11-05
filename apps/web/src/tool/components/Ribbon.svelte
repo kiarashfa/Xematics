@@ -495,7 +495,7 @@
         <div class="body ref">
           <p><code>784-16-16-10</code> layer sizes</p>
           <p><code>16:relu</code> with an activation</p>
-          <p><code>dense(64)</code> same as <code>64</code></p>
+          <p><code>784-128*3-10</code> repeat a layer</p>
         </div>
         <div class="caption">Shorthand</div>
       </div>
@@ -519,8 +519,17 @@
         <div class="body ref">
           <p><kbd>Ctrl</kbd> <kbd>Z</kbd> undo</p>
           <p><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd> redo</p>
+          <p><kbd>Ctrl</kbd> <kbd>S</kbd> save now</p>
         </div>
         <div class="caption">Keyboard</div>
+      </div>
+      <div class="group" role="group" aria-label="More keys">
+        <div class="body ref">
+          <p><kbd>Ctrl</kbd> <kbd>O</kbd> open, <kbd>Ctrl</kbd> <kbd>E</kbd> export</p>
+          <p><kbd>Ctrl</kbd> <kbd>Enter</kbd> add, <kbd>Delete</kbd> remove</p>
+          <p><kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd> move a layer</p>
+        </div>
+        <div class="caption">More keys</div>
       </div>
       <div class="group" role="group" aria-label="Guide">
         <div class="body">

@@ -2,7 +2,8 @@
 //
 //   model      = layer { separator layer }
 //   separator  = "-" | "," | whitespace
-//   layer      = ( size | call | word ) [ ":" activation ]
+//   layer      = ( size | call | word ) [ ":" activation ] [ "*" count ]
+//   count      = digit { digit }                      1 .. LIMITS.layers (repeats the layer)
 //   size       = digit { digit }                      1 .. LIMITS.units
 //   call       = type "(" [ arg { "," arg } ] ")"
 //   word       = "flatten" | "gap"                    (a call without arguments, parentheses optional)
@@ -17,7 +18,8 @@
 //   pool | maxpool | avgpool (K [x K] [, sN] [, same | valid])
 //   gap, flatten
 //
-// Examples: 784-16-16-10   4-8:relu-3:softmax   in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(10)
+// Examples: 784-16-16-10   784-128*3-10   4-8:relu-3:softmax
+//           in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(10)
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
 import { LIMITS, type Layer, type Model } from '../model/schema.ts';
@@ -400,7 +402,22 @@ function parseLayers(source: string): ShorthandLayer[] {
       layer = { ...layer, activation } as Layer;
     }
 
-    layers.push(layer);
+    let count = 1;
+    const beforeCount = pos;
+    skipSpace();
+    if (peek() === '*') {
+      pos++;
+      skipSpace();
+      if (!isDigit(peek())) {
+        fail('shorthand.expected-count', `Expected a repeat count after '*', like 128*3.`);
+      }
+      count = readNumber(LIMITS.layers, 'Repeat count');
+      if (isIdentStart(peek())) fail('shorthand.unexpected', `Unexpected ${shown(pos)}.`);
+    } else {
+      pos = beforeCount;
+    }
+
+    for (let i = 0; i < count; i++) layers.push(layer);
     if (layers.length > LIMITS.layers) {
       fail('shorthand.too-many', `Too many layers. The maximum is ${LIMITS.layers}.`, start);
     }
@@ -475,8 +492,13 @@ export function layerToken(layer: Layer): string {
   }
 }
 
+export interface ShorthandFormat {
+  /** Write runs of identical layers once with a count: 784-128*3-10. */
+  readonly repeat?: boolean;
+}
+
 /** Returns the shorthand for a model, or undefined when the model uses options the shorthand cannot express. */
-export function formatShorthand(model: Model): string | undefined {
+export function formatShorthand(model: Model, format: ShorthandFormat = {}): string | undefined {
   if (
     model.title !== undefined ||
     model.description !== undefined ||
@@ -493,5 +515,22 @@ export function formatShorthand(model: Model): string | undefined {
     }
     parts.push(layerToken(layer));
   }
-  return parts.join('-');
+  return joinTokens(parts, format);
+}
+
+/** Joins layer tokens with hyphens, folding runs of equal ones into 128*3 when asked. */
+export function joinTokens(tokens: readonly string[], format: ShorthandFormat = {}): string {
+  return (format.repeat ? repeatRuns(tokens) : tokens).join('-');
+}
+
+/** Folds runs of equal tokens: [784, 128, 128, 128, 10] becomes [784, 128*3, 10]. */
+function repeatRuns(tokens: readonly string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < tokens.length;) {
+    let end = i + 1;
+    while (tokens[end] === tokens[i]) end++;
+    out.push(end - i > 1 ? `${tokens[i]}*${end - i}` : tokens[i]!);
+    i = end;
+  }
+  return out;
 }

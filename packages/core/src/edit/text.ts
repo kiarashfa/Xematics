@@ -1,10 +1,11 @@
 // Writes model edits back to the source text. The text stays the document of record: YAML keeps
 // its comments and layout outside the changed parts, and shorthand stays shorthand while it can.
 
-import { Document, isMap, isSeq, parseDocument, type Node } from 'yaml';
+import type { Document, Node } from 'yaml';
 import type { Model } from '../model/schema.ts';
 import type { InputFormat } from '../parse/parse.ts';
 import { formatShorthand } from '../parse/shorthand.ts';
+import { yaml } from '../parse/yaml.ts';
 
 type Plain = null | boolean | number | string | Plain[] | { [key: string]: Plain };
 type Path = (string | number)[];
@@ -37,6 +38,7 @@ function flowFor(path: Path): boolean {
 
 function createNode(doc: Document, path: Path, value: Plain): Node {
   const node = doc.createNode(value) as Node;
+  const { isMap, isSeq } = yaml();
   const mark = (n: unknown, p: Path) => {
     if (isMap(n)) {
       if (flowFor(p)) n.flow = true;
@@ -50,8 +52,9 @@ function createNode(doc: Document, path: Path, value: Plain): Node {
   return node;
 }
 
+/** The model as a new YAML document. Needs the YAML reader (see loadYaml). */
 export function toYaml(model: Model): string {
-  const doc = new Document();
+  const doc = new (yaml().Document)();
   doc.contents = createNode(doc, [], toPlain(model)) as Document['contents'];
   return doc.toString({ flowCollectionPadding: true, lineWidth: 0 });
 }
@@ -66,6 +69,7 @@ function equal(a: Plain | undefined, b: Plain | undefined): boolean {
 
 function sync(doc: Document, path: Path, before: Plain | undefined, after: Plain): void {
   if (equal(before, after)) return;
+  const { isMap, isSeq } = yaml();
   const node = path.length === 0 ? doc.contents : doc.getIn(path, true);
   if (isObject(before) && isObject(after) && isMap(node)) {
     for (const key of Object.keys(before)) if (!(key in after)) doc.deleteIn([...path, key]);
@@ -90,7 +94,9 @@ function sync(doc: Document, path: Path, before: Plain | undefined, after: Plain
 
 /**
  * Returns new source text for `after`, given the text that produced `before`.
- * Shorthand stays shorthand when it can express the result, and becomes YAML otherwise.
+ * Shorthand stays shorthand when it can express the result (keeping repeats like 128*3 when the
+ * text has them), and becomes YAML otherwise. Throws YamlNotLoadedError when the result needs
+ * YAML before loadYaml has finished.
  */
 export function updateText(
   text: string,
@@ -99,13 +105,13 @@ export function updateText(
   after: Model,
 ): { text: string; format: InputFormat } {
   if (format === 'shorthand') {
-    const shorthand = formatShorthand(after);
+    const shorthand = formatShorthand(after, { repeat: text.includes('*') });
     return shorthand === undefined
       ? { text: toYaml(after), format: 'yaml' }
       : { text: shorthand, format };
   }
   if (format === 'json') return { text: toJsonText(after), format };
-  const doc = parseDocument(text);
+  const doc = yaml().parseDocument(text);
   if (doc.errors.length > 0) return { text: toYaml(after), format: 'yaml' };
   sync(doc, [], toPlain(before), toPlain(after));
   return { text: doc.toString({ flowCollectionPadding: true, lineWidth: 0 }), format };

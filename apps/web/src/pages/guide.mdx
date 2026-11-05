@@ -19,6 +19,8 @@ The quickest way to describe a network is one line of layer sizes:
 
 - Separate layers with `-`, a comma or spaces: `784, 128, 10` works too.
 - Add an activation after a colon: `4-8:relu-3:softmax`.
+- Repeat a layer with `*` and a count: `784-128*3-10` has three hidden layers of 128. This works
+  for every layer type, like `conv(16,3x3):relu*2`.
 - `dense(64)`, `fc(64)` and `linear(64)` all mean a fully connected layer of 64 neurons.
 - Images, convolutions and pooling have their own words, like `in(28x28x1)-conv(8,3x3)-pool(2)`
   (see Convolutional networks).
@@ -362,6 +364,25 @@ The output extension picks the format: `.svg`, `.png`, `.pdf`, `.tex` or `.json`
 
 Use `-` instead of a file name to read from standard input, for example
 `echo 784-16-10 | node packages/cli/src/main.ts render - > net.svg`.
+
+## Keyboard shortcuts
+
+On a Mac, use Cmd instead of Ctrl.
+
+| Keys                         | Action                                              |
+| ---------------------------- | --------------------------------------------------- |
+| Ctrl Z, Ctrl Shift Z, Ctrl Y | Undo and redo                                       |
+| Ctrl S                       | Save now (every change is also saved by itself)     |
+| Ctrl O                       | Open a diagram source file as a new document        |
+| Ctrl E                       | Export again in the last format                     |
+| Ctrl Enter or Insert         | Add a layer after the selected one                  |
+| Alt Up, Alt Down             | Move the selected layer                             |
+| Delete                       | Remove the selected layer                           |
+| Escape                       | Select the whole diagram                            |
+| Space                        | Play or pause, while the Animate tab is open        |
+| Plus, Minus, 0               | Zoom in, out, or to fit, while the figure has focus |
+
+Delete, Escape and the layer keys work when the cursor is not in a text field.
 
 ## Sharing and privacy
 

@@ -3,7 +3,7 @@ import { splitMath, nodeLabelText } from './layout/label.ts';
 import { cnnLabels } from './layout/cnn.ts';
 import { cleanLabel, layoutModel, nameText, slotsOf } from './layout/mlp.ts';
 import { isMlp, type MlpModel, type Model } from './model/schema.ts';
-import { parseModel, type InputFormat } from './parse/parse.ts';
+import { parseModelAsync, type InputFormat } from './parse/parse.ts';
 import { renderSvg, type SvgOptions } from './render/svg.ts';
 import type { Scene } from './scene.ts';
 import { resolveTheme, type TextStyle } from './style/theme.ts';
@@ -103,7 +103,7 @@ export async function renderDiagram(
   engine: TextEngine,
   options: RenderOptions = {},
 ): Promise<RenderResult> {
-  const parsed = parseModel(text);
+  const parsed = await parseModelAsync(text);
   if (!parsed.model) return { format: parsed.format, diagnostics: parsed.diagnostics };
   await prepareModel(parsed.model, engine);
   const layout = layoutModel(parsed.model, engine);

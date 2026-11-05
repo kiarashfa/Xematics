@@ -12,6 +12,7 @@
   import SourceEditor from './components/SourceEditor.svelte';
   import StatusBar from './components/StatusBar.svelte';
   import TitleBar from './components/TitleBar.svelte';
+  import { chooseSourceFile, exportAs } from './actions.ts';
   import { loadEngine } from './engine.ts';
   import { tool } from './state.svelte.ts';
   import { CHANGED_KEY, cloudState, onLocalChange } from '../user/local.ts';
@@ -102,20 +103,44 @@
     tool.scheduleSave();
   });
 
+  /**
+   * Editor shortcuts. Ctrl (or Cmd) with S, O and E work everywhere; the others only outside text
+   * fields, which keep their own keys (the source editor handles undo itself).
+   */
   function onKey(event: KeyboardEvent) {
+    if (tool.dialog || event.defaultPrevented) return;
     const target = event.target as HTMLElement;
-    // Form fields keep their own native undo; the source editor handles its own keys.
-    if (target.closest('input, textarea, select, [contenteditable]')) return;
-    if (!(event.ctrlKey || event.metaKey)) return;
+    const inField = target.closest('input, textarea, select, [contenteditable]') !== null;
+    const ctrl = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
-    if (key === 'z') {
+    const run = (action: () => unknown) => {
       event.preventDefault();
-      if (event.shiftKey) tool.redo();
-      else tool.undo();
-    } else if (key === 'y') {
-      event.preventDefault();
-      tool.redo();
+      void action();
+    };
+    if (ctrl && !event.altKey && !event.shiftKey) {
+      if (key === 's') return run(() => tool.saveNow());
+      if (key === 'o') return run(chooseSourceFile);
+      if (key === 'e') return run(() => tool.layout && exportAs(tool.exportFormat));
     }
+    if (inField) return;
+    if (ctrl && key === 'z') return run(() => (event.shiftKey ? tool.redo() : tool.undo()));
+    if (ctrl && key === 'y') return run(() => tool.redo());
+    if (ctrl && key === 'enter') return run(() => tool.valid && tool.addLayer());
+    if (ctrl) return;
+    const layer = tool.selection.kind === 'layer' ? tool.selection.index : -1;
+    const count = tool.model?.layers.length ?? 0;
+    if (event.altKey) {
+      if (key === 'arrowup' && layer > 0) return run(() => tool.moveSelectedLayer(-1));
+      if (key === 'arrowdown' && layer >= 0 && layer < count - 1)
+        return run(() => tool.moveSelectedLayer(1));
+      return;
+    }
+    if (key === 'insert') return run(() => tool.valid && tool.addLayer());
+    if (key === 'delete' && layer >= 0 && count > 1) return run(() => tool.removeSelectedLayer());
+    if (key === 'escape' && layer >= 0) return run(() => tool.select({ kind: 'diagram' }));
+    // Space plays and pauses the animation, unless a button has focus (Space presses it).
+    if (key === ' ' && tool.playerOpen && !target.closest('button, a, [role="tab"]'))
+      return run(() => (tool.playing = !tool.playing));
   }
 
   function revealFirstError() {
