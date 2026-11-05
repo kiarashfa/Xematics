@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LIMITS, patchLayer } from '@xematics/core';
+  import { layerCount, LIMITS, patchLayer, shapeText } from '@xematics/core';
   import { copyShareLink } from '../../actions.ts';
   import { tool } from '../../state.svelte.ts';
   import Canvas from '../Canvas.svelte';
@@ -30,6 +30,10 @@
 
   const index = $derived(tool.selection.kind === 'layer' ? tool.selection.index : -1);
   const layer = $derived(tool.model?.layers[index]);
+  const count = $derived(layer ? layerCount(layer) : undefined);
+  const activation = $derived(
+    layer && (layer.type === 'dense' || layer.type === 'conv') ? layer.activation : undefined,
+  );
 
   function openCommands(tab: CommandTab = commandTab) {
     commandTab = tab;
@@ -37,8 +41,10 @@
   }
 
   function step(delta: number) {
-    const units = (layer?.units ?? 1) + delta;
-    if (units >= 1 && units <= LIMITS.units) tool.edit((m) => patchLayer(m, index, { units }));
+    if (!count) return;
+    const value = count.value + delta;
+    const max = count.key === 'units' ? LIMITS.units : LIMITS.channels;
+    if (value >= 1 && value <= max) tool.edit((m) => patchLayer(m, index, { [count.key]: value }));
   }
 </script>
 
@@ -77,8 +83,7 @@
       {#if layer}
         <section class="context" aria-label={`Layer ${tool.layerName(index)}`}>
           <div class="head">
-            <b>{tool.layerName(index)}</b>{#if layer.activation}<span class="muted"
-                >{layer.activation}</span
+            <b>{tool.layerName(index)}</b>{#if activation}<span class="muted">{activation}</span
               >{/if}
             <button
               type="button"
@@ -89,19 +94,28 @@
             >
           </div>
           <div class="actions">
-            <span class="ph-stepper">
-              <button
-                type="button"
-                class="ph-ib"
-                aria-label="Fewer neurons"
-                disabled={layer.units <= 1}
-                onclick={() => step(-1)}><Icon name="minus" /></button
+            {#if count}
+              <span class="ph-stepper">
+                <button
+                  type="button"
+                  class="ph-ib"
+                  aria-label={`Fewer ${count.noun}`}
+                  disabled={count.value <= 1}
+                  onclick={() => step(-1)}><Icon name="minus" /></button
+                >
+                <span class="ph-value value" aria-live="polite">{count.value}</span>
+                <button
+                  type="button"
+                  class="ph-ib"
+                  aria-label={`More ${count.noun}`}
+                  onclick={() => step(1)}><Icon name="plus" /></button
+                >
+              </span>
+            {:else}
+              <span class="muted shape"
+                >{tool.shapes[index] ? shapeText(tool.shapes[index]) : ''}</span
               >
-              <span class="ph-value value" aria-live="polite">{layer.units}</span>
-              <button type="button" class="ph-ib" aria-label="More neurons" onclick={() => step(1)}
-                ><Icon name="plus" /></button
-              >
-            </span>
+            {/if}
             <span class="grow"></span>
             <button
               type="button"

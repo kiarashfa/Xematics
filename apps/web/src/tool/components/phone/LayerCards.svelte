@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { insertLayer, LIMITS, patchLayer, roleOf } from '@xematics/core';
+  import {
+    insertLayer,
+    layerCount,
+    LIMITS,
+    patchLayer,
+    roleOf,
+    shapeText,
+    type Layer,
+  } from '@xematics/core';
   import { tool } from '../../state.svelte.ts';
   import Icon from '../Icon.svelte';
 
@@ -7,13 +15,22 @@
   const ACTIVATIONS = ['relu', 'tanh', 'softmax'];
   const layers = $derived(tool.model?.layers ?? []);
 
+  /** Dense and convolution layers take an activation; the others do not. */
+  const activationOf = (layer: Layer | undefined) =>
+    layer && (layer.type === 'dense' || layer.type === 'conv') ? layer.activation : undefined;
+  const takesActivation = (layer: Layer) => layer.type === 'dense' || layer.type === 'conv';
+
   function step(index: number, delta: number) {
-    const units = (layers[index]?.units ?? 1) + delta;
-    if (units >= 1 && units <= LIMITS.units) tool.edit((m) => patchLayer(m, index, { units }));
+    const layer = layers[index];
+    const count = layer && layerCount(layer);
+    if (!count) return;
+    const value = count.value + delta;
+    const max = count.key === 'units' ? LIMITS.units : LIMITS.channels;
+    if (value >= 1 && value <= max) tool.edit((m) => patchLayer(m, index, { [count.key]: value }));
   }
 
   function toggleActivation(index: number, name: string) {
-    const current = layers[index]?.activation;
+    const current = activationOf(layers[index]);
     tool.edit((m) => patchLayer(m, index, { activation: current === name ? undefined : name }));
   }
 
@@ -29,42 +46,57 @@
 
 <ul class="cards" aria-label="Layers">
   {#each layers as layer, i (i)}
+    {@const count = layerCount(layer)}
     <li class="card" class:selected={tool.selection.kind === 'layer' && tool.selection.index === i}>
       <span class={`ph-dot role-${roleOf(i, layers.length)}`} aria-hidden="true"></span>
       <div class="main">
         <button type="button" class="name" onclick={() => details(i)}>{tool.layerName(i)}</button>
-        <div class="chips" role="group" aria-label={`Activation of ${tool.layerName(i)}`}>
-          {#each [...new Set( [...ACTIVATIONS, ...(layer.activation ? [layer.activation] : [])] )] as name (name)}
-            <button
-              type="button"
-              class="ph-chip"
-              aria-pressed={layer.activation === name}
-              onclick={() => toggleActivation(i, name)}>{name}</button
-            >
-          {/each}
+        {#if takesActivation(layer)}
+          {@const active = activationOf(layer)}
+          <div class="chips" role="group" aria-label={`Activation of ${tool.layerName(i)}`}>
+            {#each [...new Set([...ACTIVATIONS, ...(active ? [active] : [])])] as name (name)}
+              <button
+                type="button"
+                class="ph-chip"
+                aria-pressed={active === name}
+                onclick={() => toggleActivation(i, name)}>{name}</button
+              >
+            {/each}
+          </div>
+        {:else}
+          <span class="shape">{tool.shapes[i] ? shapeText(tool.shapes[i]) : ''}</span>
+        {/if}
+      </div>
+      {#if count}
+        <div class="ph-stepper">
+          <button
+            type="button"
+            class="ph-ib"
+            aria-label={`Fewer ${count.noun} in ${tool.layerName(i)}`}
+            onclick={() => step(i, -1)}
+            disabled={count.value <= 1}><Icon name="minus" /></button
+          >
+          <button
+            type="button"
+            class="ph-value"
+            aria-label={`${count.value} ${count.noun}, edit`}
+            onclick={() => details(i)}>{count.value}</button
+          >
+          <button
+            type="button"
+            class="ph-ib"
+            aria-label={`More ${count.noun} in ${tool.layerName(i)}`}
+            onclick={() => step(i, 1)}><Icon name="plus" /></button
+          >
         </div>
-      </div>
-      <div class="ph-stepper">
+      {:else}
         <button
           type="button"
           class="ph-ib"
-          aria-label={`Fewer neurons in ${tool.layerName(i)}`}
-          onclick={() => step(i, -1)}
-          disabled={layer.units <= 1}><Icon name="minus" /></button
+          aria-label={`Edit ${tool.layerName(i)}`}
+          onclick={() => details(i)}><Icon name="edit" /></button
         >
-        <button
-          type="button"
-          class="ph-value"
-          aria-label={`${layer.units} neurons, edit`}
-          onclick={() => details(i)}>{layer.units}</button
-        >
-        <button
-          type="button"
-          class="ph-ib"
-          aria-label={`More neurons in ${tool.layerName(i)}`}
-          onclick={() => step(i, 1)}><Icon name="plus" /></button
-        >
-      </div>
+      {/if}
     </li>
     <li class="insert-row">
       <button type="button" class="insert" onclick={() => insert(i + 1)}
@@ -75,6 +107,11 @@
 </ul>
 
 <style>
+  .shape {
+    color: var(--muted);
+    font: 0.8rem var(--font-mono);
+  }
+
   .cards {
     flex: 1;
     margin: 0;

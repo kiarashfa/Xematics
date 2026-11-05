@@ -5,10 +5,12 @@
 
 import {
   applyStructure,
-  autoName,
+  autoNames,
   createWorkspace,
+  defaultLayer,
   decodeShare,
   encodeShare,
+  inferShapes,
   insertLayer,
   isShareFragment,
   labelContent,
@@ -122,12 +124,15 @@ export class ToolState {
   ]);
   preview = $derived(this.layout ? renderSvg(this.layout.scene, { prefix: 'pv-' }) : '');
   structure = $derived(this.model ? structureOf(this.model) : '');
+  /** What each layer outputs (28×28×8 for feature maps, 784 for vectors). */
+  shapes = $derived(this.model ? inferShapes(this.model).shapes : []);
+  autoNames = $derived(this.model ? autoNames(this.model) : []);
   stats = $derived.by(() => {
     const layers = this.model?.layers ?? [];
     const items = this.layout?.scene.items ?? [];
     return {
       layers: layers.length,
-      neurons: layers.reduce((sum, layer) => sum + layer.units, 0),
+      neurons: layers.reduce((sum, layer) => sum + (layer.type === 'dense' ? layer.units : 0), 0),
       edges: items.filter((item) => item.kind === 'line' && item.classes?.includes('edge')).length,
     };
   });
@@ -136,7 +141,7 @@ export class ToolState {
   layerName(index: number): string {
     const layers = this.model?.layers ?? [];
     const name = layers[index]?.name?.trim();
-    return name || autoName(index, layers.length);
+    return name || this.autoNames[index] || `Layer ${index + 1}`;
   }
 
   setText(next: string, typing = false): void {
@@ -200,7 +205,11 @@ export class ToolState {
   addLayer(): void {
     const count = this.model?.layers.length ?? 0;
     const at = this.selection.kind === 'layer' ? this.selection.index + 1 : Math.max(1, count - 1);
-    if (this.edit((model) => insertLayer(model, at))) this.select({ kind: 'layer', index: at });
+    // Between feature maps a new layer starts as a convolution, elsewhere as a dense layer.
+    const map = this.shapes[at - 1]?.kind === 'map' && this.shapes[at]?.kind === 'map';
+    const layer = map ? defaultLayer('conv') : undefined;
+    if (this.edit((model) => insertLayer(model, at, layer)))
+      this.select({ kind: 'layer', index: at });
   }
 
   removeSelectedLayer(): void {
@@ -220,6 +229,7 @@ export class ToolState {
   labels = $derived({
     names: this.model?.style?.labels?.names ?? DEFAULTS.labels.names,
     sizes: this.model?.style?.labels?.sizes ?? DEFAULTS.labels.sizes,
+    ops: this.model?.style?.labels?.ops ?? DEFAULTS.labels.ops,
   });
   collapse = $derived({
     above: this.model?.style?.collapse?.above ?? DEFAULTS.collapse.above,
@@ -231,7 +241,7 @@ export class ToolState {
   preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');
 
   // Settings equal to the preset default are removed, so the source stays short.
-  setLabel(key: 'names' | 'sizes', on: boolean): void {
+  setLabel(key: 'names' | 'sizes' | 'ops', on: boolean): void {
     this.edit((model) =>
       patchStyle(model, { labels: { [key]: on === DEFAULTS.labels[key] ? undefined : on } }),
     );

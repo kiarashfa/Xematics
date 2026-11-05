@@ -2,7 +2,7 @@
 // neighbouring layers, labels under each column. Pure and deterministic: only + - * / and sqrt.
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
-import type { Layer, Model } from '../model/schema.ts';
+import { isMlp, type DenseLayer, type MlpModel, type Model } from '../model/schema.ts';
 import { SCENE_VERSION, type Paint, type Scene, type SceneItem } from '../scene.ts';
 import {
   mergeCollapse,
@@ -14,6 +14,7 @@ import {
 import type { TextEngine } from '../text/engine.ts';
 import { stripInvalidXml } from '../util/xml.ts';
 import { layoutBoxes } from './boxes.ts';
+import { layoutCnn } from './cnn.ts';
 import { buildLabel, labelItems, nodeLabelText, type Label, type LabelIssue } from './label.ts';
 
 /** Layers with more neurons than this are always collapsed, even when collapse is turned off. */
@@ -26,7 +27,7 @@ export interface LayoutResult {
 
 export type Slot = number | 'ellipsis';
 
-interface Column {
+export interface Column {
   readonly index: number;
   readonly role: Role;
   readonly units: number;
@@ -58,7 +59,7 @@ const range = (from: number, to: number) =>
   Array.from({ length: Math.max(0, to - from) }, (_, i) => from + i);
 
 /** Which neurons a layer draws: all, or first and last around an ellipsis. */
-export function slotsOf(layer: Layer, theme: Theme): { slots: Slot[]; forced: boolean } {
+export function slotsOf(layer: DenseLayer, theme: Theme): { slots: Slot[]; forced: boolean } {
   const rule = layer.collapse === false ? undefined : mergeCollapse(theme.collapse, layer.collapse);
   let collapse: CollapseRule | undefined =
     rule && layer.units > rule.above && rule.first + rule.last < layer.units ? rule : undefined;
@@ -75,7 +76,7 @@ export function slotsOf(layer: Layer, theme: Theme): { slots: Slot[]; forced: bo
 }
 
 /** The text of a layer's name label ('' hides it). */
-export function nameText(layer: Layer, index: number, count: number): string {
+export function nameText(layer: DenseLayer, index: number, count: number): string {
   return layer.name === undefined ? autoName(index, count) : cleanLabel(layer.name);
 }
 
@@ -107,7 +108,7 @@ export function labelReporter(
 
 /** The layer's name label, or undefined when names are off or the name is empty. */
 export function layerLabel(
-  layer: Layer,
+  layer: DenseLayer,
   index: number,
   count: number,
   theme: Theme,
@@ -119,8 +120,10 @@ export function layerLabel(
   return buildLabel(text, theme.nameText, engine, labelReporter(index, 'name', diagnostics));
 }
 
-export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
-  const theme = resolveTheme(model.style);
+export function layoutModel(input: Model, engine: TextEngine): LayoutResult {
+  const theme = resolveTheme(input.style);
+  if (!isMlp(input)) return layoutCnn(input, theme, engine);
+  const model: MlpModel = input;
   if (theme.mode === 'boxes') return layoutBoxes(model, theme, engine);
   const diagnostics: Diagnostic[] = [];
   const count = model.layers.length;
@@ -187,58 +190,19 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
   const items: SceneItem[] = [];
 
   // Edges first, so nodes paint over their ends.
-  const edgePaint: Paint = { stroke: theme.edge.color, strokeWidth: theme.edge.width };
   for (let i = 0; i + 1 < count; i++) {
-    const from = visible(columns[i]!);
-    const to = visible(columns[i + 1]!);
-    if (from.length === 0 || to.length === 0) continue;
-    const x1 = xs[i]!;
-    const x2 = xs[i + 1]!;
-    const s = x2 > x1 ? r : -r;
-    const group = `edges-${i}`;
-    items.push({ kind: 'group', id: group, classes: ['edges'] });
-    if (from.length * to.length > theme.edgeLimit) {
-      const [a0, a1] = [from[0]!.y, from.at(-1)!.y];
-      const [b0, b1] = [to[0]!.y, to.at(-1)!.y];
-      items.push({
-        kind: 'path',
-        id: `bundle-${i}`,
-        parent: group,
-        classes: ['edge-bundle'],
-        d: `M${x1 + s} ${a0}L${x2 - s} ${b0}L${x2 - s} ${b1}L${x1 + s} ${a1}Z`,
-        paint: { fill: theme.edge.color, opacity: theme.edge.bundleOpacity },
-      });
-      diagnostics.push(
-        diagnostic(
-          'warning',
-          'layout.edges-bundled',
-          `Layers ${i + 1} and ${i + 2} would need ${from.length * to.length} connection lines, so they are drawn as one band. Collapse one of them to see individual lines.`,
-          { path: ['layers', i] },
-        ),
-      );
-      continue;
-    }
-    for (const a of from) {
-      for (const b of to) {
-        // Start and end on the circle outlines rather than at the centers.
-        const dx = x2 - x1;
-        const dy = b.y - a.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
-        const ux = (dx / length) * r;
-        const uy = (dy / length) * r;
-        items.push({
-          kind: 'line',
-          id: `edge-${i}-${a.neuron}-${i + 1}-${b.neuron}`,
-          parent: group,
-          classes: ['edge'],
-          x1: x1 + ux,
-          y1: a.y + uy,
-          x2: x2 - ux,
-          y2: b.y - uy,
-          paint: edgePaint,
-        });
-      }
-    }
+    items.push(
+      ...edgeItems(
+        i,
+        visible(columns[i]!),
+        visible(columns[i + 1]!),
+        xs[i]!,
+        xs[i + 1]!,
+        r,
+        theme,
+        diagnostics,
+      ),
+    );
   }
 
   for (const column of columns) {
@@ -337,10 +301,77 @@ export function layoutModel(model: Model, engine: TextEngine): LayoutResult {
   };
 }
 
+export interface EdgeEnd {
+  readonly neuron: number;
+  readonly y: number;
+}
+
+/** Edges between two node columns at x1 and x2 (one line per pair, or one band when too many). */
+export function edgeItems(
+  i: number,
+  from: readonly EdgeEnd[],
+  to: readonly EdgeEnd[],
+  x1: number,
+  x2: number,
+  r: number,
+  theme: Theme,
+  diagnostics: Diagnostic[],
+): SceneItem[] {
+  if (from.length === 0 || to.length === 0) return [];
+  const items: SceneItem[] = [];
+  const edgePaint: Paint = { stroke: theme.edge.color, strokeWidth: theme.edge.width };
+  const s = x2 > x1 ? r : -r;
+  const group = `edges-${i}`;
+  items.push({ kind: 'group', id: group, classes: ['edges'] });
+  if (from.length * to.length > theme.edgeLimit) {
+    const [a0, a1] = [from[0]!.y, from.at(-1)!.y];
+    const [b0, b1] = [to[0]!.y, to.at(-1)!.y];
+    items.push({
+      kind: 'path',
+      id: `bundle-${i}`,
+      parent: group,
+      classes: ['edge-bundle'],
+      d: `M${x1 + s} ${a0}L${x2 - s} ${b0}L${x2 - s} ${b1}L${x1 + s} ${a1}Z`,
+      paint: { fill: theme.edge.color, opacity: theme.edge.bundleOpacity },
+    });
+    diagnostics.push(
+      diagnostic(
+        'warning',
+        'layout.edges-bundled',
+        `Layers ${i + 1} and ${i + 2} would need ${from.length * to.length} connection lines, so they are drawn as one band. Collapse one of them to see individual lines.`,
+        { path: ['layers', i] },
+      ),
+    );
+    return items;
+  }
+  for (const a of from) {
+    for (const b of to) {
+      // Start and end on the circle outlines rather than at the centers.
+      const dx = x2 - x1;
+      const dy = b.y - a.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const ux = (dx / length) * r;
+      const uy = (dy / length) * r;
+      items.push({
+        kind: 'line',
+        id: `edge-${i}-${a.neuron}-${i + 1}-${b.neuron}`,
+        parent: group,
+        classes: ['edge'],
+        x1: x1 + ux,
+        y1: a.y + uy,
+        x2: x2 - ux,
+        y2: b.y - uy,
+        paint: edgePaint,
+      });
+    }
+  }
+  return items;
+}
+
 /** Labels inside the drawn nodes of one layer (`nodeLabel`), centered on each node. */
-function nodeLabels(
-  layer: Layer,
-  column: Column,
+export function nodeLabels(
+  layer: DenseLayer,
+  column: Pick<Column, 'index' | 'role' | 'slots'>,
   x: number,
   slotY: (slot: number, slots: number) => number,
   theme: Theme,
@@ -379,7 +410,7 @@ function nodeLabels(
 }
 
 function buildColumn(
-  layer: Layer,
+  layer: DenseLayer,
   index: number,
   count: number,
   theme: Theme,
@@ -418,7 +449,7 @@ function buildColumn(
 }
 
 /** Plain-language description used as the figure's accessible description (alt text). */
-export function describe(model: Model): string {
+export function describe(model: MlpModel): string {
   const count = model.layers.length;
   const parts = model.layers.map((layer, i) => {
     const name = (layer.name !== undefined && cleanLabel(layer.name)) || autoName(i, count);

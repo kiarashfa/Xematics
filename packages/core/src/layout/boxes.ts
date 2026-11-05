@@ -3,7 +3,7 @@
 // + - * /, so every JavaScript engine produces the same numbers.
 
 import type { Diagnostic } from '../diagnostics.ts';
-import type { Model } from '../model/schema.ts';
+import type { MlpModel } from '../model/schema.ts';
 import { SCENE_VERSION, type Paint, type SceneItem } from '../scene.ts';
 import type { Theme } from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
@@ -47,7 +47,7 @@ export function barHeight(units: number, theme: Theme): number {
   return theme.box.minHeight + theme.box.perDecade * log10(units);
 }
 
-export function layoutBoxes(model: Model, theme: Theme, engine: TextEngine): LayoutResult {
+export function layoutBoxes(model: MlpModel, theme: Theme, engine: TextEngine): LayoutResult {
   const diagnostics: Diagnostic[] = [];
   const count = model.layers.length;
   const w = theme.box.width;

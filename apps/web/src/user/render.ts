@@ -45,7 +45,9 @@ export function facts(text: string): DiagramFacts {
   const model = parseModel(text).model;
   return {
     layers: model?.layers.length ?? 0,
-    neurons: model?.layers.reduce((sum, layer) => sum + layer.units, 0) ?? 0,
+    neurons:
+      model?.layers.reduce((sum, layer) => sum + (layer.type === 'dense' ? layer.units : 0), 0) ??
+      0,
     style: PRESET_NAMES[model?.style?.preset ?? 'classic'],
   };
 }

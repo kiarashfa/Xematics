@@ -8,7 +8,7 @@ import { SITE } from '../site.config.ts';
 const base = import.meta.env.BASE_URL;
 const hero = await figure('784-16-16-10', 'hero-');
 const plates = await Promise.all(
-  ['perceptron', 'xor', 'mnist', 'autoencoder'].map(async (slug, i) => {
+  ['perceptron', 'xor', 'mnist', 'cnn'].map(async (slug, i) => {
     const example = EXAMPLES.find((e) => e.slug === slug)!;
     return {
       ...example,
@@ -102,7 +102,7 @@ const highlights = [
         Plates
       </h2>
       <a class="label-caps" href={`${base}examples/`}>
-        All ten examples
+        All twelve examples
       </a>
     </div>
     <div class="plate-grid">

@@ -162,6 +162,7 @@
       {@render toggle('tag', 'Neuron counts', tool.labels.sizes, (on) =>
         tool.setLabel('sizes', on),
       )}
+      {@render toggle('tag', 'Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
       {@render toggle('canvas', 'Transparent background', tool.transparent, (on) =>
         tool.setTransparent(on),
       )}

@@ -1,0 +1,2 @@
+layers: in(224x224x3)-conv(64,7x7,s2)-pool(3,s2,same)-conv(128,3x3)-conv(256,3x3,s2)-gap-fc(1000)
+style: { preset: colorblind-dark, labels: { ops: false } }

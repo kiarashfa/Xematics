@@ -238,9 +238,10 @@
         <div class="caption">Style</div>
       </div>
       <div class="group" role="group" aria-label="Labels">
-        <div class="body stack">
+        <div class="body stack three">
           {@render toggle('Layer names', tool.labels.names, (on) => tool.setLabel('names', on))}
           {@render toggle('Neuron counts', tool.labels.sizes, (on) => tool.setLabel('sizes', on))}
+          {@render toggle('Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
         </div>
         <div class="caption">Labels</div>
       </div>
@@ -373,6 +374,14 @@
           <p><code>dense(64)</code> same as <code>64</code></p>
         </div>
         <div class="caption">Shorthand</div>
+      </div>
+      <div class="group" role="group" aria-label="Convolutions">
+        <div class="body ref">
+          <p><code>in(28x28x1)</code> an image</p>
+          <p><code>conv(16,3x3):relu</code> a convolution</p>
+          <p><code>pool(2)-flatten</code> pooling, then flat</p>
+        </div>
+        <div class="caption">Convolutions</div>
       </div>
       <div class="group" role="group" aria-label="YAML">
         <div class="body ref">
@@ -619,6 +628,11 @@
 
   .switch {
     position: relative;
+  }
+
+  /* Three switches fit the height of the other groups (targets stay 24 px tall). */
+  .three .switch {
+    padding-block: 0;
   }
 
   /* The real checkbox covers the whole label, so every click reaches it. */

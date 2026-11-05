@@ -45,6 +45,32 @@ layers:
 `,
   },
   {
+    slug: 'cnn',
+    title: 'Convolutional network',
+    note: 'Two convolution and pooling stages read the image, a dense head classifies it.',
+    source: `title: Convolutional network
+layers: in(28x28x1)-conv(8,3x3):relu-pool(2)-conv(16,3x3):relu-pool(2)-flatten-fc(64):relu-fc(10):softmax
+`,
+  },
+  {
+    slug: 'lenet',
+    title: 'LeNet-5',
+    note: 'The classic digit reader: valid convolutions and average pooling, in Print mono.',
+    source: `title: LeNet-5
+layers:
+  - { type: input, shape: [32, 32, 1], name: Input }
+  - { type: conv, filters: 6, kernel: 5, padding: valid, activation: tanh, name: C1 }
+  - { type: pool, size: 2, mode: avg, name: S2 }
+  - { type: conv, filters: 16, kernel: 5, padding: valid, activation: tanh, name: C3 }
+  - { type: pool, size: 2, mode: avg, name: S4 }
+  - { type: flatten }
+  - { units: 120, activation: tanh, name: C5 }
+  - { units: 84, activation: tanh, name: F6 }
+  - { units: 10, activation: softmax, name: Output }
+style: { preset: mono }
+`,
+  },
+  {
     slug: 'deep-mlp',
     title: 'Deep MLP',
     note: 'Many hidden layers drawn as compact bars with the Layer boxes preset.',

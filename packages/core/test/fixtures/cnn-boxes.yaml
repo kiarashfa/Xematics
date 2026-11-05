@@ -1,0 +1,2 @@
+layers: in(64x64x3)-conv(32,3x3,s2)-conv(64,3x3)-pool(2)-gap-fc(128)-fc(5)
+style: { preset: boxes }

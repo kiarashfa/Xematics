@@ -13,7 +13,7 @@ const KB = 1024;
 
 /** Gzipped bytes a page may load before any interaction. */
 const BUDGETS = {
-  toolScript: 150 * KB,
+  toolScript: 165 * KB,
   /** The profile page: Svelte, the save format and cloud save; its previews load later. */
   userScript: 50 * KB,
   pageScript: 12 * KB,

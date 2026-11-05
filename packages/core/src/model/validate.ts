@@ -1,10 +1,12 @@
 import * as v from 'valibot';
 import { diagnostic, hasErrors, type Diagnostic } from '../diagnostics.ts';
 import { parseShorthand } from '../parse/shorthand.ts';
+import { orderDiagnostics } from './shapes.ts';
 import {
   CollapseSchema,
   LabelsSchema,
-  LayerSchema,
+  LAYER_SCHEMAS,
+  LAYER_TYPES,
   MODEL_VERSION,
   ModelSchema,
   StyleSchema,
@@ -37,7 +39,11 @@ export function validateModel(raw: unknown, locate: Locator = () => undefined): 
   const input = normalize(raw, diagnostics, locate);
   if (hasErrors(diagnostics)) return { diagnostics };
   const result = v.safeParse(ModelSchema, input);
-  if (result.success) return { model: result.output, diagnostics };
+  if (result.success) {
+    const order = orderDiagnostics(result.output).map((d) => ({ ...d, ...locate(d.path ?? []) }));
+    if (order.length > 0) return { diagnostics: [...diagnostics, ...order] };
+    return { model: result.output, diagnostics };
+  }
   for (const issue of result.issues) diagnostics.push(...toDiagnostics(issue, locate, []));
   return { diagnostics };
 }
@@ -124,7 +130,7 @@ function toDiagnostics(issue: Issue, locate: Locator, base: ModelPath): Diagnost
     const parent = path.slice(0, -1);
     const owner = issue.path?.at(-1)?.input;
     if (isPlainObject(owner)) {
-      const known = knownKeys(parent);
+      const known = knownKeys(parent, owner);
       const misspelled = Object.keys(owner).some(
         (k) => !known.includes(k) && closest(k, known) === key,
       );
@@ -146,7 +152,7 @@ function toDiagnostics(issue: Issue, locate: Locator, base: ModelPath): Diagnost
   if (issue.type === 'strict_object' && issue.expected === 'never') {
     const key = String(path.at(-1));
     const parent = path.slice(0, -1);
-    const known = knownKeys(parent);
+    const known = knownKeys(parent, issue.path?.at(-1)?.input);
     const guess = closest(key, known);
     const message =
       `${capitalize(describe(parent))} has an unknown key '${key}'.` +
@@ -182,11 +188,17 @@ function where(path: ModelPath): string {
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
-function knownKeys(path: ModelPath): string[] {
+function knownKeys(path: ModelPath, owner?: unknown): string[] {
   const shape = path.filter((key) => typeof key === 'string').join('.');
+  if (shape === 'layers') {
+    const type = isPlainObject(owner) ? owner['type'] : undefined;
+    const schema = (LAYER_TYPES as readonly unknown[]).includes(type)
+      ? LAYER_SCHEMAS[type as keyof typeof LAYER_SCHEMAS]
+      : LAYER_SCHEMAS.dense;
+    return Object.keys(schema.entries);
+  }
   const schemas: Record<string, { readonly entries: object }> = {
     '': ModelSchema,
-    layers: LayerSchema,
     'layers.collapse': CollapseSchema,
     style: StyleSchema,
     'style.labels': LabelsSchema,

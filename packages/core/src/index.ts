@@ -13,16 +13,30 @@ export {
   roleOf,
   type LayoutResult,
 } from './layout/mlp.ts';
+export { autoNames, cnnAutoNames, describeCnn, opText } from './layout/cnn.ts';
+export { inferShapes, pair, shapeText, type Shape, type ShapeResult } from './model/shapes.ts';
 export {
   ACTIVATION_PATTERN,
+  isDense,
+  isMlp,
   LAYER_TYPES,
   LIMITS,
   MODEL_VERSION,
   ModelSchema,
+  PADDINGS,
+  POOL_MODES,
   PRESET_IDS,
   type CollapseOptions,
+  type ConvLayer,
+  type DenseLayer,
+  type InputLayer,
   type Layer,
+  type LayerType,
+  type MlpModel,
   type Model,
+  type Padding,
+  type PoolLayer,
+  type PoolMode,
   type PresetId,
   type StyleOptions,
 } from './model/schema.ts';
@@ -36,6 +50,7 @@ export {
 export { detectFormat, parseModel, type InputFormat, type ParseResult } from './parse/parse.ts';
 export {
   formatShorthand,
+  layerToken,
   parseShorthand,
   type ShorthandLayer,
   type ShorthandResult,
@@ -89,6 +104,9 @@ export { CSS_FONT_STACKS } from './text/fonts.ts';
 export { type MathBox, type MathResult } from './text/math.ts';
 export {
   applyStructure,
+  changeLayerType,
+  defaultLayer,
+  layerCount,
   insertLayer,
   moveLayer,
   patchLayer,

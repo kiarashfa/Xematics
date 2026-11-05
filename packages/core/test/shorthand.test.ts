@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { formatShorthand, parseModel, parseShorthand, type Model } from '../src/index.ts';
 
-const sizes = (text: string) => parseShorthand(text).layers.map((layer) => layer.units);
+const sizes = (text: string) =>
+  parseShorthand(text).layers.map((layer) => ('units' in layer ? layer.units : 0));
 
 describe('parseShorthand', () => {
   test.each([
@@ -23,7 +24,9 @@ describe('parseShorthand', () => {
       { type: 'dense', units: 8, activation: 'relu' },
       { type: 'dense', units: 3, activation: 'softmax' },
     ]);
-    expect(parseShorthand('dense(64):leaky_relu').layers[0]?.activation).toBe('leaky_relu');
+    expect(parseShorthand('dense(64):leaky_relu').layers[0]).toMatchObject({
+      activation: 'leaky_relu',
+    });
   });
 
   test.each([
@@ -35,7 +38,8 @@ describe('parseShorthand', () => {
     ['1-2000000', 3, 'shorthand.size-range'],
     ['3.5-2', 2, 'shorthand.size-whole'],
     ['relu-3', 1, 'shorthand.unknown-word'],
-    ['conv(16)-10', 1, 'shorthand.unknown-type'],
+    ['lstm(16)-10', 1, 'shorthand.unknown-type'],
+    ['conv(16)-10', 6, 'shorthand.expected-kernel'],
     ['dense()', 7, 'shorthand.expected-size'],
     ['dense(4', 8, 'shorthand.expected-paren'],
     ['4:', 3, 'shorthand.expected-activation'],

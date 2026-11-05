@@ -87,6 +87,11 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
           const [, a, i, b, j] = kid.id.split('-');
           const s = style('xm edge', paintStyle(kid.paint));
           body.push(`  \\draw[${s}] (n-${a}-${i}) -- (n-${b}-${j});`);
+        } else if (kid.kind === 'line' && kid.id.startsWith('fan-')) {
+          // From a point on a feature map to a neuron of the next layer.
+          const [, a, , j] = kid.id.split('-');
+          const s = style('xm edge', paintStyle(kid.paint));
+          body.push(`  \\draw[${s}] (${n(kid.x1)},${n(kid.y1)}) -- (n-${Number(a) + 1}-${j});`);
         } else if (kid.kind === 'path' && kid.id.startsWith('bundle-')) {
           const s = style('xm bundle', paintStyle(kid.paint));
           body.push(`  \\fill[${s}] ${tikzPath(kid.d)};`);
@@ -104,6 +109,13 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
     }
   }
 
+  // The front sheet of each feature map has the heaviest outline; the sheets behind it are lighter.
+  const frontStroke = new Map<string, number>();
+  for (const item of scene.items) {
+    if (item.kind !== 'path' || !item.id.startsWith('sheet-') || !item.parent) continue;
+    const w = item.paint.strokeWidth ?? 0;
+    frontStroke.set(item.parent, Math.max(w, frontStroke.get(item.parent) ?? 0));
+  }
   const extras: string[] = [];
   for (const item of scene.items) {
     if (item.kind === 'rect' && item.id.startsWith('box-')) {
@@ -115,6 +127,22 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
       extras.push(
         `  \\draw[${s}] (${n(item.x)},${n(item.y)}) rectangle ++(${n(item.width)},${n(item.height)});`,
       );
+    } else if (item.kind === 'path' && item.id.startsWith('sheet-')) {
+      const front = item.paint.strokeWidth === frontStroke.get(item.parent ?? '');
+      const s = style(
+        `xm map ${roleOf(item, 'map')}${front ? '' : ' back'}`,
+        `${paintStyle(item.paint)}, line join=round`,
+      );
+      extras.push(`  \\draw[${s}] ${tikzPath(item.d)};`);
+    } else if (item.kind === 'path' && item.id.startsWith('window-')) {
+      const s = style('xm window', `${paintStyle(item.paint)}, line join=round`);
+      extras.push(`  \\draw[${s}] ${tikzPath(item.d)};`);
+    } else if (item.kind === 'line' && item.id.startsWith('ray-')) {
+      const s = style('xm ray', paintStyle(item.paint));
+      extras.push(`  \\draw[${s}] (${n(item.x1)},${n(item.y1)}) -- (${n(item.x2)},${n(item.y2)});`);
+    } else if (item.kind === 'circle' && item.id.startsWith('raydot-')) {
+      const s = style('xm ray end', paintStyle(item.paint));
+      extras.push(`  \\fill[${s}] (${n(item.cx)},${n(item.cy)}) circle[radius=${n(item.r)}];`);
     } else if (item.kind === 'circle' && item.parent?.startsWith('ellipsis-')) {
       const s = style('xm dots', paintStyle(item.paint));
       extras.push(`  \\fill[${s}] (${n(item.cx)},${n(item.cy)}) circle[radius=${n(item.r)}];`);
@@ -125,7 +153,7 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   // Labels: one TikZ node per label, at the label's baseline center (or the neuron's center).
   const labels: string[] = [];
   for (const item of scene.items) {
-    const isLabel = /^(name|size)-\d+$/.test(item.id);
+    const isLabel = /^(name|size|op)-\d+$/.test(item.id);
     const isNodeLabel = /^nodelabel-\d+-\d+$/.test(item.id);
     if (!isLabel && !isNodeLabel) continue;
     const parts = labelParts(item, children.get(item.id) ?? []);
@@ -136,8 +164,9 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
           usesMath = true;
           return `$${p.tex}$`;
         }
-        if (/[^\x20-\x7e]/.test(p.text)) unicode = true;
-        return escapeLatex(p.text);
+        // The multiplication sign of map sizes (28×28×8) needs no Unicode engine.
+        if (/[^\x20-\x7e×]/.test(p.text)) unicode = true;
+        return escapeLatex(p.text).replaceAll('×', '\\ensuremath{\\times}');
       })
       .join('');
     const first = parts[0]!;

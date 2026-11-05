@@ -1,6 +1,6 @@
 // Build-time figures for the site pages: rendered by the same engine as the editor and the CLI.
 
-import { encodeShare, renderDiagram, type TextEngine } from '@xematics/core';
+import { encodeShare, isMlp, parseModel, renderDiagram, type TextEngine } from '@xematics/core';
 import { createNodeTextEngine } from '@xematics/core/node';
 
 let engine: Promise<TextEngine> | undefined;
@@ -23,6 +23,8 @@ export async function editorLink(source: string): Promise<string> {
 /** The shorthand line, or a short description for YAML sources. */
 export function sourceSummary(source: string): string {
   if (!source.includes('\n')) return source;
+  const model = parseModel(source).model;
+  if (model && !isMlp(model)) return `CNN, ${model.layers.length} layers`;
   const layers = /layers:\s*\[([^\]]*)\]/.exec(source)?.[1];
   if (layers)
     return layers

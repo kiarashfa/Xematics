@@ -1,7 +1,7 @@
 ---
 layout: ../layouts/GuideLayout.astro
 title: Syntax and export guide
-description: How to write networks in Xematics (shorthand, YAML and JSON), every layer and style option, math and right-to-left labels, and how to export to SVG, PNG, PDF and TikZ.
+description: How to write networks in Xematics (shorthand, YAML and JSON), fully connected and convolutional layers, every style option, math and right-to-left labels, and how to export to SVG, PNG, PDF and TikZ.
 ---
 
 import Figure from '../components/Figure.astro';
@@ -20,6 +20,8 @@ The quickest way to describe a network is one line of layer sizes:
 - Separate layers with `-`, a comma or spaces: `784, 128, 10` works too.
 - Add an activation after a colon: `4-8:relu-3:softmax`.
 - `dense(64)`, `fc(64)` and `linear(64)` all mean a fully connected layer of 64 neurons.
+- Images, convolutions and pooling have their own words, like `in(28x28x1)-conv(8,3x3)-pool(2)`
+  (see Convolutional networks).
 
 <Figure id="g-shorthand" source="4-8:relu-3:softmax" caption="4-8:relu-3:softmax" />
 
@@ -53,6 +55,9 @@ Mistakes are reported with their line and column, and unknown keys suggest what 
 meant. While the source has an error, the preview keeps the last valid figure.
 
 ## Layer options
+
+These options are for fully connected (dense) layers, the default type. Convolutional layers
+have their own, listed in the next section.
 
 | Key          | Values             | Meaning                                                  |
 | ------------ | ------------------ | -------------------------------------------------------- |
@@ -96,6 +101,63 @@ numbering stays correct around the ellipsis.
   caption="Inputs x1 to x12, collapsed; outputs y-hat"
 />
 
+## Convolutional networks
+
+Start with an image, then add convolution and pooling layers. The size of every feature map is
+worked out for you.
+
+```text
+in(28x28x1)-conv(8,3x3):relu-pool(2)-conv(16,3x3):relu-pool(2)-flatten-fc(64)-fc(10)
+```
+
+<Figure
+  id="g-cnn"
+  source="in(28x28x1)-conv(8,3x3):relu-pool(2)-conv(16,3x3):relu-pool(2)-flatten-fc(64)-fc(10)"
+  caption="A small image classifier"
+/>
+
+| Shorthand        | Layer                                                              |
+| ---------------- | ------------------------------------------------------------------ |
+| `in(28x28x1)`    | An image: height, width and channels. `in(32x32)` has one channel. |
+| `conv(16,3x3)`   | A convolution with 16 filters and a 3×3 kernel.                    |
+| `conv(16,3,s2)`  | The same with a stride of 2. Add `valid` for no padding.           |
+| `pool(2)`        | Max pooling over 2×2 windows. `avgpool(2)` averages instead.       |
+| `pool(3,s2)`     | Pooling with a 3×3 window and a stride of 2. Add `same` to pad.    |
+| `gap`            | Global average pooling: one value per channel.                     |
+| `flatten`        | Turns a feature map into a flat vector.                            |
+| `fc(64)` or `64` | A dense layer, as in fully connected networks.                     |
+
+In YAML, give each layer a `type`:
+
+```yaml
+layers:
+  - { type: input, shape: [28, 28, 1], name: Image }
+  - { type: conv, filters: 8, kernel: 3, padding: valid, activation: relu }
+  - { type: pool, size: 2, mode: avg }
+  - { type: flatten }
+  - { units: 10, activation: softmax, name: Digits }
+```
+
+| Key       | Layers     | Meaning                                                                |
+| --------- | ---------- | ---------------------------------------------------------------------- |
+| `type`    | all        | `dense` (the default), `input`, `conv`, `pool`, `gap` or `flatten`.    |
+| `shape`   | input      | `[height, width]` or `[height, width, channels]`.                      |
+| `filters` | conv       | Number of filters, which is the number of output channels.             |
+| `kernel`  | conv       | Window size: `3`, or `[3, 5]` for height and width.                    |
+| `size`    | pool       | Window size, written the same way.                                     |
+| `stride`  | conv, pool | Step between windows. 1 for convolutions, the window size for pooling. |
+| `padding` | conv, pool | `same` keeps the size (convolutions), `valid` adds none (pooling).     |
+| `mode`    | pool       | `max` (the default) or `avg`.                                          |
+
+Every feature map is a stack of sheets, one per channel up to seven, with its size underneath
+(28×28×8). Rays show the window each convolution or pooling step reads. The step itself is
+written above it, like conv 3×3 or max 2×2; turn these off with the Operations switch or
+`style: { labels: { ops: false } }`. Dense layers after the maps follow the preset: neurons and
+connections, or bars with Layer boxes.
+
+When a window does not fit its input, or a convolution follows a flat layer, the editor warns
+you and still draws the figure.
+
 ## Styles and presets
 
 A preset sets every color and shape at once. Pick one in the Home tab, or write it:
@@ -124,10 +186,10 @@ Other style options:
 
 | Key            | Values                          | Default         |
 | -------------- | ------------------------------- | --------------- |
-| `labels`       | `{ names: true, sizes: true }`  | both shown      |
+| `labels`       | `{ names, sizes, ops }`         | all shown       |
 | `background`   | `transparent` or a quoted color | the preset's    |
-| `nodeRadius`   | 2 to 100                        | 12              |
-| `nodeSpacing`  | 0 to 200                        | 9               |
+| `nodeRadius`   | 2 to 100                        | 12 (CNN: 8)     |
+| `nodeSpacing`  | 0 to 200                        | 9 (CNN: 5)      |
 | `layerSpacing` | 20 to 2000                      | 110 (boxes: 96) |
 | `direction`    | `ltr` or `rtl`                  | `ltr`           |
 

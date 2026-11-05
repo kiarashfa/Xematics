@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { roleOf } from '@xematics/core';
+  import { roleOf, shapeText } from '@xematics/core';
   import { tool } from '../state.svelte.ts';
   import Icon from './Icon.svelte';
 
@@ -33,7 +33,7 @@
         <Icon name="layers" size={15} /><span class="name">{tool.model?.title || 'Diagram'}</span>
       </button>
     </li>
-    {#each layers as layer, i (i)}
+    {#each layers as _layer, i (i)}
       <li>
         <button
           type="button"
@@ -47,7 +47,7 @@
         >
           <span class={`dot role-${roleOf(i, layers.length)}`} aria-hidden="true"></span>
           <span class="name">{tool.layerName(i)}</span>
-          <span class="units">{layer.units}</span>
+          <span class="units">{tool.shapes[i] ? shapeText(tool.shapes[i]) : ''}</span>
         </button>
       </li>
     {/each}

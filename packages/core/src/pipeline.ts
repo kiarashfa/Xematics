@@ -1,7 +1,8 @@
 import type { Diagnostic } from './diagnostics.ts';
 import { splitMath, nodeLabelText } from './layout/label.ts';
+import { cnnLabels } from './layout/cnn.ts';
 import { cleanLabel, layoutModel, nameText, slotsOf } from './layout/mlp.ts';
-import type { Model } from './model/schema.ts';
+import { isMlp, type MlpModel, type Model } from './model/schema.ts';
 import { parseModel, type InputFormat } from './parse/parse.ts';
 import { renderSvg, type SvgOptions } from './render/svg.ts';
 import type { Scene } from './scene.ts';
@@ -37,7 +38,23 @@ export function labelContent(model: Model): { text: TextRequest[]; math: string[
       }
     }
   };
-  model.layers.forEach((layer, index) => {
+  if (!isMlp(model)) {
+    for (const label of cnnLabels(model, theme)) add(label.text, label.style);
+    if (theme.mode === 'nodes') {
+      const style = { ...theme.nodeText, color: '' };
+      for (const layer of model.layers) {
+        if (layer.type !== 'dense' || layer.nodeLabel === undefined) continue;
+        const template = cleanLabel(layer.nodeLabel);
+        if (!template) continue;
+        for (const slot of slotsOf(layer, theme).slots) {
+          if (slot !== 'ellipsis') add(nodeLabelText(template, slot + 1), style);
+        }
+      }
+    }
+    return { text, math };
+  }
+  const mlp: MlpModel = model;
+  mlp.layers.forEach((layer, index) => {
     const name = nameText(layer, index, count);
     if (theme.labels.names && name) add(name, theme.nameText);
     text.push({ text: String(layer.units), font: theme.sizeText });

@@ -43,10 +43,14 @@ describe('model edits', () => {
     expect(
       patchLayer(patchLayer(base, 1, { name: 'x' }), 1, { name: undefined }).layers[1],
     ).toEqual({ type: 'dense', units: 5 });
-    expect(insertLayer(base, 1).layers.map((l) => l.units)).toEqual([3, 4, 5, 2]);
-    expect(removeLayer(base, 0).layers.map((l) => l.units)).toEqual([5, 2]);
+    expect(insertLayer(base, 1).layers.map((l) => ('units' in l ? l.units : 0))).toEqual([
+      3, 4, 5, 2,
+    ]);
+    expect(removeLayer(base, 0).layers.map((l) => ('units' in l ? l.units : 0))).toEqual([5, 2]);
     expect(removeLayer(model('3'), 0).layers).toHaveLength(1);
-    expect(moveLayer(base, 0, 1).layers.map((l) => l.units)).toEqual([5, 3, 2]);
+    expect(moveLayer(base, 0, 1).layers.map((l) => ('units' in l ? l.units : 0))).toEqual([
+      5, 3, 2,
+    ]);
     expect(moveLayer(base, 0, -1)).toBe(base);
   });
 

@@ -1,0 +1,12 @@
+# LeNet-5 style network: valid convolutions and average pooling.
+title: LeNet-5
+layers:
+  - { type: input, shape: [32, 32, 1], name: Image }
+  - { type: conv, filters: 6, kernel: 5, padding: valid, activation: tanh, name: C1 }
+  - { type: pool, size: 2, mode: avg, name: S2 }
+  - { type: conv, filters: 16, kernel: 5, padding: valid, activation: tanh, name: C3 }
+  - { type: pool, size: 2, mode: avg, name: S4 }
+  - { type: flatten }
+  - { units: 120, activation: tanh, name: C5 }
+  - { units: 84, activation: tanh, name: F6 }
+  - { units: 10, activation: softmax, name: Output, nodeLabel: '$y_{i}$' }

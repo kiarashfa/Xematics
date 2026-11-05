@@ -14,10 +14,16 @@ export const LIMITS = {
   title: 300,
   description: 2000,
   activation: 40,
+  /** Height and width of an image or feature map. */
+  side: 100_000,
+  channels: 100_000,
+  window: 1000,
 } as const;
 
 export const PRESET_IDS = ['classic', 'boxes', 'mono', 'colorblind', 'colorblind-dark'] as const;
-export const LAYER_TYPES = ['dense'] as const;
+export const LAYER_TYPES = ['dense', 'input', 'conv', 'pool', 'gap', 'flatten'] as const;
+export const PADDINGS = ['same', 'valid'] as const;
+export const POOL_MODES = ['max', 'avg'] as const;
 export const DIRECTIONS = ['ltr', 'rtl'] as const;
 
 /** Activation names are identifiers so they stay valid in the shorthand: relu, leaky_relu, softmax. */
@@ -62,23 +68,32 @@ export const CollapseSchema = v.strictObject(
   'must be an object like { above: 10, first: 3, last: 3 }.',
 );
 
-export const LayerSchema = v.strictObject(
-  {
-    type: v.picklist(
-      LAYER_TYPES,
-      (issue) =>
-        `'${String(issue.input)}' is not supported yet. Supported layer types: ${LAYER_TYPES.join(', ')}.`,
+const name = () => v.optional(text(LIMITS.label));
+const activation = () =>
+  v.optional(
+    v.pipe(
+      text(LIMITS.activation),
+      v.regex(ACTIVATION_PATTERN, 'must be a simple name like relu, tanh or softmax.'),
     ),
+  );
+/** A window size or stride: one number for a square, or [height, width]. */
+const windowSize = () =>
+  v.union(
+    [
+      wholeNumber(1, LIMITS.window),
+      v.strictTuple([wholeNumber(1, LIMITS.window), wholeNumber(1, LIMITS.window)]),
+    ],
+    `must be a whole number from 1 to ${LIMITS.window}, or [height, width].`,
+  );
+
+export const DenseLayerSchema = v.strictObject(
+  {
+    type: v.literal('dense'),
     units: wholeNumber(1, LIMITS.units),
-    name: v.optional(text(LIMITS.label)),
+    name: name(),
     /** Label drawn inside every node; `{i}` is the neuron number, e.g. '$x_{i}$'. */
     nodeLabel: v.optional(text(LIMITS.label)),
-    activation: v.optional(
-      v.pipe(
-        text(LIMITS.activation),
-        v.regex(ACTIVATION_PATTERN, 'must be a simple name like relu, tanh or softmax.'),
-      ),
-    ),
+    activation: activation(),
     collapse: v.optional(
       v.union(
         [v.literal(false), CollapseSchema],
@@ -89,8 +104,89 @@ export const LayerSchema = v.strictObject(
   'must be a number or an object like { units: 16 }.',
 );
 
+/** An image: [height, width] or [height, width, channels]. */
+export const InputLayerSchema = v.strictObject(
+  {
+    type: v.literal('input'),
+    shape: v.union(
+      [
+        v.strictTuple([wholeNumber(1, LIMITS.side), wholeNumber(1, LIMITS.side)]),
+        v.strictTuple([
+          wholeNumber(1, LIMITS.side),
+          wholeNumber(1, LIMITS.side),
+          wholeNumber(1, LIMITS.channels),
+        ]),
+      ],
+      'must be [height, width] or [height, width, channels], like [28, 28, 1].',
+    ),
+    name: name(),
+  },
+  'must be an object like { type: input, shape: [28, 28, 1] }.',
+);
+
+export const ConvLayerSchema = v.strictObject(
+  {
+    type: v.literal('conv'),
+    filters: wholeNumber(1, LIMITS.channels),
+    kernel: windowSize(),
+    stride: v.optional(windowSize()),
+    padding: v.optional(v.picklist(PADDINGS, `must be one of: ${PADDINGS.join(', ')}.`)),
+    name: name(),
+    activation: activation(),
+  },
+  'must be an object like { type: conv, filters: 16, kernel: 3 }.',
+);
+
+export const PoolLayerSchema = v.strictObject(
+  {
+    type: v.literal('pool'),
+    size: windowSize(),
+    stride: v.optional(windowSize()),
+    padding: v.optional(v.picklist(PADDINGS, `must be one of: ${PADDINGS.join(', ')}.`)),
+    mode: v.optional(v.picklist(POOL_MODES, `must be one of: ${POOL_MODES.join(', ')}.`)),
+    name: name(),
+  },
+  'must be an object like { type: pool, size: 2 }.',
+);
+
+/** Global average pooling: a feature map becomes one value per channel. */
+export const GapLayerSchema = v.strictObject(
+  { type: v.literal('gap'), name: name() },
+  'must be an object like { type: gap }.',
+);
+
+export const FlattenLayerSchema = v.strictObject(
+  { type: v.literal('flatten'), name: name() },
+  'must be an object like { type: flatten }.',
+);
+
+export const LAYER_SCHEMAS = {
+  dense: DenseLayerSchema,
+  input: InputLayerSchema,
+  conv: ConvLayerSchema,
+  pool: PoolLayerSchema,
+  gap: GapLayerSchema,
+  flatten: FlattenLayerSchema,
+} as const;
+
+export const LayerSchema = v.variant(
+  'type',
+  [
+    DenseLayerSchema,
+    InputLayerSchema,
+    ConvLayerSchema,
+    PoolLayerSchema,
+    GapLayerSchema,
+    FlattenLayerSchema,
+  ],
+  (issue) =>
+    issue.received === 'undefined' || !issue.path?.length || issue.path.at(-1)?.key !== 'type'
+      ? 'must be a number or an object like { units: 16 }.'
+      : `'${String(issue.input)}' is not a layer type. Layer types: ${LAYER_TYPES.join(', ')}.`,
+);
+
 export const LabelsSchema = v.strictObject(
-  { names: v.optional(flag()), sizes: v.optional(flag()) },
+  { names: v.optional(flag()), sizes: v.optional(flag()), ops: v.optional(flag()) },
   'must be an object like { names: true, sizes: false }.',
 );
 
@@ -133,6 +229,19 @@ export const ModelSchema = v.strictObject(
 
 export type Model = v.InferOutput<typeof ModelSchema>;
 export type Layer = Model['layers'][number];
+export type LayerType = Layer['type'];
+export type DenseLayer = Extract<Layer, { type: 'dense' }>;
+export type InputLayer = Extract<Layer, { type: 'input' }>;
+export type ConvLayer = Extract<Layer, { type: 'conv' }>;
+export type PoolLayer = Extract<Layer, { type: 'pool' }>;
+export type Padding = (typeof PADDINGS)[number];
+export type PoolMode = (typeof POOL_MODES)[number];
+
+export const isDense = (layer: Layer): layer is DenseLayer => layer.type === 'dense';
+/** A model whose layers are all dense (a plain fully connected network). */
+export type MlpModel = Omit<Model, 'layers'> & { readonly layers: readonly DenseLayer[] };
+/** True when every layer is dense: the model is drawn as a plain fully connected network. */
+export const isMlp = (model: Model): model is Model & MlpModel => model.layers.every(isDense);
 export type StyleOptions = v.InferOutput<typeof StyleSchema>;
 export type CollapseOptions = v.InferOutput<typeof CollapseSchema>;
 export type PresetId = (typeof PRESET_IDS)[number];

@@ -54,7 +54,7 @@ test('fonts are self-hosted', async ({ page }) => {
 });
 
 const PAGES = [
-  ['./examples/', 'Ten networks to start from'],
+  ['./examples/', 'Twelve networks to start from'],
   ['./guide/', 'Syntax and export guide'],
   ['./about/', 'About Xematics'],
   ['./credits/', 'Built on the work of others'],
@@ -82,7 +82,7 @@ test('every example opens in the editor as shown', async ({ page }) => {
   await page.goto('./examples/');
   // The example's title is visually hidden text after the visible label.
   const links = page.getByRole('link', { name: /^Open in editor\s*:/ });
-  await expect(links).toHaveCount(10);
+  await expect(links).toHaveCount(12);
   await page.getByRole('link', { name: /^Open in editor\s*: Iris classifier$/ }).click();
   await expect(page.getByRole('img', { name: 'Iris classifier' })).toBeVisible();
 });

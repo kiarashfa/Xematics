@@ -82,6 +82,45 @@ test.describe('desktop editor', () => {
     expect(await exportSvg()).toBe(await readFile(new URL('mnist.live.svg', GOLDEN), 'utf8'));
   });
 
+  test('convolutional networks export the same bytes as the Node golden', async ({ page }) => {
+    await openEditor(page);
+    const text = (await readFile(new URL('../fixtures/cnn-small.txt', GOLDEN), 'utf8')).trim();
+    await source(page).fill(text);
+    await expect(page.getByRole('img', { name: 'Neural network diagram' })).toBeVisible();
+    await expect(page.locator('#pv-sheet-1-6')).toBeAttached();
+    await expect(page.locator('#pv-window-1')).toBeAttached();
+    const download = page.waitForEvent('download');
+    await exportButton(page, 'Export SVG');
+    const file = await (await download).path();
+    expect(await readFile(file, 'utf8')).toBe(
+      await readFile(new URL('cnn-small.svg', GOLDEN), 'utf8'),
+    );
+  });
+
+  test('format pane edits convolution layers and changes layer types', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-10');
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await expect(nav).toContainText('28×28×8');
+    await nav.getByRole('button', { name: /Conv/ }).click();
+    await page.getByRole('spinbutton', { name: 'Filters' }).fill('12');
+    await page.getByRole('spinbutton', { name: 'Filters' }).press('Enter');
+    await page.getByRole('spinbutton', { name: 'Stride height' }).fill('2');
+    await page.getByRole('spinbutton', { name: 'Stride height' }).press('Enter');
+    await page.getByRole('spinbutton', { name: 'Stride width' }).fill('2');
+    await page.getByRole('spinbutton', { name: 'Stride width' }).press('Enter');
+    await expect(source(page)).toHaveValue('in(28x28x1)-conv(12,3x3,s2):relu-pool(2)-flatten-10');
+    await expect(page.getByText('Output 14×14×12')).toBeVisible();
+    await nav.getByRole('button', { name: /Pool/ }).click();
+    await page.getByRole('combobox', { name: 'Layer type' }).selectOption('conv');
+    await expect(source(page)).toHaveValue(
+      'in(28x28x1)-conv(12,3x3,s2):relu-conv(16,3x3)-flatten-10',
+    );
+    await page.getByRole('switch', { name: 'Operations' }).uncheck();
+    await expect(source(page)).toHaveValue(/labels: { ops: false }/);
+    await expect(page.locator('#pv-op-1')).not.toBeAttached();
+  });
+
   test('shorthand bar changes sizes and keeps names', async ({ page }) => {
     await openEditor(page);
     const bar = page.getByRole('textbox', { name: /Layer sizes/ });

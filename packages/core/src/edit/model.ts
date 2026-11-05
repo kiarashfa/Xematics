@@ -1,14 +1,23 @@
 // Pure, immutable edits on the canonical model. Editors call these, then write the result back
 // to the source text with updateText (see ./text.ts).
 
-import type { Layer, Model, StyleOptions } from '../model/schema.ts';
-import type { ShorthandLayer } from '../parse/shorthand.ts';
+import type { Layer, LayerType, Model, StyleOptions } from '../model/schema.ts';
+import { layerToken, type ShorthandLayer } from '../parse/shorthand.ts';
 
 /** A partial update; a key set to undefined removes it. */
 export type Patch<T> = { [K in keyof T]?: T[K] | undefined };
 
-/** Layer fields to change; units can change but never be removed. */
-export type LayerPatch = Patch<Omit<Layer, 'type' | 'units'>> & { units?: number };
+type AllKeys<T> = T extends unknown ? keyof T : never;
+type ValueOf<T, K extends PropertyKey> = T extends unknown
+  ? K extends keyof T
+    ? T[K]
+    : never
+  : never;
+
+/** Layer fields to change (any layer type's fields; the editor offers only the ones that apply). */
+export type LayerPatch = {
+  [K in Exclude<AllKeys<Layer>, 'type'>]?: ValueOf<Layer, K> | undefined;
+};
 
 type LabelsPatch = Patch<NonNullable<StyleOptions['labels']>>;
 type CollapsePatch = Patch<NonNullable<StyleOptions['collapse']>>;
@@ -36,7 +45,45 @@ export function patchLayer(model: Model, index: number, patch: LayerPatch): Mode
   if (!model.layers[index]) return model;
   return {
     ...model,
-    layers: model.layers.map((layer, i) => (i === index ? clean({ ...layer, ...patch }) : layer)),
+    layers: model.layers.map((layer, i) =>
+      i === index ? (clean({ ...layer, ...patch }) as Layer) : layer,
+    ),
+  };
+}
+
+/** A new layer of each type, with the usual starting values. */
+export function defaultLayer(type: LayerType): Layer {
+  switch (type) {
+    case 'dense':
+      return { type, units: 16 };
+    case 'input':
+      return { type, shape: [28, 28, 1] };
+    case 'conv':
+      return { type, filters: 16, kernel: 3 };
+    case 'pool':
+      return { type, size: 2 };
+    case 'gap':
+    case 'flatten':
+      return { type };
+  }
+}
+
+/** Changes a layer's type, keeping its name (and activation where the new type takes one). */
+export function changeLayerType(model: Model, index: number, type: LayerType): Model {
+  const old = model.layers[index];
+  if (!old || old.type === type) return model;
+  const next: Record<string, unknown> = { ...defaultLayer(type) };
+  if (old.name !== undefined) next['name'] = old.name;
+  if (
+    (type === 'dense' || type === 'conv') &&
+    'activation' in old &&
+    old.activation !== undefined
+  ) {
+    next['activation'] = old.activation;
+  }
+  return {
+    ...model,
+    layers: model.layers.map((layer, i) => (i === index ? (next as Layer) : layer)),
   };
 }
 
@@ -97,16 +144,29 @@ export function applyStructure(model: Model, structure: readonly ShorthandLayer[
   };
   const layers = structure.map((s, i): Layer => {
     const old = match(i);
-    const base: Layer = old ? { ...old, units: s.units } : { type: 'dense', units: s.units };
-    const { activation: _drop, ...rest } = base;
-    return s.activation === undefined ? rest : { ...rest, activation: s.activation };
+    if (s.type === 'dense') {
+      const base: Layer =
+        old?.type === 'dense' ? { ...old, units: s.units } : { type: 'dense', units: s.units };
+      const { activation: _drop, ...rest } = base;
+      return s.activation === undefined ? rest : { ...rest, activation: s.activation };
+    }
+    // Other types come whole from the structure; a layer of the same type keeps its name.
+    return old?.type === s.type && old.name !== undefined ? { ...s, name: old.name } : s;
   });
   return { ...model, layers };
 }
 
 /** Sizes and activations as shorthand, whether or not the whole model fits the shorthand. */
 export function structureOf(model: Model): string {
-  return model.layers
-    .map((l) => (l.activation ? `${l.units}:${l.activation}` : String(l.units)))
-    .join('-');
+  return model.layers.map(layerToken).join('-');
+}
+
+/** The number a layer's plus and minus buttons change: neurons of dense layers, filters of convolutions. */
+export function layerCount(
+  layer: Layer,
+):
+  { readonly key: 'units' | 'filters'; readonly value: number; readonly noun: string } | undefined {
+  if (layer.type === 'dense') return { key: 'units', value: layer.units, noun: 'neurons' };
+  if (layer.type === 'conv') return { key: 'filters', value: layer.filters, noun: 'filters' };
+  return undefined;
 }

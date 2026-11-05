@@ -38,7 +38,7 @@
 
   function onClick(event: MouseEvent) {
     const target = (event.target as Element).closest(
-      '[id^="pv-node-"],[id^="pv-layer-"],[id^="pv-name-"],[id^="pv-size-"],[id^="pv-ellipsis-"]',
+      '[id^="pv-node-"],[id^="pv-layer-"],[id^="pv-name-"],[id^="pv-size-"],[id^="pv-op-"],[id^="pv-ellipsis-"]',
     );
     const index = target ? Number(target.id.split('-')[2]) : NaN;
     tool.select(Number.isInteger(index) ? { kind: 'layer', index } : { kind: 'diagram' });
@@ -169,7 +169,8 @@
   }
 
   .paper :global([data-selected] circle),
-  .paper :global([data-selected] rect) {
+  .paper :global([data-selected] rect),
+  .paper :global([data-selected] .pv-sheet) {
     stroke: #0b6bcb;
     stroke-width: 3;
   }

@@ -47,7 +47,7 @@ export interface Theme {
   readonly labelPadding: number;
   /** Background color, or null for transparent. */
   readonly background: string | null;
-  readonly labels: { readonly names: boolean; readonly sizes: boolean };
+  readonly labels: { readonly names: boolean; readonly sizes: boolean; readonly ops: boolean };
   readonly collapse: CollapseRule;
   /** Above this many connections between two layers, they are drawn as one band. */
   readonly edgeLimit: number;
@@ -62,6 +62,26 @@ export interface Theme {
     readonly minHeight: number;
     readonly perDecade: number;
     readonly arrow: { readonly color: string; readonly width: number };
+  };
+  /** Convolutional models: feature maps drawn as stacks of sheets, one per channel. */
+  readonly maps: {
+    /** Pooling layers get their own tint; other maps use the role paints. */
+    readonly pool: { readonly fill: string; readonly stroke: string };
+    /** The window on a map that a convolution or pooling step reads. */
+    readonly window: string;
+    /** Rays from that window to the next map. */
+    readonly ray: { readonly color: string; readonly width: number };
+    /** Height of the largest map's sheets in px; others scale with the square root of their size. */
+    readonly face: number;
+    readonly minFace: number;
+    /** At most this many sheets per map. */
+    readonly sheets: number;
+    readonly strokeWidth: number;
+    /** Node size and gap for dense layers next to feature maps (style nodeRadius/nodeSpacing override). */
+    readonly nodeRadius: number;
+    readonly nodeSpacing: number;
+    /** Operation labels on the connectors (conv 3×3, max 2×2). */
+    readonly opText: TextStyle;
   };
 }
 
@@ -88,12 +108,24 @@ const CLASSIC: Theme = {
   lineGap: 2,
   labelPadding: 12,
   background: '#ffffff',
-  labels: { names: true, sizes: true },
+  labels: { names: true, sizes: true, ops: true },
   collapse: { above: 10, first: 3, last: 3 },
   edgeLimit: 2500,
   mode: 'nodes',
   direction: 'ltr',
   box: { width: 30, radius: 6, minHeight: 28, perDecade: 34, arrow: { color: MUTED, width: 1.4 } },
+  maps: {
+    pool: { fill: '#dfe3e8', stroke: '#4b5563' },
+    window: '#aeb3b9',
+    ray: { color: MUTED, width: 0.8 },
+    face: 104,
+    minFace: 16,
+    sheets: 7,
+    strokeWidth: 1.2,
+    nodeRadius: 8,
+    nodeSpacing: 5,
+    opText: { family: 'Inter', weight: 400, size: 11, color: MUTED },
+  },
 };
 
 /** Okabe-Ito fills, shared by the light and dark colorblind-safe presets. */
@@ -119,6 +151,13 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
     nameText: { ...CLASSIC.nameText, color: '#000000' },
     sizeText: { ...CLASSIC.sizeText, color: '#4d4d4d' },
     box: { ...CLASSIC.box, arrow: { color: '#000000', width: 1.2 } },
+    maps: {
+      ...CLASSIC.maps,
+      pool: { fill: '#ececec', stroke: '#000000' },
+      window: '#bfbfbf',
+      ray: { color: '#4d4d4d', width: 0.7 },
+      opText: { ...CLASSIC.maps.opText, color: '#4d4d4d' },
+    },
   },
   colorblind: {
     ...CLASSIC,
@@ -128,6 +167,11 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
       output: { fill: OKABE_OUTPUT, stroke: '#d55e00', text: INK },
     },
     edge: { ...CLASSIC.edge, color: '#c3c8cf' },
+    maps: {
+      ...CLASSIC.maps,
+      pool: { fill: '#d1d5db', stroke: '#6b7280' },
+      window: '#b3b8bf',
+    },
   },
   'colorblind-dark': {
     ...CLASSIC,
@@ -142,6 +186,13 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
     nameText: { ...CLASSIC.nameText, color: '#e8eaed' },
     sizeText: { ...CLASSIC.sizeText, color: '#9aa3ae' },
     box: { ...CLASSIC.box, arrow: { color: '#9aa3ae', width: 1.4 } },
+    maps: {
+      ...CLASSIC.maps,
+      pool: { fill: '#3a414d', stroke: '#9aa3ae' },
+      window: '#51575f',
+      ray: { color: '#9aa3ae', width: 0.8 },
+      opText: { ...CLASSIC.maps.opText, color: '#9aa3ae' },
+    },
   },
 };
 
@@ -182,6 +233,12 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
     labels: {
       names: style.labels?.names ?? base.labels.names,
       sizes: style.labels?.sizes ?? base.labels.sizes,
+      ops: style.labels?.ops ?? base.labels.ops,
+    },
+    maps: {
+      ...base.maps,
+      nodeRadius: style.nodeRadius ?? base.maps.nodeRadius,
+      nodeSpacing: style.nodeSpacing ?? base.maps.nodeSpacing,
     },
     collapse: mergeCollapse(base.collapse, style.collapse),
   };

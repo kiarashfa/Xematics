@@ -1,0 +1,1 @@
+in(28x28x1)-conv(8,3x3):relu-pool(2)-conv(16,3x3):relu-pool(2)-flatten-fc(64):relu-fc(10):softmax

@@ -1,0 +1,7 @@
+layers:
+  - { type: input, shape: [48, 48, 3], name: تصویر }
+  - { type: conv, filters: 32, kernel: [3, 5], stride: [1, 2], name: کانولوشن }
+  - { type: pool, size: 2, stride: 1, padding: same }
+  - { type: flatten }
+  - { units: 3, name: خروجی }
+style: { preset: mono, direction: rtl }

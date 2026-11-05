@@ -1,0 +1,6 @@
+layers:
+  - { type: input, shape: [28, 28], name: '$\mathbf{X}$' }
+  - { type: conv, filters: 4, kernel: 3, name: '$H^{(1)}$' }
+  - { type: gap, name: '$\bar{h}$' }
+  - { units: 2, name: '$\hat{y}$' }
+style: { preset: colorblind, labels: { sizes: false } }

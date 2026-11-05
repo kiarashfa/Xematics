@@ -71,6 +71,18 @@ test('tap a layer, step its neurons from the context card', async ({ page }) => 
   await expect(await sourceText(page)).toHaveValue(/units: 17, activation: relu/);
 });
 
+test('layer cards step convolution filters and show map sizes', async ({ page }) => {
+  await openDocument(page);
+  await page.getByRole('button', { name: 'Source', exact: true }).click();
+  await source(page).fill('in(32x32x3)-conv(8,3x3):relu-pool(2)-flatten-10');
+  await page.getByRole('button', { name: 'Layer cards' }).click();
+  await page.getByRole('button', { name: 'More filters in Conv' }).click();
+  await expect(page.getByRole('list', { name: 'Layers' })).toContainText('16×16×9');
+  await expect(await sourceText(page)).toHaveValue(
+    'in(32x32x3)-conv(9,3x3):relu-pool(2)-flatten-10',
+  );
+});
+
 test('layer cards change activations and sizes', async ({ page }) => {
   await openDocument(page);
   await page.getByRole('button', { name: 'Layer cards' }).click();

@@ -30,10 +30,13 @@ const ascii = (bytes: Uint8Array) => {
 };
 
 describe('PDF export', () => {
-  test.each(['mnist.txt', 'math.yaml', 'persian.yaml', 'rtl-boxes.yaml'])('%s', async (file) => {
-    const pdf = ascii(renderPdf(await scene(file)));
-    await expect(pdf).toMatchFileSnapshot(`./golden/${file.replace(/\.\w+$/, '')}.pdf`);
-  });
+  test.each(['mnist.txt', 'math.yaml', 'persian.yaml', 'rtl-boxes.yaml', 'cnn-small.txt'])(
+    '%s',
+    async (file) => {
+      const pdf = ascii(renderPdf(await scene(file)));
+      await expect(pdf).toMatchFileSnapshot(`./golden/${file.replace(/\.\w+$/, '')}.pdf`);
+    },
+  );
 
   test('is a valid single-page file with a correct cross-reference table', async () => {
     const pdf = ascii(renderPdf(await scene('mnist.txt')));
@@ -60,6 +63,10 @@ describe('TikZ export', () => {
     'rtl-boxes.yaml',
     'bundled.yaml',
     'persian.yaml',
+    'cnn-small.txt',
+    'cnn-lenet.yaml',
+    'cnn-boxes.yaml',
+    'cnn-math.yaml',
   ])('%s', async (file) => {
     await expect(renderTikz(await scene(file))).toMatchFileSnapshot(
       `./golden/${file.replace(/\.\w+$/, '')}.tex`,
