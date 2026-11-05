@@ -40,6 +40,13 @@
     stepforward: 'M6 5l9 7-9 7z|M18 5v14',
     repeat: 'M17 2l4 4-4 4|M3 11V9a3 3 0 0 1 3-3h15|M7 22l-4-4 4-4|M21 13v2a3 3 0 0 1-3 3H3',
     film: 'M3 5h18v14H3z|M3 9h18|M3 15h18|M8 5v4|M16 5v4|M8 15v4|M16 15v4',
+    shorthand: 'M3 12h4|M10 12h4|M17 12h4|M5 8v8|M12 8v8|M19 8v8',
+    convolution: 'M3 3h18v18H3z|M9 3v18|M15 3v18|M3 9h18|M3 15h18',
+    braces:
+      'M8 4c-2 0-3 1-3 3v2c0 1-1 3-2 3 1 0 2 2 2 3v2c0 2 1 3 3 3|M16 4c2 0 3 1 3 3v2c0 1 1 3 2 3-1 0-2 2-2 3v2c0 2-1 3-3 3',
+    keyboard: 'M2 6h20v12H2z|M6 10h.01|M10 10h.01|M14 10h.01|M18 10h.01|M7 14h10',
+    chevronUp: 'M7 14l5-5 5 5',
+    pin: 'M9 4h6l-1 6 3 3H7l3-3z|M12 13v8',
   } as const;
 
   export type IconName = keyof typeof PATHS;

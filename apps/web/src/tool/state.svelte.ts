@@ -84,6 +84,8 @@ export class ToolState {
   dialog = $state<'export-options' | 'embed' | undefined>(undefined);
   showNavigator = $state(true);
   showFormat = $state(true);
+  /** The manual page shown in the right pane instead of the format pane (set from the Help tab). */
+  manual = $state<'shorthand' | 'convolutions' | 'yaml' | 'keyboard' | undefined>(undefined);
   canUndo = $state(false);
   canRedo = $state(false);
   notice = $state('');

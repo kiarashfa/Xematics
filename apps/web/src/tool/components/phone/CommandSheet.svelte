@@ -343,7 +343,9 @@
     border-radius: 8px;
     background: var(--bg);
     color: var(--ink);
-    font: 0.72rem var(--font-sans);
+    font: 0.72rem/1.15 var(--font-sans);
+    text-align: center;
+    overflow-wrap: anywhere;
   }
 
   .preset[aria-pressed='true'] {

@@ -8,6 +8,7 @@
   import FormulaBar from './components/FormulaBar.svelte';
   import Navigator from './components/Navigator.svelte';
   import PhoneTool from './components/PhoneTool.svelte';
+  import Manual from './components/Manual.svelte';
   import Ribbon from './components/Ribbon.svelte';
   import SourceEditor from './components/SourceEditor.svelte';
   import StatusBar from './components/StatusBar.svelte';
@@ -167,7 +168,9 @@
       {/if}
       <Canvas />
       {#if tool.showFormat}
-        <div class="right"><FormatPane /></div>
+        <div class="right">
+          {#if tool.manual}<Manual />{:else}<FormatPane />{/if}
+        </div>
       {/if}
     </div>
     <StatusBar onReveal={revealFirstError} />

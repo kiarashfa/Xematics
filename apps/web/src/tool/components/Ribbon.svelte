@@ -33,6 +33,65 @@
   let sourceInput: HTMLInputElement | undefined = $state();
   let workspaceInput: HTMLInputElement | undefined = $state();
 
+  // Collapsed: only the tabs show. Clicking a tab then opens its commands as a temporary layer
+  // that closes after a command, on Escape, or on a click elsewhere. The pin button restores it.
+  const COLLAPSE_KEY = 'xm-ribbon-collapsed';
+  let collapsed = $state(readCollapsed());
+  let peek = $state(false);
+  const showPanel = $derived(!collapsed || peek);
+  let root: HTMLDivElement | undefined = $state();
+
+  function readCollapsed(): boolean {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function setCollapsed(value: boolean) {
+    collapsed = value;
+    peek = false;
+    try {
+      localStorage.setItem(COLLAPSE_KEY, value ? '1' : '0');
+    } catch {
+      // Private mode: the choice just lasts for this visit.
+    }
+  }
+
+  function pickTab(tab: Tab) {
+    // Clicking the open tab again closes the temporary layer.
+    peek = collapsed && (tab !== active || !peek);
+    active = tab;
+  }
+
+  // A command in the temporary layer closes it.
+  function onWindowClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    if (peek && target.closest('#ribbon-panel') && target.closest('button, a')) peek = false;
+  }
+
+  function onWindowPointer(event: PointerEvent) {
+    if (peek && root && !root.contains(event.target as Node)) peek = false;
+  }
+
+  function onWindowKey(event: KeyboardEvent) {
+    if (peek && event.key === 'Escape') {
+      peek = false;
+      document.getElementById(`ribbon-tab-${active}`)?.focus();
+    }
+  }
+
+  // The manual belongs to the Help tab: leaving it brings the format pane back.
+  $effect(() => {
+    if (active !== 'Help') untrack(() => (tool.manual = undefined));
+  });
+
+  function openManual(topic: NonNullable<typeof tool.manual>) {
+    tool.manual = tool.manual === topic ? undefined : topic;
+    if (tool.manual) tool.showFormat = true;
+  }
+
   const layerSelected = $derived(tool.selection.kind === 'layer');
   const layerCount = $derived(tool.model?.layers.length ?? 0);
   const index = $derived(tool.selection.kind === 'layer' ? tool.selection.index : -1);
@@ -106,6 +165,18 @@
   </button>
 {/snippet}
 
+{#snippet manualButton(topic: NonNullable<typeof tool.manual>, icon: IconName, label: string)}
+  <button
+    type="button"
+    class="big"
+    class:primary={tool.manual === topic}
+    aria-pressed={tool.manual === topic}
+    onclick={() => openManual(topic)}
+  >
+    <Icon name={icon} size={26} /><span>{label}</span>
+  </button>
+{/snippet}
+
 {#snippet small(icon: IconName, label: string, action: () => void, disabled = false)}
   <button type="button" class="small" onclick={action} {disabled}
     ><Icon name={icon} size={15} />{label}</button
@@ -124,24 +195,44 @@
   </label>
 {/snippet}
 
-<div class="ribbon">
-  <div class="tabs" role="tablist" aria-label="Ribbon">
-    {#each TABS as tab (tab)}
-      <button
-        type="button"
-        role="tab"
-        id={`ribbon-tab-${tab}`}
-        class:file={tab === 'File'}
-        aria-selected={active === tab}
-        aria-controls="ribbon-panel"
-        tabindex={active === tab ? 0 : -1}
-        onclick={() => (active = tab)}
-        onkeydown={onTabKey}>{tab}</button
-      >
-    {/each}
+<svelte:window onpointerdown={onWindowPointer} onclick={onWindowClick} onkeydown={onWindowKey} />
+
+<div class="ribbon" class:collapsed bind:this={root}>
+  <div class="tabs">
+    <div class="list" role="tablist" aria-label="Ribbon">
+      {#each TABS as tab (tab)}
+        <button
+          type="button"
+          role="tab"
+          id={`ribbon-tab-${tab}`}
+          class:file={tab === 'File'}
+          aria-selected={active === tab && showPanel}
+          aria-controls="ribbon-panel"
+          tabindex={active === tab ? 0 : -1}
+          onclick={() => pickTab(tab)}
+          onkeydown={onTabKey}>{tab}</button
+        >
+      {/each}
+    </div>
+    <button
+      type="button"
+      class="fold"
+      aria-label={collapsed ? 'Pin the ribbon' : 'Collapse the ribbon'}
+      title={collapsed ? 'Pin the ribbon' : 'Collapse the ribbon'}
+      aria-expanded={!collapsed}
+      onclick={() => setCollapsed(!collapsed)}
+      ><Icon name={collapsed ? 'pin' : 'chevronUp'} size={18} /></button
+    >
   </div>
 
-  <div class="panel" id="ribbon-panel" role="tabpanel" aria-labelledby={`ribbon-tab-${active}`}>
+  <div
+    class="panel"
+    class:float={collapsed}
+    hidden={!showPanel}
+    id="ribbon-panel"
+    role="tabpanel"
+    aria-labelledby={`ribbon-tab-${active}`}
+  >
     {#if active === 'File'}
       <div class="group" role="group" aria-label="Document">
         <div class="body">
@@ -491,50 +582,19 @@
         <div class="caption">Options</div>
       </div>
     {:else}
-      <div class="group" role="group" aria-label="Shorthand">
-        <div class="body ref">
-          <p><code>784-16-16-10</code> layer sizes</p>
-          <p><code>16:relu</code> with an activation</p>
-          <p><code>784-128*3-10</code> repeat a layer</p>
+      <div class="group" role="group" aria-label="Manual">
+        <div class="body">
+          {@render manualButton('shorthand', 'shorthand', 'Shorthand')}
+          {@render manualButton('convolutions', 'convolution', 'Convolutions')}
+          {@render manualButton('yaml', 'braces', 'YAML')}
+          {@render manualButton('keyboard', 'keyboard', 'Keyboard')}
         </div>
-        <div class="caption">Shorthand</div>
-      </div>
-      <div class="group" role="group" aria-label="Convolutions">
-        <div class="body ref">
-          <p><code>in(28x28x1)</code> an image</p>
-          <p><code>conv(16,3x3):relu</code> a convolution</p>
-          <p><code>pool(2)-flatten</code> pooling, then flat</p>
-        </div>
-        <div class="caption">Convolutions</div>
-      </div>
-      <div class="group" role="group" aria-label="YAML">
-        <div class="body ref">
-          <p><code>- &#123; units: 784, name: Pixels &#125;</code></p>
-          <p><code>collapse: &#123; first: 2, last: 4 &#125;</code></p>
-          <p><code>style: &#123; labels: &#123; sizes: false &#125; &#125;</code></p>
-        </div>
-        <div class="caption">YAML</div>
-      </div>
-      <div class="group" role="group" aria-label="Keyboard">
-        <div class="body ref">
-          <p><kbd>Ctrl</kbd> <kbd>Z</kbd> undo</p>
-          <p><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd> redo</p>
-          <p><kbd>Ctrl</kbd> <kbd>S</kbd> save now</p>
-        </div>
-        <div class="caption">Keyboard</div>
-      </div>
-      <div class="group" role="group" aria-label="More keys">
-        <div class="body ref">
-          <p><kbd>Ctrl</kbd> <kbd>O</kbd> open, <kbd>Ctrl</kbd> <kbd>E</kbd> export</p>
-          <p><kbd>Ctrl</kbd> <kbd>Enter</kbd> add, <kbd>Delete</kbd> remove</p>
-          <p><kbd>Alt</kbd> <kbd>↑</kbd> <kbd>↓</kbd> move a layer</p>
-        </div>
-        <div class="caption">More keys</div>
+        <div class="caption">Manual</div>
       </div>
       <div class="group" role="group" aria-label="Guide">
         <div class="body">
           <a class="big" href={`${import.meta.env.BASE_URL}guide/`}
-            ><Icon name="help" size={26} /><span>Syntax and export guide</span></a
+            ><Icon name="help" size={26} /><span>Full guide</span></a
           >
         </div>
         <div class="caption">Guide</div>
@@ -565,8 +625,15 @@
 
 <style>
   .ribbon {
+    position: relative;
+    z-index: 5;
     background: var(--surface);
     border-bottom: 1px solid var(--line);
+  }
+
+  /* Collapsed, the ribbon is just the tab row; the open panel floats over the editor. */
+  .ribbon.collapsed {
+    border-bottom: 0;
   }
 
   .tabs {
@@ -576,7 +643,12 @@
     border-bottom: 1px solid var(--line);
   }
 
-  .tabs button {
+  .list {
+    display: flex;
+    gap: 2px;
+  }
+
+  .tabs button:not(.fold) {
     border: 0;
     border-bottom: 3px solid transparent;
     background: none;
@@ -584,6 +656,25 @@
     font: 500 0.85rem var(--font-sans);
     padding: 8px 14px 6px;
     cursor: pointer;
+  }
+
+  .tabs .fold {
+    display: grid;
+    place-items: center;
+    align-self: center;
+    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 3px;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .tabs .fold:hover {
+    background: var(--surface-2);
+    color: var(--ink);
   }
 
   .tabs button[aria-selected='true'] {
@@ -599,9 +690,23 @@
   .panel {
     display: flex;
     align-items: stretch;
-    height: 100px;
     padding: 6px 6px 0;
     overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .panel[hidden] {
+    display: none;
+  }
+
+  .panel.float {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 6px 14px rgb(0 0 0 / 0.18);
   }
 
   .group {
@@ -612,15 +717,19 @@
     flex: none;
   }
 
+  /* Every group has the same body height, so the captions line up across the ribbon. */
   .body {
-    flex: 1;
+    flex: none;
+    height: 78px;
     display: flex;
     align-items: flex-start;
     gap: 6px;
   }
 
   .caption {
+    flex: none;
     padding: 2px 0 4px;
+    white-space: nowrap;
     font-size: 0.7rem;
     color: var(--muted);
     text-align: center;
@@ -694,6 +803,15 @@
     white-space: nowrap;
   }
 
+  /* A focused field lifts above its neighbours so its ring is never hidden by the next one. */
+  .documents:focus-visible,
+  .numbers input:focus-visible,
+  .small:focus-visible,
+  .big:focus-visible {
+    position: relative;
+    z-index: 1;
+  }
+
   .documents {
     min-height: 26px;
     max-width: 210px;
@@ -719,23 +837,26 @@
 
   .gallery {
     display: flex;
+    align-items: stretch;
     gap: 4px;
   }
 
   .thumb {
-    display: grid;
-    place-items: center;
-    align-content: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 2px;
     width: 62px;
-    height: 58px;
+    min-height: 58px;
     padding: 2px;
     border: 1px solid var(--line);
     border-radius: 3px;
     background: var(--bg);
     color: var(--ink);
-    font: 0.62rem var(--font-sans);
-    white-space: nowrap;
+    font: 0.62rem/1.15 var(--font-sans);
+    text-align: center;
+    overflow-wrap: anywhere;
     cursor: pointer;
   }
 
@@ -829,24 +950,5 @@
     background: var(--bg);
     color: var(--ink);
     font: 0.8rem var(--font-mono);
-  }
-
-  .ref {
-    flex-direction: column;
-    gap: 3px;
-    font-size: 0.78rem;
-  }
-
-  .ref p {
-    margin: 0;
-    white-space: nowrap;
-  }
-
-  kbd {
-    font: 0.72rem var(--font-mono);
-    border: 1px solid var(--line);
-    border-bottom-width: 2px;
-    border-radius: 3px;
-    padding: 0 4px;
   }
 </style>

@@ -472,6 +472,38 @@ test.describe('exports', () => {
     expect(animate.violations.map((v) => v.id)).toEqual([]);
   });
 
+  test('the ribbon never scrolls and its captions line up', async ({ page }) => {
+    await openEditor(page);
+    for (const tab of ['File', 'Home', 'View', 'Animate', 'Export', 'Help']) {
+      await page.getByRole('tab', { name: tab }).click();
+      const panel = page.locator('#ribbon-panel');
+      const fits = await panel.evaluate((el) => el.scrollHeight <= el.clientHeight);
+      expect(fits, tab).toBe(true);
+      const tops = await panel
+        .locator('.caption')
+        .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+      expect(new Set(tops).size, tab).toBe(1);
+    }
+  });
+
+  test('the ribbon collapses to its tabs and the Help tab opens the manual', async ({ page }) => {
+    await openEditor(page);
+    await page.getByRole('button', { name: 'Collapse the ribbon' }).click();
+    await expect(page.locator('#ribbon-panel')).toBeHidden();
+    // A tab opens its commands temporarily; a command closes them again.
+    await page.getByRole('tab', { name: 'Help' }).click();
+    await expect(page.getByRole('button', { name: 'Keyboard' })).toBeVisible();
+    await page.getByRole('button', { name: 'Keyboard' }).click();
+    await expect(page.locator('#ribbon-panel')).toBeHidden();
+    await expect(page.getByRole('complementary', { name: 'Manual' })).toContainText('Ctrl');
+    // Pinning brings the ribbon back; leaving Help restores the format pane.
+    await page.getByRole('button', { name: 'Pin the ribbon' }).click();
+    await expect(page.locator('#ribbon-panel')).toBeVisible();
+    await page.getByRole('tab', { name: 'Home' }).click();
+    await expect(page.getByRole('complementary', { name: 'Manual' })).toHaveCount(0);
+    await expect(page.getByRole('complementary', { name: 'Format' })).toBeVisible();
+  });
+
   test('PDF and TikZ match the Node golden files', async ({ page }) => {
     await openEditor(page);
     await source(page).fill('784-16-16-10');
