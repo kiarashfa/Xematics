@@ -477,7 +477,12 @@ export function layerToken(layer: Layer): string {
 
 /** Returns the shorthand for a model, or undefined when the model uses options the shorthand cannot express. */
 export function formatShorthand(model: Model): string | undefined {
-  if (model.title !== undefined || model.description !== undefined || model.style !== undefined) {
+  if (
+    model.title !== undefined ||
+    model.description !== undefined ||
+    model.style !== undefined ||
+    model.animation !== undefined
+  ) {
     return undefined;
   }
   const parts: string[] = [];

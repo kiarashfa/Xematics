@@ -25,6 +25,10 @@ export const LAYER_TYPES = ['dense', 'input', 'conv', 'pool', 'gap', 'flatten'] 
 export const PADDINGS = ['same', 'valid'] as const;
 export const POOL_MODES = ['max', 'avg'] as const;
 export const DIRECTIONS = ['ltr', 'rtl'] as const;
+/** Animation looks: a signal (pulse, flow, dots), the network learning, or a whole training loop. */
+export const ANIMATION_LOOKS = ['pulse', 'flow', 'dots', 'learning', 'training'] as const;
+/** Which way the signal looks (pulse, flow, dots) run. */
+export const ANIMATION_SCENES = ['forward', 'backward', 'both'] as const;
 
 /** Activation names are identifiers so they stay valid in the shorthand: relu, leaky_relu, softmax. */
 export const ACTIVATION_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -208,8 +212,24 @@ export const StyleSchema = v.strictObject(
     layerSpacing: v.optional(decimal(20, 2000)),
     /** Flow direction: 'rtl' puts the input layer on the right. */
     direction: v.optional(v.picklist(DIRECTIONS, `must be one of: ${DIRECTIONS.join(', ')}.`)),
+    /** Color connections by a learned weight (sign and strength), the still frame of 'learning'. */
+    weights: v.optional(flag()),
   },
   'must be an object like { preset: classic }.',
+);
+
+export const AnimationSchema = v.strictObject(
+  {
+    look: v.optional(v.picklist(ANIMATION_LOOKS, `must be one of: ${ANIMATION_LOOKS.join(', ')}.`)),
+    scene: v.optional(
+      v.picklist(ANIMATION_SCENES, `must be one of: ${ANIMATION_SCENES.join(', ')}.`),
+    ),
+    speed: v.optional(decimal(0.25, 4)),
+    loop: v.optional(flag()),
+    /** Hidden layers keep their fill and only get a darker border when the flow reaches them. */
+    grayHidden: v.optional(flag()),
+  },
+  'must be an object like { look: pulse, scene: both }.',
 );
 
 export const ModelSchema = v.strictObject(
@@ -223,6 +243,7 @@ export const ModelSchema = v.strictObject(
       v.maxLength(LIMITS.layers, `must contain at most ${LIMITS.layers} layers.`),
     ),
     style: v.optional(StyleSchema),
+    animation: v.optional(AnimationSchema),
   },
   'must be a shorthand like 784-16-10, a list of layer sizes, or an object with a layers list.',
 );
@@ -243,5 +264,8 @@ export type MlpModel = Omit<Model, 'layers'> & { readonly layers: readonly Dense
 /** True when every layer is dense: the model is drawn as a plain fully connected network. */
 export const isMlp = (model: Model): model is Model & MlpModel => model.layers.every(isDense);
 export type StyleOptions = v.InferOutput<typeof StyleSchema>;
+export type AnimationOptions = v.InferOutput<typeof AnimationSchema>;
+export type AnimationLook = (typeof ANIMATION_LOOKS)[number];
+export type AnimationScene = (typeof ANIMATION_SCENES)[number];
 export type CollapseOptions = v.InferOutput<typeof CollapseSchema>;
 export type PresetId = (typeof PRESET_IDS)[number];

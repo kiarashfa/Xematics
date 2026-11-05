@@ -143,3 +143,11 @@ export function deleteDocument(): void {
   )
     tool.deleteCurrent();
 }
+
+export type AnimationExport = 'svg' | 'gif' | 'video';
+
+/** Animation exports load on first use (the GIF writer and the video recorder are large). */
+export async function exportAnimation(kind: AnimationExport): Promise<void> {
+  const { exportAnimationNow } = await import('./animation-export.ts');
+  await exportAnimationNow(kind);
+}

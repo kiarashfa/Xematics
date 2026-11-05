@@ -1,7 +1,7 @@
 ---
 layout: ../layouts/GuideLayout.astro
 title: Syntax and export guide
-description: How to write networks in Xematics (shorthand, YAML and JSON), fully connected and convolutional layers, every style option, math and right-to-left labels, and how to export to SVG, PNG, PDF and TikZ.
+description: How to write networks in Xematics (shorthand, YAML and JSON), fully connected and convolutional layers, every style option, animations, math and right-to-left labels, and how to export to SVG, PNG, PDF, TikZ, GIF and video.
 ---
 
 import Figure from '../components/Figure.astro';
@@ -192,8 +192,58 @@ Other style options:
 | `nodeSpacing`  | 0 to 200                        | 9 (CNN: 5)      |
 | `layerSpacing` | 20 to 2000                      | 110 (boxes: 96) |
 | `direction`    | `ltr` or `rtl`                  | `ltr`           |
+| `weights`      | `true` or `false`               | `false`         |
 
 Write colors in quotes, like `background: '#ffffff'`, because YAML treats `#` as a comment.
+
+`weights: true` draws every connection by a weight: blue for positive, vermillion for negative,
+wider and darker for stronger ones. The weights are made up, not trained, and always the same
+for the same diagram.
+
+<Figure
+  id="g-weights"
+  source={`layers: [6, 8, 8, 4]
+style: { weights: true }
+`}
+  caption="Weight colors"
+/>
+
+## Animation
+
+Open the Animate tab to see the figure move. Play and pause, step through it, or drag the slider
+under the figure. There are five looks:
+
+| Look       | What moves                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| `pulse`    | Each layer lights up in turn, and the connections between layers flash.                     |
+| `flow`     | Dashes run along the connections in the direction of the signal.                            |
+| `dots`     | A dot travels along every connection.                                                       |
+| `learning` | The weights drift from random to learned: color shows the sign, width the strength.         |
+| `training` | Five examples in a loop: the signal goes forward, the error comes back, the weights change. |
+
+Pulse, Flow and Dots show the forward pass in blue, backpropagation in vermillion, or both in
+turn. The settings are saved with the diagram:
+
+```yaml
+animation: { look: training, speed: 0.5, grayHidden: true }
+```
+
+| Key          | Values                                          | Default |
+| ------------ | ----------------------------------------------- | ------- |
+| `look`       | `pulse`, `flow`, `dots`, `learning`, `training` | `pulse` |
+| `scene`      | `forward`, `backward` or `both`                 | `both`  |
+| `speed`      | 0.25 to 4                                       | 1       |
+| `loop`       | `true` or `false`                               | `true`  |
+| `grayHidden` | `true` or `false`                               | `false` |
+
+With `grayHidden`, hidden layers keep their gray and only get a darker border when the signal
+reaches them. Save the animation from the Animate tab:
+
+- **Animated SVG:** plays anywhere an image does, in a README, a slide or a web page, with no
+  scripts. Viewers who ask for reduced motion see the still figure.
+- **GIF:** one loop at 12 frames per second, for slides and chats.
+- **Video:** one loop at 30 frames per second, recorded in real time. WebM, or MP4 in browsers
+  that only record that.
 
 ## Labels and math
 

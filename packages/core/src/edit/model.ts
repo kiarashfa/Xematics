@@ -1,7 +1,7 @@
 // Pure, immutable edits on the canonical model. Editors call these, then write the result back
 // to the source text with updateText (see ./text.ts).
 
-import type { Layer, LayerType, Model, StyleOptions } from '../model/schema.ts';
+import type { AnimationOptions, Layer, LayerType, Model, StyleOptions } from '../model/schema.ts';
 import { layerToken, type ShorthandLayer } from '../parse/shorthand.ts';
 
 /** A partial update; a key set to undefined removes it. */
@@ -169,4 +169,23 @@ export function layerCount(
   if (layer.type === 'dense') return { key: 'units', value: layer.units, noun: 'neurons' };
   if (layer.type === 'conv') return { key: 'filters', value: layer.filters, noun: 'filters' };
   return undefined;
+}
+
+export type AnimationPatch = Patch<AnimationOptions>;
+
+/** Changes animation settings; settings equal to the defaults are dropped, as is an empty block. */
+export function patchAnimation(model: Model, patch: AnimationPatch): Model {
+  const defaults: Required<AnimationOptions> = {
+    look: 'pulse',
+    scene: 'both',
+    speed: 1,
+    loop: true,
+    grayHidden: false,
+  };
+  const next: Record<string, unknown> = { ...model.animation, ...patch };
+  for (const [key, value] of Object.entries(next)) {
+    if (value === undefined || value === defaults[key as keyof AnimationOptions]) delete next[key];
+  }
+  const { animation: _old, ...rest } = model;
+  return Object.keys(next).length === 0 ? rest : { ...rest, animation: next as AnimationOptions };
 }

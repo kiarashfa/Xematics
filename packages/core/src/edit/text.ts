@@ -22,12 +22,17 @@ export function toPlain(model: Model): Record<string, Plain> {
     return (type === 'dense' ? rest : layer) as Plain;
   });
   if (model.style !== undefined) out['style'] = model.style as Plain;
+  if (model.animation !== undefined) out['animation'] = model.animation as Plain;
   return out;
 }
 
 /** Layer entries and small style objects read best on one line: `- { units: 16, name: Hidden }`. */
 function flowFor(path: Path): boolean {
-  return (path[0] === 'layers' && path.length === 2) || (path[0] === 'style' && path.length === 2);
+  return (
+    (path[0] === 'layers' && path.length === 2) ||
+    (path[0] === 'style' && path.length === 2) ||
+    (path[0] === 'animation' && path.length === 1)
+  );
 }
 
 function createNode(doc: Document, path: Path, value: Plain): Node {

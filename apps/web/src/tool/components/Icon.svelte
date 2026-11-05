@@ -34,6 +34,12 @@
     help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z|M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14|M12 17h.01',
     external: 'M14 4h6v6|M20 4l-9 9|M18 14v6H4V6h6',
     link: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7|M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
+    play: 'M7 4l13 8-13 8z',
+    pause: 'M7 4v16|M17 4v16',
+    stepback: 'M18 5 9 12l9 7z|M6 5v14',
+    stepforward: 'M6 5l9 7-9 7z|M18 5v14',
+    repeat: 'M17 2l4 4-4 4|M3 11V9a3 3 0 0 1 3-3h15|M7 22l-4-4 4-4|M21 13v2a3 3 0 0 1-3 3H3',
+    film: 'M3 5h18v14H3z|M3 9h18|M3 15h18|M8 5v4|M16 5v4|M8 15v4|M16 15v4',
   } as const;
 
   export type IconName = keyof typeof PATHS;

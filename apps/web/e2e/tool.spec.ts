@@ -121,6 +121,57 @@ test.describe('desktop editor', () => {
     await expect(page.locator('#pv-op-1')).not.toBeAttached();
   });
 
+  test('Animate tab plays the preview and exports the same bytes as the Node golden', async ({
+    page,
+  }) => {
+    await openEditor(page);
+    const mlp = [
+      'layers:',
+      '  - { units: 3, name: Input }',
+      '  - { units: 5, activation: relu }',
+      '  - { units: 4, activation: relu }',
+      '  - { units: 2, name: Output }',
+      'animation: { look: training }',
+    ].join('\n');
+    await source(page).fill(`${mlp}\n`);
+    await page.getByRole('tab', { name: 'Animate' }).click();
+    await expect(page.getByRole('group', { name: 'Animation player' })).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.querySelector('.paper svg')!.getAnimations({ subtree: true }).length,
+        ),
+      )
+      .toBeGreaterThan(50);
+    await page.getByRole('button', { name: 'Pause', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+    await page.getByRole('switch', { name: 'Hidden layers stay gray' }).check();
+    await expect(source(page)).toHaveValue(/animation: \{ look: training, grayHidden: true \}/);
+    await page.getByRole('switch', { name: 'Hidden layers stay gray' }).uncheck();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Animated SVG' }).click();
+    const file = await (await download).path();
+    expect(await readFile(file, 'utf8')).toBe(
+      await readFile(new URL('anim-training.svg', GOLDEN), 'utf8'),
+    );
+    // Leaving the tab stops the animation and shows the still figure.
+    await page.getByRole('tab', { name: 'Home' }).click();
+    await expect(page.getByRole('group', { name: 'Animation player' })).toHaveCount(0);
+  });
+
+  test('animation exports a looping GIF', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('layers: [3, 4, 2]\nanimation: { look: pulse, speed: 4 }\n');
+    await page.getByRole('tab', { name: 'Animate' }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'GIF', exact: true }).click();
+    const gif = await (await download).path();
+    const bytes = await readFile(gif);
+    expect(bytes.subarray(0, 6).toString('ascii')).toBe('GIF89a');
+    expect(bytes.includes(Buffer.from('NETSCAPE2.0'))).toBe(true);
+    expect(bytes.at(-1)).toBe(0x3b);
+  });
+
   test('shorthand bar changes sizes and keeps names', async ({ page }) => {
     await openEditor(page);
     const bar = page.getByRole('textbox', { name: /Layer sizes/ });
@@ -335,13 +386,18 @@ test.describe('exports', () => {
       .getByRole('tablist', { name: 'Ribbon' })
       .getByRole('tab')
       .allInnerTexts();
-    expect(tabs).toEqual(['File', 'Home', 'View', 'Export', 'Help']);
+    expect(tabs).toEqual(['File', 'Home', 'View', 'Animate', 'Export', 'Help']);
     await page.getByRole('tab', { name: 'Export' }).click();
     for (const group of ['Images', 'Documents', 'Share', 'Export options']) {
       await expect(page.getByRole('group', { name: group })).toBeVisible();
     }
     const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
     expect(results.violations.map((v) => v.id)).toEqual([]);
+    // The Animate tab and its player are accessible too.
+    await page.getByRole('tab', { name: 'Animate' }).click();
+    await expect(page.getByRole('group', { name: 'Animation player' })).toBeVisible();
+    const animate = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+    expect(animate.violations.map((v) => v.id)).toEqual([]);
   });
 
   test('PDF and TikZ match the Node golden files', async ({ page }) => {

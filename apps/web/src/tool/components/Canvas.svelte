@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+  import { player } from '../player.ts';
   import { parseSafeSvg } from '../safe-svg.ts';
   import { tool } from '../state.svelte.ts';
+  import Scrubber from './Scrubber.svelte';
 
   let width = $state(0);
   let height = $state(0);
@@ -25,11 +28,32 @@
     tool.scale = scale;
   });
 
+  // Play and pause; while playing, the scrubber follows the animation.
+  $effect(() => {
+    if (!tool.timeline) return;
+    if (!tool.playing) {
+      player.pause();
+      return;
+    }
+    player.play();
+    let frame = requestAnimationFrame(function tick() {
+      tool.time = player.time;
+      if (player.finished) tool.playing = false;
+      else frame = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(frame);
+  });
+
   // Mounts the preview as parsed, filtered nodes (never innerHTML) and marks the selected layer
   // (ids come from the Scene: pv-layer-N). Re-runs when the preview or the selection changes.
   function mountPreview(node: HTMLElement) {
     const svg = parseSafeSvg(tool.preview);
     node.replaceChildren(...(svg ? [svg] : []));
+    // A redrawn preview picks up the animation where it was.
+    const timeline = tool.timeline;
+    if (svg && timeline) {
+      untrack(() => player.attach(svg, timeline, 'pv-', tool.time, tool.playing, 1));
+    } else player.detach();
     const selection = tool.selection;
     if (svg && selection.kind === 'layer') {
       svg.querySelector(`#pv-layer-${selection.index}`)?.setAttribute('data-selected', '');
@@ -117,6 +141,7 @@
         onclick={onClick}
       ></div>
     </div>
+    {#if tool.timeline}<Scrubber />{/if}
   {/if}
 </div>
 

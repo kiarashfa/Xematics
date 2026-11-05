@@ -532,7 +532,12 @@ export async function createTextEngine(options: TextEngineOptions): Promise<Text
     if (!load) throw new Error('Embedding fonts needs loadSubsetter.');
     subsetter ??= load().then(createSubsetter);
     const subset = await subsetter;
-    const indices = [...used.keys()].sort((a, b) => a - b);
+    // Fonts load in parallel, so load order is a race: name them by a stable key instead (the
+    // bundled file, or the order faces were given in), so output never depends on timing.
+    const stable = (face: number) => fileOf.get(face) ?? `\u0000${String(face).padStart(6, '0')}`;
+    const indices = [...used.keys()].sort((a, b) =>
+      stable(a) < stable(b) ? -1 : stable(a) > stable(b) ? 1 : 0,
+    );
     const name = (face: number) => `font-${indices.indexOf(face)}`;
     const faces = indices.map((face): EmbeddedFace => {
       const bytes = subset(loaded[face]!.sfnt, used.get(face)!);
@@ -540,7 +545,9 @@ export async function createTextEngine(options: TextEngineOptions): Promise<Text
       return { key: name(face), type: cff ? 'font/otf' : 'font/ttf', data: base64Encode(bytes) };
     });
     const stacks: Record<string, string[]> = {};
-    for (const [key, list] of order) stacks[key] = [...list].sort((a, b) => a - b).map(name);
+    const rank = (face: number) => indices.indexOf(face);
+    for (const [key, list] of order)
+      stacks[key] = [...list].sort((a, b) => rank(a) - rank(b)).map(name);
     return { faces, stacks };
   }
 

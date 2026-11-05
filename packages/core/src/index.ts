@@ -17,6 +17,11 @@ export { autoNames, cnnAutoNames, describeCnn, opText } from './layout/cnn.ts';
 export { inferShapes, pair, shapeText, type Shape, type ShapeResult } from './model/shapes.ts';
 export {
   ACTIVATION_PATTERN,
+  ANIMATION_LOOKS,
+  ANIMATION_SCENES,
+  type AnimationLook,
+  type AnimationOptions,
+  type AnimationScene,
   isDense,
   isMlp,
   LAYER_TYPES,
@@ -110,10 +115,12 @@ export {
   insertLayer,
   moveLayer,
   patchLayer,
+  patchAnimation,
   patchModel,
   patchStyle,
   removeLayer,
   structureOf,
+  type AnimationPatch,
   type LayerPatch,
   type Patch,
   type StylePatch,
@@ -151,5 +158,7 @@ export {
   type WorkspaceSettings,
 } from './share/workspace.ts';
 export { renderPdf } from './export/pdf.ts';
+export { encodeGif, GifWriter, type GifOptions } from './export/gif.ts';
+export * from './animate/index.ts';
 export { renderTikz, type TikzOptions } from './export/tikz.ts';
 export { embedSnippets, pngSize, setPngDpi, type EmbedSnippets } from './export/embed.ts';

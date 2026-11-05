@@ -13,6 +13,9 @@ export interface Paint {
   readonly stroke?: string;
   readonly strokeWidth?: number;
   readonly opacity?: number;
+  /** Dash pattern and offset in px (animation frames only). */
+  readonly dash?: readonly number[];
+  readonly dashOffset?: number;
 }
 
 interface ItemBase {

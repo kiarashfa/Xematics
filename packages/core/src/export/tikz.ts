@@ -54,6 +54,14 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   const font = (size: number) =>
     `font=\\sffamily\\fontsize{${n(size * PT_PER_PX)}}{${n(size * PT_PER_PX * 1.2)}}\\selectfont`;
 
+  /** Connections share one style; weighted ones (style.weights) add their width and opacity. */
+  const edgeStyle = (item: SceneItem & { paint: Paint }) => {
+    const sign = item.classes?.find((c) => c.startsWith('weight-'))?.slice('weight-'.length);
+    if (!sign) return style('xm edge', paintStyle(item.paint));
+    const name = style(`xm weight ${sign}`, `draw=${color(item.paint.stroke ?? '#000000')}`);
+    const width = n((item.paint.strokeWidth ?? 1) * PT_PER_PX);
+    return `${name}, line width=${width}pt, opacity=${n(item.paint.opacity ?? 1)}`;
+  };
   const body: string[] = [];
   let usesArrows = false;
   let unicode = false;
@@ -85,13 +93,13 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
       for (const kid of kids) {
         if (kid.kind === 'line' && kid.id.startsWith('edge-')) {
           const [, a, i, b, j] = kid.id.split('-');
-          const s = style('xm edge', paintStyle(kid.paint));
-          body.push(`  \\draw[${s}] (n-${a}-${i}) -- (n-${b}-${j});`);
+          body.push(`  \\draw[${edgeStyle(kid)}] (n-${a}-${i}) -- (n-${b}-${j});`);
         } else if (kid.kind === 'line' && kid.id.startsWith('fan-')) {
           // From a point on a feature map to a neuron of the next layer.
           const [, a, , j] = kid.id.split('-');
-          const s = style('xm edge', paintStyle(kid.paint));
-          body.push(`  \\draw[${s}] (${n(kid.x1)},${n(kid.y1)}) -- (n-${Number(a) + 1}-${j});`);
+          body.push(
+            `  \\draw[${edgeStyle(kid)}] (${n(kid.x1)},${n(kid.y1)}) -- (n-${Number(a) + 1}-${j});`,
+          );
         } else if (kid.kind === 'path' && kid.id.startsWith('bundle-')) {
           const s = style('xm bundle', paintStyle(kid.paint));
           body.push(`  \\fill[${s}] ${tikzPath(kid.d)};`);

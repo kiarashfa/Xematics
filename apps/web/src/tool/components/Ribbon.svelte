@@ -4,6 +4,7 @@
     copyShareLink,
     copySvg,
     copyTikz,
+    exportAnimation,
     exportAs,
     deleteDocument,
     downloadSource,
@@ -11,14 +12,21 @@
     openWorkspaceFile,
     saveWorkspace,
   } from '../actions.ts';
+  import { untrack } from 'svelte';
   import { currentTheme, setTheme } from '../browser.ts';
+  import { player, prefersReducedMotion } from '../player.ts';
   import { PNG_SIZES } from '../formats.ts';
   import { EXAMPLES, tool } from '../state.svelte.ts';
-  import { PRESET_IDS, PRESET_NAMES } from '@xematics/core';
+  import {
+    PRESET_IDS,
+    PRESET_NAMES,
+    type AnimationLook,
+    type AnimationScene,
+  } from '@xematics/core';
   import Icon, { type IconName } from './Icon.svelte';
   import PresetThumb from './PresetThumb.svelte';
 
-  const TABS = ['File', 'Home', 'View', 'Export', 'Help'] as const;
+  const TABS = ['File', 'Home', 'View', 'Animate', 'Export', 'Help'] as const;
   type Tab = (typeof TABS)[number];
   let active = $state<Tab>('Home');
   let theme = $state(currentTheme());
@@ -28,6 +36,39 @@
   const layerSelected = $derived(tool.selection.kind === 'layer');
   const layerCount = $derived(tool.model?.layers.length ?? 0);
   const index = $derived(tool.selection.kind === 'layer' ? tool.selection.index : -1);
+
+  const LOOKS: [AnimationLook, string][] = [
+    ['pulse', 'Pulse'],
+    ['flow', 'Flow'],
+    ['dots', 'Dots'],
+    ['learning', 'Learning'],
+    ['training', 'Training'],
+  ];
+  const SCENES: [AnimationScene, string][] = [
+    ['forward', 'Forward pass'],
+    ['backward', 'Backpropagation'],
+    ['both', 'Both, in turn'],
+  ];
+  const SPEEDS = [0.25, 0.5, 1, 1.5, 2, 4];
+  const signalLook = $derived(['pulse', 'flow', 'dots'].includes(tool.animation.look));
+
+  // The Animate tab shows the animation in the preview; it starts playing unless the system
+  // asks for reduced motion.
+  $effect(() => {
+    const open = active === 'Animate';
+    if (open === untrack(() => tool.playerOpen)) return;
+    tool.playerOpen = open;
+    tool.playing = open && !prefersReducedMotion();
+  });
+
+  function step(direction: 1 | -1) {
+    const duration = tool.timeline?.duration ?? 0;
+    if (!duration) return;
+    tool.playing = false;
+    const next = (tool.time + direction * (duration / 20) + duration) % duration;
+    tool.time = next;
+    player.seek(next);
+  }
 
   function onTabKey(event: KeyboardEvent) {
     const i = TABS.indexOf(active);
@@ -311,6 +352,89 @@
           )}
         </div>
         <div class="caption">Theme</div>
+      </div>
+    {:else if active === 'Animate'}
+      <div class="group" role="group" aria-label="Playback">
+        <div class="body">
+          {@render big(
+            tool.playing ? 'pause' : 'play',
+            tool.playing ? 'Pause' : 'Play',
+            () => (tool.playing = !tool.playing),
+            !tool.timeline,
+            true,
+          )}
+          <div class="stack">
+            {@render small('stepback', 'Step back', () => step(-1), !tool.timeline)}
+            {@render small('stepforward', 'Step forward', () => step(1), !tool.timeline)}
+          </div>
+        </div>
+        <div class="caption">Playback</div>
+      </div>
+      <div class="group" role="group" aria-label="Look">
+        <div class="body stack">
+          <label class="option"
+            >Look <select
+              class="documents"
+              aria-label="Animation look"
+              value={tool.animation.look}
+              disabled={!tool.valid}
+              onchange={(e) => tool.setAnimation({ look: e.currentTarget.value as AnimationLook })}
+            >
+              {#each LOOKS as [value, label] (value)}<option {value}>{label}</option>{/each}
+            </select></label
+          >
+          <label class="option"
+            >Scene <select
+              class="documents"
+              aria-label="Animation scene"
+              value={tool.animation.scene}
+              disabled={!tool.valid || !signalLook}
+              onchange={(e) =>
+                tool.setAnimation({ scene: e.currentTarget.value as AnimationScene })}
+            >
+              {#each SCENES as [value, label] (value)}<option {value}>{label}</option>{/each}
+            </select></label
+          >
+        </div>
+        <div class="caption">Look</div>
+      </div>
+      <div class="group" role="group" aria-label="Timing">
+        <div class="body stack">
+          <label class="option"
+            >Speed <select
+              class="documents"
+              aria-label="Animation speed"
+              value={tool.animation.speed}
+              disabled={!tool.valid}
+              onchange={(e) => tool.setAnimation({ speed: Number(e.currentTarget.value) })}
+            >
+              {#each SPEEDS as speed (speed)}<option value={speed}>{speed}×</option>{/each}
+            </select></label
+          >
+          {@render toggle('Loop', tool.animation.loop, (on) => tool.setAnimation({ loop: on }))}
+        </div>
+        <div class="caption">Timing</div>
+      </div>
+      <div class="group" role="group" aria-label="Layers and weights">
+        <div class="body stack">
+          {@render toggle('Hidden layers stay gray', tool.animation.grayHidden, (on) =>
+            tool.setAnimation({ grayHidden: on }),
+          )}
+          {@render toggle('Weight colors in still images', tool.weights, (on) =>
+            tool.setWeights(on),
+          )}
+        </div>
+        <div class="caption">Layers</div>
+      </div>
+      <div class="group" role="group" aria-label="Save animation">
+        <div class="body">
+          {@render big('download', 'Animated SVG', () => exportAnimation('svg'), !tool.layout)}
+          <div class="stack">
+            {@render small('film', 'GIF', () => exportAnimation('gif'), !tool.layout)}
+            {@render small('film', 'Video', () => exportAnimation('video'), !tool.layout)}
+          </div>
+        </div>
+        <div class="caption">Save</div>
       </div>
     {:else if active === 'Export'}
       <div class="group" role="group" aria-label="Images">

@@ -60,3 +60,33 @@ describe('text engine', () => {
     expect(Math.min(...ys)).toBeGreaterThan(50 - shaped.ascent);
   });
 });
+
+describe('live text embedding', () => {
+  // Fonts load in parallel, so the order they finish in is a race. Embedded font names and
+  // font-family stacks must not depend on it, or the same diagram exports differently.
+  test('does not depend on the order fonts finish loading', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const { createRequire } = await import('node:module');
+    const { createTextEngine, renderDiagram } = await import('../src/index.ts');
+    const { readBundledFont } = await import('../src/node/index.ts');
+    const require = createRequire(import.meta.url);
+    const engineWith = (slow: (file: string) => boolean) =>
+      createTextEngine({
+        loadFont: async (font) => {
+          if (slow(font.file)) await new Promise((resolve) => setTimeout(resolve, 40));
+          return readBundledFont(font);
+        },
+        importMath: (specifier) => import(specifier),
+        loadSubsetter: async () =>
+          new Uint8Array(await readFile(require.resolve('harfbuzzjs/dist/harfbuzz-subset.wasm'))),
+      });
+    const source = 'layers:\n  - { units: 3, name: Pixels }\n  - { units: 2, name: Digits }';
+    const svgs = await Promise.all(
+      [(file: string) => file.includes('-400-'), (file: string) => file.includes('-500-')].map(
+        async (slow) => (await renderDiagram(source, await engineWith(slow), { text: 'live' })).svg,
+      ),
+    );
+    expect(svgs[0]).toContain("font-family:'xm-font-1'");
+    expect(svgs[0]).toBe(svgs[1]);
+  });
+});

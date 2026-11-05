@@ -4,7 +4,14 @@
 // to the browser and can be saved to and opened from a file.
 
 import {
+  animatedScene,
   applyStructure,
+  buildTimeline,
+  patchAnimation,
+  resolveAnimation,
+  resolveTheme,
+  type AnimationPatch,
+  type Timeline,
   autoNames,
   createWorkspace,
   defaultLayer,
@@ -122,7 +129,25 @@ export class ToolState {
     ...this.parsed.diagnostics.filter((d) => d.severity === 'warning'),
     ...(this.layout?.diagnostics ?? []),
   ]);
-  preview = $derived(this.layout ? renderSvg(this.layout.scene, { prefix: 'pv-' }) : '');
+  /** The Animate tab (or the phone's animation sheet) is open: the preview shows the animation. */
+  playerOpen = $state(false);
+  playing = $state(false);
+  /** Position in the animation loop, in ms (kept while the preview redraws). */
+  time = $state(0);
+  animation = $derived(resolveAnimation(this.model?.animation));
+  timeline = $derived<Timeline | undefined>(
+    this.playerOpen && this.layout
+      ? buildTimeline(this.layout.scene, resolveTheme(this.model?.style), this.model?.animation)
+      : undefined,
+  );
+  preview = $derived(
+    this.layout
+      ? renderSvg(
+          this.timeline ? animatedScene(this.layout.scene, this.timeline) : this.layout.scene,
+          { prefix: 'pv-' },
+        )
+      : '',
+  );
   structure = $derived(this.model ? structureOf(this.model) : '');
   /** What each layer outputs (28×28×8 for feature maps, 784 for vectors). */
   shapes = $derived(this.model ? inferShapes(this.model).shapes : []);
@@ -238,6 +263,7 @@ export class ToolState {
   });
   transparent = $derived(this.model?.style?.background === 'transparent');
   rightToLeft = $derived(this.model?.style?.direction === 'rtl');
+  weights = $derived(this.model?.style?.weights === true);
   preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');
 
   // Settings equal to the preset default are removed, so the source stays short.
@@ -245,6 +271,15 @@ export class ToolState {
     this.edit((model) =>
       patchStyle(model, { labels: { [key]: on === DEFAULTS.labels[key] ? undefined : on } }),
     );
+  }
+
+  setWeights(on: boolean): void {
+    this.edit((model) => patchStyle(model, { weights: on ? true : undefined }));
+  }
+
+  /** Changes animation settings in the source (defaults are left out). */
+  setAnimation(patch: AnimationPatch): void {
+    this.edit((model) => patchAnimation(model, patch));
   }
 
   setCollapse(key: 'above' | 'first' | 'last', value: number): void {

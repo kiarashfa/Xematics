@@ -3,6 +3,7 @@ import { diagnostic, hasErrors, type Diagnostic } from '../diagnostics.ts';
 import { parseShorthand } from '../parse/shorthand.ts';
 import { orderDiagnostics } from './shapes.ts';
 import {
+  AnimationSchema,
   CollapseSchema,
   LabelsSchema,
   LAYER_SCHEMAS,
@@ -203,6 +204,7 @@ function knownKeys(path: ModelPath, owner?: unknown): string[] {
     style: StyleSchema,
     'style.labels': LabelsSchema,
     'style.collapse': CollapseSchema,
+    animation: AnimationSchema,
   };
   const schema = schemas[shape];
   return schema ? Object.keys(schema.entries) : [];

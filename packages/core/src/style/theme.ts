@@ -63,6 +63,17 @@ export interface Theme {
     readonly perDecade: number;
     readonly arrow: { readonly color: string; readonly width: number };
   };
+  /** Animation and weight colors: the forward signal, the backward error, and weight signs. */
+  readonly motion: {
+    readonly forward: string;
+    readonly backward: string;
+    readonly positive: string;
+    readonly negative: string;
+    /** Border of a hidden node the flow reaches when hidden layers stay gray. */
+    readonly grayBorder: string;
+  };
+  /** Draw connections by a learned weight (style.weights). */
+  readonly weights: boolean;
   /** Convolutional models: feature maps drawn as stacks of sheets, one per channel. */
   readonly maps: {
     /** Pooling layers get their own tint; other maps use the role paints. */
@@ -114,6 +125,14 @@ const CLASSIC: Theme = {
   mode: 'nodes',
   direction: 'ltr',
   box: { width: 30, radius: 6, minHeight: 28, perDecade: 34, arrow: { color: MUTED, width: 1.4 } },
+  motion: {
+    forward: '#0072b2',
+    backward: '#d55e00',
+    positive: '#0072b2',
+    negative: '#d55e00',
+    grayBorder: INK,
+  },
+  weights: false,
   maps: {
     pool: { fill: '#dfe3e8', stroke: '#4b5563' },
     window: '#aeb3b9',
@@ -151,6 +170,13 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
     nameText: { ...CLASSIC.nameText, color: '#000000' },
     sizeText: { ...CLASSIC.sizeText, color: '#4d4d4d' },
     box: { ...CLASSIC.box, arrow: { color: '#000000', width: 1.2 } },
+    motion: {
+      forward: '#000000',
+      backward: '#7f7f7f',
+      positive: '#1f2937',
+      negative: '#9ca3af',
+      grayBorder: '#000000',
+    },
     maps: {
       ...CLASSIC.maps,
       pool: { fill: '#ececec', stroke: '#000000' },
@@ -186,6 +212,13 @@ export const PRESETS: Readonly<Record<PresetId, Theme>> = {
     nameText: { ...CLASSIC.nameText, color: '#e8eaed' },
     sizeText: { ...CLASSIC.sizeText, color: '#9aa3ae' },
     box: { ...CLASSIC.box, arrow: { color: '#9aa3ae', width: 1.4 } },
+    motion: {
+      forward: '#56b4e9',
+      backward: '#e8743b',
+      positive: '#56b4e9',
+      negative: '#e8743b',
+      grayBorder: '#e8eaed',
+    },
     maps: {
       ...CLASSIC.maps,
       pool: { fill: '#3a414d', stroke: '#9aa3ae' },
@@ -235,6 +268,7 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
       sizes: style.labels?.sizes ?? base.labels.sizes,
       ops: style.labels?.ops ?? base.labels.ops,
     },
+    weights: style.weights ?? base.weights,
     maps: {
       ...base.maps,
       nodeRadius: style.nodeRadius ?? base.maps.nodeRadius,

@@ -14,6 +14,7 @@ import {
 import type { TextEngine } from '../text/engine.ts';
 import { stripInvalidXml } from '../util/xml.ts';
 import { layoutBoxes } from './boxes.ts';
+import { applyWeights } from '../animate/weights.ts';
 import { layoutCnn } from './cnn.ts';
 import { buildLabel, labelItems, nodeLabelText, type Label, type LabelIssue } from './label.ts';
 
@@ -122,6 +123,11 @@ export function layerLabel(
 
 export function layoutModel(input: Model, engine: TextEngine): LayoutResult {
   const theme = resolveTheme(input.style);
+  const result = layoutPlain(input, theme, engine);
+  return theme.weights ? { ...result, scene: applyWeights(result.scene, theme) } : result;
+}
+
+function layoutPlain(input: Model, theme: Theme, engine: TextEngine): LayoutResult {
   if (!isMlp(input)) return layoutCnn(input, theme, engine);
   const model: MlpModel = input;
   if (theme.mode === 'boxes') return layoutBoxes(model, theme, engine);

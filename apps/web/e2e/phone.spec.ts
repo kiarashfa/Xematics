@@ -133,6 +133,18 @@ test('command sheet: labels toggle and SVG export', async ({ page }) => {
   await expect(await sourceText(page)).toHaveValue(/labels: \{ sizes: false \}/);
 });
 
+test('command sheet: animate the figure and pick a look', async ({ page }) => {
+  await openDocument(page);
+  await page.getByRole('button', { name: 'All commands' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Commands' });
+  await sheet.getByRole('tab', { name: 'Animate' }).click();
+  await sheet.getByRole('combobox', { name: 'Look' }).selectOption('learning');
+  await sheet.getByRole('switch', { name: 'Animate the figure' }).check();
+  await expect(page.getByRole('group', { name: 'Animation player' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Close' }).click();
+  await expect(await sourceText(page)).toHaveValue(/animation: \{ look: learning \}/);
+});
+
 test('command sheet: preset strip switches the look', async ({ page }) => {
   await openDocument(page);
   await page.getByRole('button', { name: 'All commands' }).click();

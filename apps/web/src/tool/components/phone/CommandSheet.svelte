@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  export const COMMAND_TABS = ['File', 'Home', 'Export', 'View'] as const;
+  export const COMMAND_TABS = ['File', 'Home', 'Animate', 'Export', 'View'] as const;
   export type CommandTab = (typeof COMMAND_TABS)[number];
 </script>
 
@@ -9,12 +9,19 @@
     copySvg,
     downloadSource,
     copyTikz,
+    exportAnimation,
     exportAs,
     openSourceFile,
     openWorkspaceFile,
     saveWorkspace,
   } from '../../actions.ts';
-  import { PRESET_IDS, PRESET_NAMES } from '@xematics/core';
+  import {
+    PRESET_IDS,
+    PRESET_NAMES,
+    type AnimationLook,
+    type AnimationScene,
+  } from '@xematics/core';
+  import { prefersReducedMotion } from '../../player.ts';
   import { currentTheme, setTheme } from '../../browser.ts';
   import { tool } from '../../state.svelte.ts';
   import Icon, { type IconName } from '../Icon.svelte';
@@ -32,6 +39,26 @@
 
   const index = $derived(tool.selection.kind === 'layer' ? tool.selection.index : -1);
   const count = $derived(tool.model?.layers.length ?? 0);
+
+  const LOOKS: [AnimationLook, string][] = [
+    ['pulse', 'Pulse'],
+    ['flow', 'Flow'],
+    ['dots', 'Dots'],
+    ['learning', 'Learning'],
+    ['training', 'Training'],
+  ];
+  const SCENES: [AnimationScene, string][] = [
+    ['forward', 'Forward pass'],
+    ['backward', 'Backpropagation'],
+    ['both', 'Both, in turn'],
+  ];
+  const SPEEDS = [0.25, 0.5, 1, 1.5, 2, 4];
+
+  /** Shows the animation in the figure and plays it (still with reduced motion until Play). */
+  function showAnimation(on: boolean) {
+    tool.playerOpen = on;
+    tool.playing = on && !prefersReducedMotion();
+  }
 
   function run(action: () => unknown) {
     action();
@@ -98,6 +125,29 @@
         onclick={() => step(key, 1)}><Icon name="plus" /></button
       >
     </span>
+  </li>
+{/snippet}
+
+{#snippet choice(
+  label: string,
+  value: string,
+  options: readonly (readonly [string, string])[],
+  change: (value: string) => void,
+  disabled = false,
+)}
+  <li>
+    <label class="ph-row">
+      <span class="ph-label">{label}</span>
+      <select
+        class="ph-select"
+        aria-label={label}
+        {value}
+        {disabled}
+        onchange={(e) => change(e.currentTarget.value)}
+      >
+        {#each options as [v, text] (v)}<option value={v}>{text}</option>{/each}
+      </select>
+    </label>
   </li>
 {/snippet}
 
@@ -173,6 +223,37 @@
       {@render stepper('Collapse above', 'above')}
       {@render stepper('Show first', 'first')}
       {@render stepper('Show last', 'last')}
+    {:else if tab === 'Animate'}
+      {@render toggle('play', 'Animate the figure', tool.playerOpen, showAnimation)}
+      {@render choice('Look', tool.animation.look, LOOKS, (v) =>
+        tool.setAnimation({ look: v as AnimationLook }),
+      )}
+      {@render choice(
+        'Scene',
+        tool.animation.scene,
+        SCENES,
+        (v) => tool.setAnimation({ scene: v as AnimationScene }),
+        !['pulse', 'flow', 'dots'].includes(tool.animation.look),
+      )}
+      {@render choice(
+        'Speed',
+        String(tool.animation.speed),
+        SPEEDS.map((s) => [String(s), `${s}×`]),
+        (v) => tool.setAnimation({ speed: Number(v) }),
+      )}
+      {@render toggle('repeat', 'Loop', tool.animation.loop, (on) =>
+        tool.setAnimation({ loop: on }),
+      )}
+      {@render toggle('layers', 'Hidden layers stay gray', tool.animation.grayHidden, (on) =>
+        tool.setAnimation({ grayHidden: on }),
+      )}
+      {@render toggle('tag', 'Weight colors in still images', tool.weights, (on) =>
+        tool.setWeights(on),
+      )}
+      <li class="ph-rule" aria-hidden="true"></li>
+      {@render row('download', 'Save animated SVG', () => exportAnimation('svg'), !tool.layout)}
+      {@render row('film', 'Save GIF', () => exportAnimation('gif'), !tool.layout)}
+      {@render row('film', 'Save video', () => exportAnimation('video'), !tool.layout)}
     {:else if tab === 'Export'}
       {@render row('download', 'Save SVG', () => exportAs('svg'), !tool.layout)}
       {@render row('download', 'Save PNG', () => exportAs('png'), !tool.layout)}

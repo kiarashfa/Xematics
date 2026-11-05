@@ -148,10 +148,15 @@ function paintAttrs(paint: Paint): string[] {
   if (paint.stroke !== undefined) attrs.push(`stroke="${escapeXml(paint.stroke)}"`);
   if (paint.strokeWidth !== undefined) attrs.push(`stroke-width="${num(paint.strokeWidth)}"`);
   if (paint.opacity !== undefined) attrs.push(`opacity="${num(paint.opacity)}"`);
+  if (paint.dash && paint.dash.length > 0) {
+    attrs.push(`stroke-dasharray="${paint.dash.map(num).join(' ')}"`);
+    if (paint.dashOffset !== undefined) attrs.push(`stroke-dashoffset="${num(paint.dashOffset)}"`);
+  }
   return attrs;
 }
 
-const paintKey = (p: Paint) => `${p.fill}|${p.stroke}|${p.strokeWidth}|${p.opacity}`;
+const paintKey = (p: Paint) =>
+  `${p.fill}|${p.stroke}|${p.strokeWidth}|${p.opacity}|${p.dash?.join(',')}|${p.dashOffset}`;
 
 /** When every child of a group is a leaf with the same paint, the paint moves to the group. */
 function sharedPaint(kids: readonly SceneItem[]): Paint | undefined {

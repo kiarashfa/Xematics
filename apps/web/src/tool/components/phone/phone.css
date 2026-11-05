@@ -194,3 +194,13 @@
 .ph-toast:empty {
   display: none;
 }
+
+.ph-select {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}

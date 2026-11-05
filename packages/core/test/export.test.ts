@@ -67,6 +67,7 @@ describe('TikZ export', () => {
     'cnn-lenet.yaml',
     'cnn-boxes.yaml',
     'cnn-math.yaml',
+    'weights.yaml',
   ])('%s', async (file) => {
     await expect(renderTikz(await scene(file))).toMatchFileSnapshot(
       `./golden/${file.replace(/\.\w+$/, '')}.tex`,
