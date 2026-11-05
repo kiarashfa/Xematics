@@ -12,7 +12,7 @@
     openWorkspaceFile,
     saveWorkspace,
   } from '../actions.ts';
-  import { untrack } from 'svelte';
+  import { tick, untrack, type Snippet } from 'svelte';
   import { currentTheme, setTheme } from '../browser.ts';
   import { player, prefersReducedMotion } from '../player.ts';
   import { PNG_SIZES } from '../formats.ts';
@@ -68,14 +68,18 @@
   // A command in the temporary layer closes it.
   function onWindowClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
+    if (target.closest('.popup') && target.closest('button, a')) openGroup = '';
     if (peek && target.closest('#ribbon-panel') && target.closest('button, a')) peek = false;
   }
 
   function onWindowPointer(event: PointerEvent) {
-    if (peek && root && !root.contains(event.target as Node)) peek = false;
+    const target = event.target as HTMLElement;
+    if (openGroup && !target.closest('.popup, .foldbtn')) openGroup = '';
+    if (peek && root && !root.contains(target)) peek = false;
   }
 
   function onWindowKey(event: KeyboardEvent) {
+    if (openGroup && event.key === 'Escape') openGroup = '';
     if (peek && event.key === 'Escape') {
       peek = false;
       document.getElementById(`ribbon-tab-${active}`)?.focus();
@@ -91,6 +95,81 @@
     tool.manual = tool.manual === topic ? undefined : topic;
     if (tool.manual) tool.showFormat = true;
   }
+
+  // Responsive layout, like Office: as the window narrows, small buttons lose their labels
+  // (stage 1), big buttons become icons (stage 2), then groups fold into drawers from the right.
+  let stage = $state(0);
+  let fold = $state(0);
+  let count = $state(0);
+  let openGroup = $state('');
+  let popupX = $state(0);
+  let popupY = $state(0);
+  let fitting = false;
+  let again = false;
+
+  async function fit() {
+    if (fitting) {
+      again = true;
+      return;
+    }
+    fitting = true;
+    try {
+      do {
+        again = false;
+        const panel = document.getElementById('ribbon-panel');
+        if (!panel || panel.hidden) break;
+        openGroup = '';
+        stage = 0;
+        fold = 0;
+        await tick();
+        count = panel.querySelectorAll(':scope > .group').length;
+        const over = () => panel.scrollWidth > panel.clientWidth + 1;
+        const steps: [number, number][] = [
+          [1, 0],
+          [2, 0],
+        ];
+        for (let k = 1; k <= count; k++) steps.push([2, k]);
+        for (const [s, f] of steps) {
+          if (!over()) break;
+          stage = s;
+          fold = f;
+          await tick();
+        }
+      } while (again);
+    } finally {
+      fitting = false;
+    }
+  }
+
+  function toggleGroup(name: string, button: HTMLElement) {
+    if (openGroup === name) {
+      openGroup = '';
+      return;
+    }
+    const r = button.getBoundingClientRect();
+    popupX = Math.max(4, Math.min(r.left, innerWidth - 420));
+    popupY = r.bottom + 4;
+    openGroup = name;
+  }
+
+  $effect(() => {
+    if (!root) return;
+    let width = root.clientWidth;
+    const watcher = new ResizeObserver(() => {
+      if (root && root.clientWidth !== width) {
+        width = root.clientWidth;
+        void fit();
+      }
+    });
+    watcher.observe(root);
+    return () => watcher.disconnect();
+  });
+
+  $effect(() => {
+    void active;
+    void showPanel;
+    void tick().then(fit);
+  });
 
   const layerSelected = $derived(tool.selection.kind === 'layer');
   const layerCount = $derived(tool.model?.layers.length ?? 0);
@@ -165,6 +244,46 @@
   </button>
 {/snippet}
 
+{#snippet group(
+  i: number,
+  name: string,
+  icon: IconName,
+  label: string,
+  caption: string,
+  cls: string,
+  body: Snippet,
+)}
+  {#if fold > 0 && i >= count - fold}
+    <div class="group" role="group" aria-label={name}>
+      <button
+        type="button"
+        class="big foldbtn"
+        aria-expanded={openGroup === name}
+        onclick={(e) => toggleGroup(name, e.currentTarget)}
+      >
+        <Icon name={icon} size={26} /><span>{label}</span><Icon name="chevron" size={12} />
+      </button>
+      {#if openGroup === name}
+        <div
+          class="popup"
+          role="group"
+          aria-label={name}
+          style:left="{popupX}px"
+          style:top="{popupY}px"
+        >
+          <div class="body {cls}">{@render body()}</div>
+          <div class="caption">{caption}</div>
+        </div>
+      {/if}
+    </div>
+  {:else}
+    <div class="group s{stage}" role="group" aria-label={name}>
+      <div class="body {cls}">{@render body()}</div>
+      <div class="caption">{caption}</div>
+    </div>
+  {/if}
+{/snippet}
+
 {#snippet manualButton(topic: NonNullable<typeof tool.manual>, icon: IconName, label: string)}
   <button
     type="button"
@@ -178,8 +297,8 @@
 {/snippet}
 
 {#snippet small(icon: IconName, label: string, action: () => void, disabled = false)}
-  <button type="button" class="small" onclick={action} {disabled}
-    ><Icon name={icon} size={15} />{label}</button
+  <button type="button" class="small ic" title={label} onclick={action} {disabled}
+    ><Icon name={icon} size={15} /><span class="t">{label}</span></button
   >
 {/snippet}
 
@@ -234,65 +353,71 @@
     aria-labelledby={`ribbon-tab-${active}`}
   >
     {#if active === 'File'}
-      <div class="group" role="group" aria-label="Document">
-        <div class="body">
-          {@render big('file', 'New', () => tool.newDocument())}
-          {@render big('open', 'Open file', () => sourceInput?.click())}
-          <div class="stack">
-            {@render small('download', 'Save source', downloadSource)}
-            {@render small('trash', 'Delete', deleteDocument)}
-          </div>
+      {#snippet gFile0()}
+        {@render big('file', 'New', () => tool.newDocument())}
+        {@render big('open', 'Open file', () => sourceInput?.click())}
+        <div class="stack">
+          {@render small('download', 'Save source', downloadSource)}
+          {@render small('trash', 'Delete', deleteDocument)}
         </div>
-        <div class="caption">Document</div>
-      </div>
-      <div class="group" role="group" aria-label="Documents">
-        <div class="body stack">
-          <select
-            class="documents"
-            aria-label="Open document"
-            value={tool.currentId}
-            onchange={(e) => tool.switchTo(e.currentTarget.value)}
-          >
-            {#each tool.documents as document (document.id)}
-              <option value={document.id}>{tool.documentName(document)}</option>
-            {/each}
-          </select>
-          <span class="meta"
-            >{tool.documents.length === 1 ? '1 document' : `${tool.documents.length} documents`} in this
-            workspace</span
-          >
-        </div>
-        <div class="caption">Documents</div>
-      </div>
-      <div class="group" role="group" aria-label="Examples">
-        <div class="body examples">
-          {#each EXAMPLES as example (example.name)}
-            <button type="button" class="small" onclick={() => tool.newDocument(example.text)}
-              >{example.name}</button
-            >
+      {/snippet}
+      {@render group(0, 'Document', 'file', 'Document', 'Document', '', gFile0)}
+      {#snippet gFile1()}
+        <select
+          class="documents"
+          aria-label="Open document"
+          value={tool.currentId}
+          onchange={(e) => tool.switchTo(e.currentTarget.value)}
+        >
+          {#each tool.documents as document (document.id)}
+            <option value={document.id}>{tool.documentName(document)}</option>
           {/each}
-        </div>
-        <div class="caption">Examples (open as new)</div>
-      </div>
-      <div class="group" role="group" aria-label="Workspace">
-        <div class="body">
-          {@render big('open', 'Open save file', () => workspaceInput?.click())}
-          {@render big('download', 'Download save file', saveWorkspace)}
-        </div>
-        <div class="caption">Workspace, autosaved in this browser</div>
-      </div>
-      <div class="group" role="group" aria-label="Share">
-        <div class="body">{@render big('link', 'Copy link', copyShareLink, !tool.ready)}</div>
-        <div class="caption">Share</div>
-      </div>
-      <div class="group" role="group" aria-label="Close">
-        <div class="body">
-          <a class="big" href={import.meta.env.BASE_URL}
-            ><Icon name="close" size={26} /><span>Close editor</span></a
+        </select>
+        <span class="meta"
+          >{tool.documents.length === 1 ? '1 document' : `${tool.documents.length} documents`} in this
+          workspace</span
+        >
+      {/snippet}
+      {@render group(1, 'Documents', 'layers', 'Documents', 'Documents', 'stack', gFile1)}
+      {#snippet gFile2()}
+        {#each EXAMPLES as example (example.name)}
+          <button type="button" class="small" onclick={() => tool.newDocument(example.text)}
+            >{example.name}</button
           >
-        </div>
-        <div class="caption">Back to the site</div>
-      </div>
+        {/each}
+      {/snippet}
+      {@render group(
+        2,
+        'Examples',
+        'cards',
+        'Examples',
+        'Examples (open as new)',
+        'examples',
+        gFile2,
+      )}
+      {#snippet gFile3()}
+        {@render big('open', 'Open save file', () => workspaceInput?.click())}
+        {@render big('download', 'Download save file', saveWorkspace)}
+      {/snippet}
+      {@render group(
+        3,
+        'Workspace',
+        'open',
+        'Workspace',
+        'Workspace, autosaved in this browser',
+        '',
+        gFile3,
+      )}
+      {#snippet gFile4()}
+        {@render big('link', 'Copy link', copyShareLink, !tool.ready)}
+      {/snippet}
+      {@render group(4, 'Share', 'link', 'Share', 'Share', '', gFile4)}
+      {#snippet gFile5()}
+        <a class="big" href={import.meta.env.BASE_URL}
+          ><Icon name="close" size={26} /><span>Close editor</span></a
+        >
+      {/snippet}
+      {@render group(5, 'Close', 'close', 'Close', 'Back to the site', '', gFile5)}
       <input
         bind:this={sourceInput}
         type="file"
@@ -308,317 +433,276 @@
         onchange={(e) => onFile(e, openWorkspaceFile)}
       />
     {:else if active === 'Home'}
-      <div class="group" role="group" aria-label="History">
-        <div class="body">
-          {@render big('undo', 'Undo', () => tool.undo(), !tool.canUndo)}
-          <div class="stack">
-            {@render small('redo', 'Redo', () => tool.redo(), !tool.canRedo)}
-            {@render small('link', 'Copy link', copyShareLink, !tool.ready)}
-          </div>
+      {#snippet gHome0()}
+        {@render big('undo', 'Undo', () => tool.undo(), !tool.canUndo)}
+        <div class="stack">
+          {@render small('redo', 'Redo', () => tool.redo(), !tool.canRedo)}
+          {@render small('link', 'Copy link', copyShareLink, !tool.ready)}
         </div>
-        <div class="caption">History</div>
-      </div>
-      <div class="group" role="group" aria-label="Layers">
-        <div class="body">
-          {@render big('plus', 'Add layer', () => tool.addLayer(), !tool.valid)}
-          <div class="stack">
-            {@render small(
-              'trash',
-              'Remove',
-              () => tool.removeSelectedLayer(),
-              !layerSelected || layerCount <= 1,
-            )}
-            {@render small(
-              'left',
-              'Move left',
-              () => tool.moveSelectedLayer(-1),
-              !layerSelected || index <= 0,
-            )}
-            {@render small(
-              'right',
-              'Move right',
-              () => tool.moveSelectedLayer(1),
-              !layerSelected || index >= layerCount - 1,
-            )}
-          </div>
+      {/snippet}
+      {@render group(0, 'History', 'undo', 'History', 'History', '', gHome0)}
+      {#snippet gHome1()}
+        {@render big('plus', 'Add layer', () => tool.addLayer(), !tool.valid)}
+        <div class="stack">
+          {@render small(
+            'trash',
+            'Remove',
+            () => tool.removeSelectedLayer(),
+            !layerSelected || layerCount <= 1,
+          )}
+          {@render small(
+            'left',
+            'Move left',
+            () => tool.moveSelectedLayer(-1),
+            !layerSelected || index <= 0,
+          )}
+          {@render small(
+            'right',
+            'Move right',
+            () => tool.moveSelectedLayer(1),
+            !layerSelected || index >= layerCount - 1,
+          )}
         </div>
-        <div class="caption">Layers</div>
-      </div>
-      <div class="group" role="group" aria-label="Style">
-        <div class="body">
-          <div class="gallery" role="group" aria-label="Preset">
-            {#each PRESET_IDS as id (id)}
-              <button
-                type="button"
-                class="thumb"
-                aria-pressed={tool.preset === id}
-                title={PRESET_NAMES[id]}
-                onclick={() => tool.setPreset(id)}
-              >
-                <PresetThumb {id} />
-                <span>{PRESET_NAMES[id]}</span>
-              </button>
-            {/each}
-          </div>
-          <div class="stack">
-            {@render toggle('Transparent background', tool.transparent, (on) =>
-              tool.setTransparent(on),
-            )}
-            {@render toggle('Right to left', tool.rightToLeft, (on) => tool.setRightToLeft(on))}
-          </div>
+      {/snippet}
+      {@render group(1, 'Layers', 'plus', 'Layers', 'Layers', '', gHome1)}
+      {#snippet gHome2()}
+        <div class="gallery" role="group" aria-label="Preset">
+          {#each PRESET_IDS as id (id)}
+            <button
+              type="button"
+              class="thumb"
+              aria-pressed={tool.preset === id}
+              title={PRESET_NAMES[id]}
+              onclick={() => tool.setPreset(id)}
+            >
+              <PresetThumb {id} />
+              <span>{PRESET_NAMES[id]}</span>
+            </button>
+          {/each}
         </div>
-        <div class="caption">Style</div>
-      </div>
-      <div class="group" role="group" aria-label="Labels">
-        <div class="body stack three">
-          {@render toggle('Layer names', tool.labels.names, (on) => tool.setLabel('names', on))}
-          {@render toggle('Neuron counts', tool.labels.sizes, (on) => tool.setLabel('sizes', on))}
-          {@render toggle('Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
+        <div class="stack">
+          {@render toggle('Transparent background', tool.transparent, (on) =>
+            tool.setTransparent(on),
+          )}
+          {@render toggle('Right to left', tool.rightToLeft, (on) => tool.setRightToLeft(on))}
         </div>
-        <div class="caption">Labels</div>
-      </div>
-      <div class="group" role="group" aria-label="Large layers">
-        <div class="body stack numbers">
-          <label
-            >Collapse above <input
-              type="number"
-              min="1"
-              value={tool.collapse.above}
-              disabled={tool.preset === 'boxes'}
-              onchange={(e) => setNumber('above', e)}
-            /></label
-          >
-          <label
-            >Show first <input
-              type="number"
-              min="0"
-              max="100"
-              value={tool.collapse.first}
-              disabled={tool.preset === 'boxes'}
-              onchange={(e) => setNumber('first', e)}
-            /></label
-          >
-          <label
-            >Show last <input
-              type="number"
-              min="0"
-              max="100"
-              value={tool.collapse.last}
-              disabled={tool.preset === 'boxes'}
-              onchange={(e) => setNumber('last', e)}
-            /></label
-          >
-        </div>
-        <div class="caption">Large layers</div>
-      </div>
+      {/snippet}
+      {@render group(2, 'Style', 'canvas', 'Style', 'Style', '', gHome2)}
+      {#snippet gHome3()}
+        {@render toggle('Layer names', tool.labels.names, (on) => tool.setLabel('names', on))}
+        {@render toggle('Neuron counts', tool.labels.sizes, (on) => tool.setLabel('sizes', on))}
+        {@render toggle('Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
+      {/snippet}
+      {@render group(3, 'Labels', 'tag', 'Labels', 'Labels', 'stack three', gHome3)}
+      {#snippet gHome4()}
+        <label
+          >Collapse above <input
+            type="number"
+            min="1"
+            value={tool.collapse.above}
+            disabled={tool.preset === 'boxes'}
+            onchange={(e) => setNumber('above', e)}
+          /></label
+        >
+        <label
+          >Show first <input
+            type="number"
+            min="0"
+            max="100"
+            value={tool.collapse.first}
+            disabled={tool.preset === 'boxes'}
+            onchange={(e) => setNumber('first', e)}
+          /></label
+        >
+        <label
+          >Show last <input
+            type="number"
+            min="0"
+            max="100"
+            value={tool.collapse.last}
+            disabled={tool.preset === 'boxes'}
+            onchange={(e) => setNumber('last', e)}
+          /></label
+        >
+      {/snippet}
+      {@render group(
+        4,
+        'Large layers',
+        'fit',
+        'Large layers',
+        'Large layers',
+        'stack numbers',
+        gHome4,
+      )}
     {:else if active === 'View'}
-      <div class="group" role="group" aria-label="Zoom">
-        <div class="body">
-          {@render big('fit', 'Fit', () => (tool.zoom = 'fit'))}
-          <div class="stack">
-            {@render small('plus', 'Zoom in', () => tool.zoomBy(1.25))}
-            {@render small('minus', 'Zoom out', () => tool.zoomBy(0.8))}
-            <button type="button" class="small" onclick={() => (tool.zoom = 1)}>Actual size</button>
-          </div>
+      {#snippet gView0()}
+        {@render big('fit', 'Fit', () => (tool.zoom = 'fit'))}
+        <div class="stack">
+          {@render small('plus', 'Zoom in', () => tool.zoomBy(1.25))}
+          {@render small('minus', 'Zoom out', () => tool.zoomBy(0.8))}
+          <button type="button" class="small" onclick={() => (tool.zoom = 1)}>Actual size</button>
         </div>
-        <div class="caption">Zoom</div>
-      </div>
-      <div class="group" role="group" aria-label="Panes">
-        <div class="body stack">
-          {@render toggle(
-            'Layers and source',
-            tool.showNavigator,
-            (on) => (tool.showNavigator = on),
-          )}
-          {@render toggle('Format pane', tool.showFormat, (on) => (tool.showFormat = on))}
-        </div>
-        <div class="caption">Panes</div>
-      </div>
-      <div class="group" role="group" aria-label="Theme">
-        <div class="body">
-          {@render big(
-            theme === 'dark' ? 'sun' : 'moon',
-            theme === 'dark' ? 'Light theme' : 'Dark theme',
-            toggleTheme,
-          )}
-        </div>
-        <div class="caption">Theme</div>
-      </div>
+      {/snippet}
+      {@render group(0, 'Zoom', 'fit', 'Zoom', 'Zoom', '', gView0)}
+      {#snippet gView1()}
+        {@render toggle('Layers and source', tool.showNavigator, (on) => (tool.showNavigator = on))}
+        {@render toggle('Format pane', tool.showFormat, (on) => (tool.showFormat = on))}
+      {/snippet}
+      {@render group(1, 'Panes', 'panelRight', 'Panes', 'Panes', 'stack', gView1)}
+      {#snippet gView2()}
+        {@render big(
+          theme === 'dark' ? 'sun' : 'moon',
+          theme === 'dark' ? 'Light theme' : 'Dark theme',
+          toggleTheme,
+        )}
+      {/snippet}
+      {@render group(2, 'Theme', 'moon', 'Theme', 'Theme', '', gView2)}
     {:else if active === 'Animate'}
-      <div class="group" role="group" aria-label="Playback">
-        <div class="body">
-          {@render big(
-            tool.playing ? 'pause' : 'play',
-            tool.playing ? 'Pause' : 'Play',
-            () => (tool.playing = !tool.playing),
-            !tool.timeline,
-            true,
-          )}
-          <div class="stack">
-            {@render small('stepback', 'Step back', () => step(-1), !tool.timeline)}
-            {@render small('stepforward', 'Step forward', () => step(1), !tool.timeline)}
-          </div>
+      {#snippet gAnimate0()}
+        {@render big(
+          tool.playing ? 'pause' : 'play',
+          tool.playing ? 'Pause' : 'Play',
+          () => (tool.playing = !tool.playing),
+          !tool.timeline,
+          true,
+        )}
+        <div class="stack">
+          {@render small('stepback', 'Step back', () => step(-1), !tool.timeline)}
+          {@render small('stepforward', 'Step forward', () => step(1), !tool.timeline)}
         </div>
-        <div class="caption">Playback</div>
-      </div>
-      <div class="group" role="group" aria-label="Look">
-        <div class="body stack">
-          <label class="option"
-            >Look <select
-              class="documents"
-              aria-label="Animation look"
-              value={tool.animation.look}
-              disabled={!tool.valid}
-              onchange={(e) => tool.setAnimation({ look: e.currentTarget.value as AnimationLook })}
-            >
-              {#each LOOKS as [value, label] (value)}<option {value}>{label}</option>{/each}
-            </select></label
+      {/snippet}
+      {@render group(0, 'Playback', 'play', 'Playback', 'Playback', '', gAnimate0)}
+      {#snippet gAnimate1()}
+        <label class="option"
+          >Look <select
+            class="documents"
+            aria-label="Animation look"
+            value={tool.animation.look}
+            disabled={!tool.valid}
+            onchange={(e) => tool.setAnimation({ look: e.currentTarget.value as AnimationLook })}
           >
-          <label class="option"
-            >Scene <select
-              class="documents"
-              aria-label="Animation scene"
-              value={tool.animation.scene}
-              disabled={!tool.valid || !signalLook}
-              onchange={(e) =>
-                tool.setAnimation({ scene: e.currentTarget.value as AnimationScene })}
-            >
-              {#each SCENES as [value, label] (value)}<option {value}>{label}</option>{/each}
-            </select></label
+            {#each LOOKS as [value, label] (value)}<option {value}>{label}</option>{/each}
+          </select></label
+        >
+        <label class="option"
+          >Scene <select
+            class="documents"
+            aria-label="Animation scene"
+            value={tool.animation.scene}
+            disabled={!tool.valid || !signalLook}
+            onchange={(e) => tool.setAnimation({ scene: e.currentTarget.value as AnimationScene })}
           >
-        </div>
-        <div class="caption">Look</div>
-      </div>
-      <div class="group" role="group" aria-label="Timing">
-        <div class="body stack">
-          <label class="option"
-            >Speed <select
-              class="documents"
-              aria-label="Animation speed"
-              value={tool.animation.speed}
-              disabled={!tool.valid}
-              onchange={(e) => tool.setAnimation({ speed: Number(e.currentTarget.value) })}
-            >
-              {#each SPEEDS as speed (speed)}<option value={speed}>{speed}×</option>{/each}
-            </select></label
+            {#each SCENES as [value, label] (value)}<option {value}>{label}</option>{/each}
+          </select></label
+        >
+      {/snippet}
+      {@render group(1, 'Look', 'film', 'Look', 'Look', 'stack', gAnimate1)}
+      {#snippet gAnimate2()}
+        <label class="option"
+          >Speed <select
+            class="documents"
+            aria-label="Animation speed"
+            value={tool.animation.speed}
+            disabled={!tool.valid}
+            onchange={(e) => tool.setAnimation({ speed: Number(e.currentTarget.value) })}
           >
-          {@render toggle('Loop', tool.animation.loop, (on) => tool.setAnimation({ loop: on }))}
+            {#each SPEEDS as speed (speed)}<option value={speed}>{speed}×</option>{/each}
+          </select></label
+        >
+        {@render toggle('Loop', tool.animation.loop, (on) => tool.setAnimation({ loop: on }))}
+      {/snippet}
+      {@render group(2, 'Timing', 'repeat', 'Timing', 'Timing', 'stack', gAnimate2)}
+      {#snippet gAnimate3()}
+        {@render toggle('Hidden layers stay gray', tool.animation.grayHidden, (on) =>
+          tool.setAnimation({ grayHidden: on }),
+        )}
+        {@render toggle('Weight colors in still images', tool.weights, (on) => tool.setWeights(on))}
+      {/snippet}
+      {@render group(3, 'Layers and weights', 'layers', 'Layers', 'Layers', 'stack', gAnimate3)}
+      {#snippet gAnimate4()}
+        {@render big('download', 'Animated SVG', () => exportAnimation('svg'), !tool.layout)}
+        <div class="stack">
+          {@render small('film', 'GIF', () => exportAnimation('gif'), !tool.layout)}
+          {@render small('film', 'Video', () => exportAnimation('video'), !tool.layout)}
         </div>
-        <div class="caption">Timing</div>
-      </div>
-      <div class="group" role="group" aria-label="Layers and weights">
-        <div class="body stack">
-          {@render toggle('Hidden layers stay gray', tool.animation.grayHidden, (on) =>
-            tool.setAnimation({ grayHidden: on }),
-          )}
-          {@render toggle('Weight colors in still images', tool.weights, (on) =>
-            tool.setWeights(on),
-          )}
-        </div>
-        <div class="caption">Layers</div>
-      </div>
-      <div class="group" role="group" aria-label="Save animation">
-        <div class="body">
-          {@render big('download', 'Animated SVG', () => exportAnimation('svg'), !tool.layout)}
-          <div class="stack">
-            {@render small('film', 'GIF', () => exportAnimation('gif'), !tool.layout)}
-            {@render small('film', 'Video', () => exportAnimation('video'), !tool.layout)}
-          </div>
-        </div>
-        <div class="caption">Save</div>
-      </div>
+      {/snippet}
+      {@render group(4, 'Save animation', 'download', 'Save', 'Save', '', gAnimate4)}
     {:else if active === 'Export'}
-      <div class="group" role="group" aria-label="Images">
-        <div class="body">
-          {@render big('download', 'Export SVG', () => exportAs('svg'), !tool.layout, true)}
-          {@render big('download', 'Export PNG', () => exportAs('png'), !tool.layout)}
-          <div class="stack">
-            {@render small('copy', 'Copy SVG', copySvg, !tool.layout)}
-            {@render toggle('Editable SVG text', tool.liveText, (on) => (tool.liveText = on))}
-          </div>
+      {#snippet gExport0()}
+        {@render big('download', 'Export SVG', () => exportAs('svg'), !tool.layout, true)}
+        {@render big('download', 'Export PNG', () => exportAs('png'), !tool.layout)}
+        <div class="stack">
+          {@render small('copy', 'Copy SVG', copySvg, !tool.layout)}
+          {@render toggle('Editable SVG text', tool.liveText, (on) => (tool.liveText = on))}
         </div>
-        <div class="caption">Images</div>
-      </div>
-      <div class="group" role="group" aria-label="Documents">
-        <div class="body">
-          {@render big('file', 'Export PDF', () => exportAs('pdf'), !tool.layout)}
-          {@render big('code', 'Export TikZ', () => exportAs('tex'), !tool.layout)}
-          <div class="stack">
-            {@render small('copy', 'Copy TikZ', copyTikz, !tool.layout)}
-          </div>
+      {/snippet}
+      {@render group(0, 'Images', 'download', 'Images', 'Images', '', gExport0)}
+      {#snippet gExport1()}
+        {@render big('file', 'Export PDF', () => exportAs('pdf'), !tool.layout)}
+        {@render big('code', 'Export TikZ', () => exportAs('tex'), !tool.layout)}
+        <div class="stack">
+          {@render small('copy', 'Copy TikZ', copyTikz, !tool.layout)}
         </div>
-        <div class="caption">Documents</div>
-      </div>
-      <div class="group" role="group" aria-label="Share">
-        <div class="body">
-          {@render big('code', 'Embed code', () => exportAs('embed'), !tool.layout)}
-          {@render big('download', 'Model file', () => exportAs('json'), !tool.model)}
-        </div>
-        <div class="caption">Share</div>
-      </div>
-      <div class="group" role="group" aria-label="Export options">
-        <div class="body stack">
-          <label class="option"
-            >PNG size <select
-              class="documents"
-              value={tool.pngDpi}
-              onchange={(e) => (tool.pngDpi = Number(e.currentTarget.value))}
-            >
-              {#each PNG_SIZES as size (size.dpi)}<option value={size.dpi}>{size.label}</option
-                >{/each}
-            </select></label
+      {/snippet}
+      {@render group(1, 'Documents', 'file', 'Documents', 'Documents', '', gExport1)}
+      {#snippet gExport2()}
+        {@render big('code', 'Embed code', () => exportAs('embed'), !tool.layout)}
+        {@render big('download', 'Model file', () => exportAs('json'), !tool.model)}
+      {/snippet}
+      {@render group(2, 'Share', 'link', 'Share', 'Share', '', gExport2)}
+      {#snippet gExport3()}
+        <label class="option"
+          >PNG size <select
+            class="documents"
+            value={tool.pngDpi}
+            onchange={(e) => (tool.pngDpi = Number(e.currentTarget.value))}
           >
-          <label class="option"
-            >TikZ <select
-              class="documents"
-              value={tool.tikzStandalone ? 'document' : 'picture'}
-              onchange={(e) => (tool.tikzStandalone = e.currentTarget.value === 'document')}
-            >
-              <option value="document">Standalone document</option>
-              <option value="picture">tikzpicture only</option>
-            </select></label
+            {#each PNG_SIZES as size (size.dpi)}<option value={size.dpi}>{size.label}</option
+              >{/each}
+          </select></label
+        >
+        <label class="option"
+          >TikZ <select
+            class="documents"
+            value={tool.tikzStandalone ? 'document' : 'picture'}
+            onchange={(e) => (tool.tikzStandalone = e.currentTarget.value === 'document')}
           >
-        </div>
-        <div class="caption">Options</div>
-      </div>
+            <option value="document">Standalone document</option>
+            <option value="picture">tikzpicture only</option>
+          </select></label
+        >
+      {/snippet}
+      {@render group(3, 'Export options', 'edit', 'Options', 'Options', 'stack', gExport3)}
     {:else}
-      <div class="group" role="group" aria-label="Manual">
-        <div class="body">
-          {@render manualButton('shorthand', 'shorthand', 'Shorthand')}
-          {@render manualButton('convolutions', 'convolution', 'Convolutions')}
-          {@render manualButton('yaml', 'braces', 'YAML')}
-          {@render manualButton('keyboard', 'keyboard', 'Keyboard')}
-        </div>
-        <div class="caption">Manual</div>
-      </div>
-      <div class="group" role="group" aria-label="Guide">
-        <div class="body">
-          <a class="big" href={`${import.meta.env.BASE_URL}guide/`}
-            ><Icon name="help" size={26} /><span>Full guide</span></a
-          >
-        </div>
-        <div class="caption">Guide</div>
-      </div>
-      <div class="group" role="group" aria-label="Feedback">
-        <div class="body">
-          <a class="big" href={`${SITE.repoUrl}/issues`} target="_blank" rel="noopener"
-            ><Icon name="external" size={26} /><span>Report an issue</span></a
-          >
-        </div>
-        <div class="caption">Feedback</div>
-      </div>
-      <div class="group" role="group" aria-label="Privacy">
-        <div class="body stack">
-          <a class="small" href={`${import.meta.env.BASE_URL}about/#privacy`}>Privacy</a>
-          <button
-            type="button"
-            class="small"
-            onclick={() => document.dispatchEvent(new CustomEvent('xm:consent-open'))}
-            >Cookie settings</button
-          >
-        </div>
-        <div class="caption">Privacy</div>
-      </div>
+      {#snippet gHelp0()}
+        {@render manualButton('shorthand', 'shorthand', 'Shorthand')}
+        {@render manualButton('convolutions', 'convolution', 'Convolutions')}
+        {@render manualButton('yaml', 'braces', 'YAML')}
+        {@render manualButton('keyboard', 'keyboard', 'Keyboard')}
+      {/snippet}
+      {@render group(0, 'Manual', 'help', 'Manual', 'Manual', '', gHelp0)}
+      {#snippet gHelp1()}
+        <a class="big" href={`${import.meta.env.BASE_URL}guide/`}
+          ><Icon name="help" size={26} /><span>Full guide</span></a
+        >
+      {/snippet}
+      {@render group(1, 'Guide', 'file', 'Guide', 'Guide', '', gHelp1)}
+      {#snippet gHelp2()}
+        <a class="big" href={`${SITE.repoUrl}/issues`} target="_blank" rel="noopener"
+          ><Icon name="external" size={26} /><span>Report an issue</span></a
+        >
+      {/snippet}
+      {@render group(2, 'Feedback', 'external', 'Feedback', 'Feedback', '', gHelp2)}
+      {#snippet gHelp3()}
+        <a class="small" href={`${import.meta.env.BASE_URL}about/#privacy`}>Privacy</a>
+        <button
+          type="button"
+          class="small"
+          onclick={() => document.dispatchEvent(new CustomEvent('xm:consent-open'))}
+          >Cookie settings</button
+        >
+      {/snippet}
+      {@render group(3, 'Privacy', 'check', 'Privacy', 'Privacy', 'stack', gHelp3)}
     {/if}
   </div>
 </div>
@@ -733,6 +817,38 @@
     font-size: 0.7rem;
     color: var(--muted);
     text-align: center;
+  }
+
+  /* Narrow stages: small buttons lose their labels, big buttons become icons. */
+  .s1 .small.ic .t,
+  .s2 .small.ic .t,
+  .s2 .big span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .s2 .big {
+    width: 40px;
+  }
+
+  .foldbtn {
+    gap: 2px;
+  }
+
+  .popup {
+    position: fixed;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    padding: 6px 10px 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    box-shadow: 0 6px 14px rgb(0 0 0 / 0.25);
   }
 
   .stack {
