@@ -143,10 +143,15 @@ test.describe('desktop editor', () => {
     await source(page).fill('seq(3x3)-rnn(4)-fc(2)');
     await expect(page.locator('#pv-box-1-0')).toBeAttached();
     await page.getByRole('tab', { name: 'Home' }).click();
-    await page.getByRole('switch', { name: 'Neurons per step' }).check();
+    // A narrow ribbon folds the Network group into a popup; open it when its switches are hidden.
+    const neurons = page.getByRole('switch', { name: 'Neurons per step' });
+    if (!(await neurons.isVisible())) {
+      await page.getByRole('button', { name: 'Network', exact: true }).click();
+    }
+    await neurons.check();
     await expect(source(page)).toHaveValue(/recurrent: neurons/);
     await expect(page.locator('#pv-frame-1-0')).toBeAttached();
-    await page.getByRole('switch', { name: 'Neurons per step' }).uncheck();
+    await neurons.uncheck();
     const nav = page.getByRole('navigation', { name: 'Layers' });
     await nav.getByRole('button', { name: /RNN/ }).click();
     await page.getByRole('checkbox', { name: /Bidirectional/ }).check();
