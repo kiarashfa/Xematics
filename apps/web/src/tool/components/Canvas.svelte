@@ -56,8 +56,33 @@
     } else player.detach();
     const selection = tool.selection;
     if (svg && selection.kind === 'layer') {
-      svg.querySelector(`#pv-layer-${selection.index}`)?.setAttribute('data-selected', '');
+      const chosen = svg.querySelector(`#pv-layer-${selection.index}`);
+      chosen?.setAttribute('data-selected', '');
+      // A frame marks the selected layer; lighter frames mark the layers of the same kind, which
+      // share its colors. Frames leave the layer's own colors visible.
+      const role = tool.selectedRole;
+      const groups = role ? [...svg.querySelectorAll(`.pv-layer-${role}`)] : chosen ? [chosen] : [];
+      for (const group of groups) frame(svg, group as SVGGraphicsElement, group === chosen);
     }
+  }
+
+  function frame(svg: SVGSVGElement, group: SVGGraphicsElement, selected: boolean) {
+    let box: DOMRect;
+    try {
+      box = group.getBBox();
+    } catch {
+      return;
+    }
+    if (box.width === 0 && box.height === 0) return;
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    const pad = 4;
+    rect.setAttribute('x', String(box.x - pad));
+    rect.setAttribute('y', String(box.y - pad));
+    rect.setAttribute('width', String(box.width + 2 * pad));
+    rect.setAttribute('height', String(box.height + 2 * pad));
+    rect.setAttribute('rx', '4');
+    rect.setAttribute('class', selected ? 'pv-frame pv-frame-selected' : 'pv-frame');
+    svg.append(rect);
   }
 
   function onClick(event: MouseEvent) {
@@ -193,11 +218,20 @@
     display: block;
   }
 
-  .paper :global([data-selected] circle),
-  .paper :global([data-selected] rect),
-  .paper :global([data-selected] .pv-sheet) {
+  .paper :global(.pv-frame) {
+    fill: none;
     stroke: #0b6bcb;
-    stroke-width: 3;
+    stroke-width: 1;
+    stroke-dasharray: 4 3;
+    opacity: 0.6;
+    pointer-events: none;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .paper :global(.pv-frame-selected) {
+    stroke-width: 2;
+    stroke-dasharray: none;
+    opacity: 1;
   }
 
   .message {

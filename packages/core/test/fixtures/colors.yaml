@@ -1,0 +1,11 @@
+# User colors per layer kind over a preset: fills, outlines, weights and dash patterns.
+# The dark output fill gets white node labels automatically.
+layers:
+  - { units: 3, nodeLabel: 'x{i}' }
+  - { units: 5 }
+  - { units: 4 }
+  - { units: 2, nodeLabel: 'y{i}' }
+style:
+  input: { fill: '#fdd', outline: '#c00', weight: 2.5 }
+  hidden: { fill: '#e8f4ea', outline: '#009e73', dashes: dashed }
+  output: { fill: '#1f2937', weight: 0 }

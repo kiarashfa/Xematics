@@ -7,6 +7,7 @@ import { SCENE_VERSION, type Paint, type Scene, type SceneItem } from '../scene.
 import {
   mergeCollapse,
   resolveTheme,
+  roleStroke,
   type CollapseRule,
   type Role,
   type Theme,
@@ -228,8 +229,7 @@ function layoutPlain(input: Model, theme: Theme, engine: TextEngine): LayoutResu
     const role = theme.roles[column.role];
     const nodePaint: Paint = {
       fill: role.fill,
-      stroke: role.stroke,
-      strokeWidth: theme.nodeStrokeWidth,
+      ...roleStroke(theme, column.role, theme.nodeStrokeWidth),
     };
     items.push({ kind: 'group', id: group, classes: ['layer', `layer-${column.role}`] });
     column.slots.forEach((slot, j) => {

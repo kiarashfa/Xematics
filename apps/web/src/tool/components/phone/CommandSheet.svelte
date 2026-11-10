@@ -1,9 +1,10 @@
 <script lang="ts" module>
-  export const COMMAND_TABS = ['File', 'Home', 'Animate', 'Export', 'View'] as const;
+  export const COMMAND_TABS = ['File', 'Home', 'Design', 'Animate', 'Export', 'View'] as const;
   export type CommandTab = (typeof COMMAND_TABS)[number];
 </script>
 
 <script lang="ts">
+  import { untrack } from 'svelte';
   import {
     copyShareLink,
     copySvg,
@@ -26,6 +27,8 @@
   import { tool } from '../../state.svelte.ts';
   import Icon, { type IconName } from '../Icon.svelte';
   import PresetThumb from '../PresetThumb.svelte';
+  import type ColorPanelComponent from '../ColorPanel.svelte';
+  import { targetTitle, type ColorTarget } from '../../color-target.ts';
 
   // The desktop ribbon as large touch rows, one tab at a time (like Office on phones).
   let {
@@ -58,6 +61,36 @@
   function showAnimation(on: boolean) {
     tool.playerOpen = on;
     tool.playing = on && !prefersReducedMotion();
+  }
+
+  // Fill, Outline and the animation colors open a color panel in the sheet (loaded on first use).
+  let ColorPanel: typeof ColorPanelComponent | undefined = $state();
+  let color = $state<ColorTarget | undefined>();
+
+  async function openColor(target: ColorTarget) {
+    ColorPanel ??= (await import('../ColorPanel.svelte')).default;
+    color = target;
+  }
+
+  function closeColor() {
+    color = undefined;
+    tool.stylePreview = undefined;
+  }
+
+  $effect(() => {
+    void tab;
+    untrack(closeColor);
+  });
+
+  const SPACING_STEPS: Record<
+    'layerSpacing' | 'nodeSpacing' | 'nodeRadius',
+    [number, number, number]
+  > = { layerSpacing: [20, 2000, 10], nodeSpacing: [0, 200, 1], nodeRadius: [2, 100, 1] };
+
+  function stepSpacing(key: keyof typeof SPACING_STEPS, delta: number) {
+    const [min, max, step] = SPACING_STEPS[key];
+    const value = Math.min(max, Math.max(min, tool.spacing[key] + delta * step));
+    if (value !== tool.spacing[key]) tool.setSpacing(key, value);
   }
 
   function run(action: () => unknown) {
@@ -128,6 +161,46 @@
   </li>
 {/snippet}
 
+{#snippet colorRow(icon: IconName, label: string, bar: string, target: ColorTarget | undefined)}
+  <li>
+    <button
+      type="button"
+      class="ph-row"
+      disabled={target === undefined}
+      onclick={() => target && openColor(target)}
+      ><Icon name={icon} size={22} {bar} /><span class="ph-label"
+        >{label}{#if target?.kind === 'role'}<small class="note"
+            >{target.role === 'hidden' ? 'Every hidden layer' : `The ${target.role} layer`}</small
+          >{:else if target === undefined}<small class="note">Select a layer first</small
+          >{/if}</span
+      ><span class="swatch" style:background={bar === 'none' ? 'transparent' : bar}></span><Icon
+        name="right"
+      /></button
+    >
+  </li>
+{/snippet}
+
+{#snippet spacingStepper(label: string, key: keyof typeof SPACING_STEPS)}
+  <li class="ph-row static">
+    <Icon name="spacing" /><span class="ph-label">{label}</span>
+    <span class="ph-stepper">
+      <button
+        type="button"
+        class="ph-ib"
+        aria-label={`Decrease ${label.toLowerCase()}`}
+        onclick={() => stepSpacing(key, -1)}><Icon name="minus" /></button
+      >
+      <span class="ph-value value" aria-live="polite">{tool.spacing[key]}</span>
+      <button
+        type="button"
+        class="ph-ib"
+        aria-label={`Increase ${label.toLowerCase()}`}
+        onclick={() => stepSpacing(key, 1)}><Icon name="plus" /></button
+      >
+    </span>
+  </li>
+{/snippet}
+
 {#snippet choice(
   label: string,
   value: string,
@@ -193,32 +266,11 @@
         index < 0 || index >= count - 1,
       )}
       <li class="ph-rule" aria-hidden="true"></li>
-      <li>
-        <div class="presets" role="group" aria-label="Preset">
-          {#each PRESET_IDS as id (id)}
-            <button
-              type="button"
-              class="preset"
-              aria-pressed={tool.preset === id}
-              onclick={() => tool.setPreset(id)}
-            >
-              <PresetThumb {id} />
-              <span>{PRESET_NAMES[id]}</span>
-            </button>
-          {/each}
-        </div>
-      </li>
       {@render toggle('tag', 'Layer names', tool.labels.names, (on) => tool.setLabel('names', on))}
       {@render toggle('tag', 'Neuron counts', tool.labels.sizes, (on) =>
         tool.setLabel('sizes', on),
       )}
       {@render toggle('tag', 'Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
-      {@render toggle('canvas', 'Transparent background', tool.transparent, (on) =>
-        tool.setTransparent(on),
-      )}
-      {@render toggle('left', 'Flow right to left', tool.rightToLeft, (on) =>
-        tool.setRightToLeft(on),
-      )}
       {#if tool.family === 'rnn'}
         {@render toggle('layers', 'Neurons per step', tool.network.neurons, (on) =>
           tool.setNetwork({ recurrent: on ? 'neurons' : undefined }),
@@ -239,6 +291,62 @@
       {@render stepper('Collapse above', 'above')}
       {@render stepper('Show first', 'first')}
       {@render stepper('Show last', 'last')}
+    {:else if tab === 'Design' && color && ColorPanel}
+      <li class="color-head">
+        <button type="button" class="ph-ib" aria-label="Back" onclick={closeColor}
+          ><Icon name="back" /></button
+        ><span>{targetTitle(color)}</span>
+      </li>
+      <li class="color-body"><ColorPanel target={color} touch onClose={closeColor} /></li>
+    {:else if tab === 'Design'}
+      {@const role = tool.selectedRole}
+      {@render colorRow(
+        'bucket',
+        'Fill',
+        role ? tool.theme.roles[role].fill : 'none',
+        role && { kind: 'role', role, part: 'fill' },
+      )}
+      {@render colorRow(
+        'pen',
+        'Outline',
+        role ? tool.theme.roles[role].stroke : 'none',
+        role && { kind: 'role', role, part: 'outline' },
+      )}
+      {@render row('undo', 'Reset colors', () => tool.resetColors(), !tool.customColors)}
+      <li class="ph-rule" aria-hidden="true"></li>
+      {@render spacingStepper('Layer gap', 'layerSpacing')}
+      {@render spacingStepper('Node gap', 'nodeSpacing')}
+      {@render spacingStepper('Node radius', 'nodeRadius')}
+      {@render row('undo', 'Reset spacing', () => tool.resetSpacing(), !tool.customSpacing)}
+      <li class="ph-rule" aria-hidden="true"></li>
+      <li>
+        <div class="presets" role="group" aria-label="Preset">
+          {#each PRESET_IDS as id (id)}
+            <button
+              type="button"
+              class="preset"
+              aria-pressed={tool.preset === id}
+              onclick={() => tool.setPreset(id)}
+            >
+              <PresetThumb {id} />
+              <span>{PRESET_NAMES[id]}</span>
+            </button>
+          {/each}
+        </div>
+      </li>
+      {@render toggle('canvas', 'Transparent background', tool.transparent, (on) =>
+        tool.setTransparent(on),
+      )}
+      {@render toggle('left', 'Flow right to left', tool.rightToLeft, (on) =>
+        tool.setRightToLeft(on),
+      )}
+    {:else if tab === 'Animate' && color && ColorPanel}
+      <li class="color-head">
+        <button type="button" class="ph-ib" aria-label="Back" onclick={closeColor}
+          ><Icon name="back" /></button
+        ><span>{targetTitle(color)}</span>
+      </li>
+      <li class="color-body"><ColorPanel target={color} touch onClose={closeColor} /></li>
     {:else if tab === 'Animate'}
       {@render toggle('play', 'Animate the figure', tool.playerOpen, showAnimation)}
       {@render choice('Look', tool.animation.look, LOOKS, (v) =>
@@ -266,6 +374,15 @@
       {@render toggle('tag', 'Weight colors in still images', tool.weights, (on) =>
         tool.setWeights(on),
       )}
+      {@render colorRow('forward', 'Forward color', tool.motionColors.forward, {
+        kind: 'motion',
+        key: 'forward',
+      })}
+      {@render colorRow('backward', 'Backward color', tool.motionColors.backward, {
+        kind: 'motion',
+        key: 'backward',
+      })}
+      {@render row('undo', 'Reset animation colors', () => tool.resetMotion(), !tool.customMotion)}
       <li class="ph-rule" aria-hidden="true"></li>
       {@render row('download', 'Save animated SVG', () => exportAnimation('svg'), !tool.layout)}
       {@render row('film', 'Save GIF', () => exportAnimation('gif'), !tool.layout)}
@@ -317,6 +434,31 @@
 />
 
 <style>
+  .note {
+    display: block;
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .swatch {
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+  }
+
+  .color-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+
+  .color-body {
+    padding: 4px 2px 12px;
+  }
+
   .tabs {
     display: flex;
     gap: 6px;

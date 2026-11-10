@@ -8,7 +8,7 @@ import { diagnostic, type Diagnostic } from '../diagnostics.ts';
 import { familyOf, type DenseLayer, type Layer, type Model } from '../model/schema.ts';
 import { inferShapes, pair, shapeText, type Shape } from '../model/shapes.ts';
 import { SCENE_VERSION, type Paint, type SceneItem } from '../scene.ts';
-import type { Role, TextStyle, Theme } from '../style/theme.ts';
+import { roleStroke, type Role, type TextStyle, type Theme } from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
 import { barHeight } from './boxes.ts';
 import { buildLabel, labelItems, type Label } from './label.ts';
@@ -177,10 +177,12 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
     const shape = shapes[index]!;
     const role = roleOf(index, count);
     const rolePaint = role === 'hidden' && layer.type === 'pool' ? maps.pool : theme.roles[role];
+    const width = shape.kind === 'map' ? maps.strokeWidth : theme.nodeStrokeWidth;
     const paint: Paint = {
       fill: rolePaint.fill,
-      stroke: rolePaint.stroke,
-      strokeWidth: shape.kind === 'map' ? maps.strokeWidth : theme.nodeStrokeWidth,
+      ...(rolePaint === maps.pool
+        ? { stroke: rolePaint.stroke, strokeWidth: width }
+        : roleStroke(theme, role, width)),
     };
     const nameValue = cnnNameText(layer, auto[index]!);
     const name =

@@ -47,19 +47,43 @@
     keyboard: 'M2 6h20v12H2z|M6 10h.01|M10 10h.01|M14 10h.01|M18 10h.01|M7 14h10',
     chevronUp: 'M7 14l5-5 5 5',
     pin: 'M9 4h6l-1 6 3 3H7l3-3z|M12 13v8',
+    palette:
+      'M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.2-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z|M7.5 11h.01|M10 7.5h.01|M14.5 7.5h.01',
+    eyedropper: 'M14 4l6 6|M17 7l-9 9-4 1 1-4 9-9|M15.5 2.5a2 2 0 0 1 3 0l3 3a2 2 0 0 1 0 3',
+    spacing: 'M3 12h18|M6 9l-3 3 3 3|M18 9l3 3-3 3|M3 4v4|M21 4v4|M3 16v4|M21 16v4',
+    // Drawn in the top 18 units so a color bar fits below (Fill, Outline, animation colors).
+    bucket:
+      'M11 2 3 10l6 6 8-8z|M3 10h14|M19.5 11s-1.8 2.3-1.8 3.3a1.8 1.8 0 0 0 3.6 0c0-1-1.8-3.3-1.8-3.3',
+    pen: 'M15 2l4 4-10 10H5v-4z|M12.5 4.5l4 4',
+    forward: 'M3 9h15|M13 4l5 5-5 5',
+    backward: 'M21 9H6|M11 4 6 9l5 5',
   } as const;
 
   export type IconName = keyof typeof PATHS;
 </script>
 
 <script lang="ts">
-  let { name, size = 18 }: { name: IconName; size?: number } = $props();
+  // `bar` draws a color strip under the icon (Fill, Outline): a color, or 'none' for an outline only.
+  let { name, size = 18, bar }: { name: IconName; size?: number; bar?: string } = $props();
 </script>
 
 <svg class="icon" width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
   {#each PATHS[name].split('|') as d (d)}
     <path {d} />
   {/each}
+  {#if bar}
+    <rect
+      class="bar"
+      x="2"
+      y="19.5"
+      width="20"
+      height="4"
+      rx="0.5"
+      style:fill={bar === 'none' ? 'none' : bar}
+      style:stroke={bar === 'none' ? 'currentColor' : 'rgb(0 0 0 / 0.3)'}
+      style:stroke-width={bar === 'none' ? 1 : 0.6}
+    />
+  {/if}
 </svg>
 
 <style>

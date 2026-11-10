@@ -13,7 +13,13 @@ import {
 } from '../model/schema.ts';
 import { inferShapes, shapeText, type Shape } from '../model/shapes.ts';
 import type { Paint } from '../scene.ts';
-import type { Role, RolePaint, TextStyle, Theme } from '../style/theme.ts';
+import {
+  roleStroke,
+  type Role,
+  type RolePaint,
+  type TextStyle,
+  type Theme,
+} from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
 import { Painter, type Point } from './draw.ts';
 import type { Label } from './label.ts';
@@ -330,8 +336,7 @@ function unrolledLook(model: Model, theme: Theme, painter: Painter) {
     const suffix = row.dir === 'b' ? '-b' : '';
     const paint: Paint = {
       fill: row.paint.fill,
-      stroke: row.paint.stroke,
-      strokeWidth: theme.nodeStrokeWidth,
+      ...roleStroke(theme, row.role, theme.nodeStrokeWidth),
     };
     if (row.kind === 'cell') {
       const offsets = row.layer.type === 'lstm' ? [-8, 8] : [0];
@@ -572,8 +577,7 @@ function neuronsLook(model: Model, theme: Theme, painter: Painter) {
     painter.group(group, ['layer', `layer-${row.role}`]);
     const paint: Paint = {
       fill: row.paint.fill,
-      stroke: row.paint.stroke,
-      strokeWidth: theme.nodeStrokeWidth,
+      ...roleStroke(theme, row.role, theme.nodeStrokeWidth),
     };
     const half = rowWidth(k) / 2 + FRAME_PAD;
     if (row.kind === 'cell') {

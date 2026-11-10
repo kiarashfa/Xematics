@@ -8,7 +8,13 @@
 import type { Layer, Model } from '../model/schema.ts';
 import { inferShapes, shapeText, type Shape } from '../model/shapes.ts';
 import type { Paint } from '../scene.ts';
-import type { RolePaint, TextStyle, Theme } from '../style/theme.ts';
+import {
+  roleStroke,
+  type Role,
+  type RolePaint,
+  type TextStyle,
+  type Theme,
+} from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
 import { barHeight } from './boxes.ts';
 import { Painter, type Point } from './draw.ts';
@@ -78,11 +84,21 @@ export function layoutTransformer(model: Model, theme: Theme, engine: TextEngine
   );
   const bh = Math.max(110, longest + 22);
   const headH = Math.max(84, painter.measure('Softmax', slimText(theme.roles.hidden)).width + 24);
-  const paintOf = (p: { fill: string; stroke: string }, w = 1.2): Paint => ({
-    fill: p.fill,
-    stroke: p.stroke,
-    strokeWidth: w,
-  });
+  const roleOfPaint = (p: { fill: string; stroke: string }): Role | undefined =>
+    p === theme.roles.input
+      ? 'input'
+      : p === theme.roles.hidden
+        ? 'hidden'
+        : p === theme.roles.output
+          ? 'output'
+          : undefined;
+  // Input, hidden and output boxes take the user's outline; part boxes keep theirs.
+  const paintOf = (p: { fill: string; stroke: string }, w = 1.2): Paint => {
+    const role = roleOfPaint(p);
+    return role
+      ? { fill: p.fill, ...roleStroke(theme, role, w) }
+      : { fill: p.fill, stroke: p.stroke, strokeWidth: w };
+  };
   const sizeOf = (shape: Shape) =>
     shape.kind === 'seq'
       ? shape.tokens

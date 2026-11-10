@@ -8,7 +8,7 @@
 import { mixColor } from '../animate/random.ts';
 import type { DenseLayer, GanLayer, Model } from '../model/schema.ts';
 import type { Paint } from '../scene.ts';
-import type { TextStyle, Theme } from '../style/theme.ts';
+import { roleStroke, type TextStyle, type Theme } from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
 import { Painter, type Point } from './draw.ts';
 import type { Label } from './label.ts';
@@ -306,7 +306,7 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
           xs[c]!,
           yy,
           r,
-          { fill: paint.fill, stroke: paint.stroke, strokeWidth: 1.1 },
+          { fill: paint.fill, ...roleStroke(theme, 'hidden', 1.1) },
           {
             parent: group,
             classes: ['node', 'node-hidden'],
@@ -349,8 +349,7 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
   painter.group(`layer-${sampleLayer}`, ['layer', 'layer-hidden']);
   const realPaint: Paint = {
     fill: theme.roles.input.fill,
-    stroke: theme.roles.input.stroke,
-    strokeWidth: theme.nodeStrokeWidth,
+    ...roleStroke(theme, 'input', theme.nodeStrokeWidth),
   };
   const fakePaint: Paint = {
     fill: theme.parts.generator.fill,
@@ -386,7 +385,7 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
     scoreX,
     cy,
     SCORE_R,
-    { fill: out.fill, stroke: out.stroke, strokeWidth: theme.nodeStrokeWidth },
+    { fill: out.fill, ...roleStroke(theme, 'output', theme.nodeStrokeWidth) },
     {
       parent: `layer-${scoreLayer}`,
       classes: ['node', 'node-output'],

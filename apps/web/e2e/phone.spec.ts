@@ -149,6 +149,7 @@ test('command sheet: preset strip switches the look', async ({ page }) => {
   await openDocument(page);
   await page.getByRole('button', { name: 'All commands' }).click();
   const sheet = page.getByRole('dialog', { name: 'Commands' });
+  await sheet.getByRole('tab', { name: 'Design' }).click();
   await sheet
     .getByRole('group', { name: 'Preset' })
     .getByRole('button', { name: 'Print mono' })

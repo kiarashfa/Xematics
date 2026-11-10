@@ -5,7 +5,7 @@
 import type { Diagnostic } from '../diagnostics.ts';
 import type { MlpModel } from '../model/schema.ts';
 import { SCENE_VERSION, type Paint, type SceneItem } from '../scene.ts';
-import type { Theme } from '../style/theme.ts';
+import { roleStroke, type Theme } from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
 import { buildLabel, labelItems } from './label.ts';
 import { cleanLabel, describe, layerLabel, roleOf, type LayoutResult } from './mlp.ts';
@@ -147,8 +147,7 @@ export function layoutBoxes(model: MlpModel, theme: Theme, engine: TextEngine): 
     const role = theme.roles[bar.role];
     const paint: Paint = {
       fill: role.fill,
-      stroke: role.stroke,
-      strokeWidth: theme.nodeStrokeWidth,
+      ...roleStroke(theme, bar.role, theme.nodeStrokeWidth),
     };
     items.push({ kind: 'group', id: group, classes: ['layer', `layer-${bar.role}`] });
     items.push({

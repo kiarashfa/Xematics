@@ -138,7 +138,8 @@
     }
     if (key === 'insert') return run(() => tool.valid && tool.addLayer());
     if (key === 'delete' && layer >= 0 && count > 1) return run(() => tool.removeSelectedLayer());
-    if (key === 'escape' && layer >= 0) return run(() => tool.select({ kind: 'diagram' }));
+    if (key === 'escape' && layer >= 0 && !tool.colorOpen)
+      return run(() => tool.select({ kind: 'diagram' }));
     // Space plays and pauses the animation, unless a button has focus (Space presses it).
     if (key === ' ' && tool.playerOpen && !target.closest('button, a, [role="tab"]'))
       return run(() => (tool.playing = !tool.playing));

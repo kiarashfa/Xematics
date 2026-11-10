@@ -4,7 +4,7 @@
 
 const ELEMENTS = new Set(['svg', 'g', 'title', 'desc', 'rect', 'circle', 'line', 'path', 'text']);
 const ATTRIBUTE =
-  /^(?:xmlns|id|class|role|aria-[a-z]+|width|height|viewBox|x|y|x1|y1|x2|y2|cx|cy|r|rx|d|fill|stroke|stroke-width|opacity|font-family|font-size|font-weight|text-anchor|direction)$/;
+  /^(?:xmlns|id|class|role|aria-[a-z]+|width|height|viewBox|x|y|x1|y1|x2|y2|cx|cy|r|rx|d|fill|stroke|stroke-width|stroke-dasharray|stroke-dashoffset|opacity|font-family|font-size|font-weight|text-anchor|direction)$/;
 
 export function parseSafeSvg(markup: string): SVGSVGElement | undefined {
   if (!markup) return undefined;

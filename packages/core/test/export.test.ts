@@ -38,6 +38,7 @@ describe('PDF export', () => {
     'cnn-small.txt',
     'rnn-neurons.yaml',
     'tf-gpt.txt',
+    'colors.yaml',
   ])('%s', async (file) => {
     const pdf = ascii(renderPdf(await scene(file)));
     await expect(pdf).toMatchFileSnapshot(`./golden/${file.replace(/\.\w+$/, '')}.pdf`);
@@ -81,6 +82,8 @@ describe('TikZ export', () => {
     'tf-gpt.txt',
     'tf-encdec.yaml',
     'ae-vae.yaml',
+    'colors.yaml',
+    'colors-cnn.yaml',
   ])('%s', async (file) => {
     await expect(renderTikz(await scene(file))).toMatchFileSnapshot(
       `./golden/${file.replace(/\.\w+$/, '')}.tex`,

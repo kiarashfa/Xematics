@@ -2,9 +2,11 @@
 
 import type {
   CollapseOptions,
+  DashStyle,
   FunnelLook,
   PresetId,
   RecurrentLook,
+  RoleStyle,
   StyleOptions,
 } from '../model/schema.ts';
 
@@ -15,6 +17,9 @@ export interface RolePaint {
   readonly stroke: string;
   /** Color of node labels drawn on this fill. */
   readonly text: string;
+  /** Outline width chosen by the user for plain neurons (px); other shapes scale with it. */
+  readonly weight?: number;
+  readonly dashes?: DashStyle;
 }
 
 export interface TextStyle {
@@ -336,6 +341,73 @@ export function mergeCollapse(
   };
 }
 
+/** Outline width of plain neurons in every preset; a user weight scales other shapes by weight / this. */
+export const DEFAULT_WEIGHT = 1.5;
+
+/** Lowercase six-digit hex (#abc becomes #aabbcc). */
+export function expandHex(hex: string): string {
+  const h = hex.toLowerCase();
+  return h.length === 4 ? `#${h[1]}${h[1]}${h[2]}${h[2]}${h[3]}${h[3]}` : h;
+}
+
+// Brightness with a gamma of 2 (squares only, so Node and browsers agree to the bit).
+function brightness(hex: string): number {
+  const n = parseInt(expandHex(hex).slice(1), 16);
+  const c = (v: number) => (v / 255) * (v / 255);
+  return 0.2126 * c((n >> 16) & 255) + 0.7152 * c((n >> 8) & 255) + 0.0722 * c(n & 255);
+}
+
+function contrast(a: string, b: string): number {
+  const x = brightness(a);
+  const y = brightness(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+/** Node label color on a user fill: the preset's text color or its opposite, whichever reads better. */
+export function textOn(fill: string, presetText: string): string {
+  const other = brightness(presetText) < 0.5 ? '#ffffff' : '#1f2937';
+  return contrast(fill, other) > contrast(fill, presetText) ? other : presetText;
+}
+
+/**
+ * The outline of a role's shape drawn at `width` px by default: the user's weight scales it
+ * (0 hides it) and the dash pattern follows the drawn width.
+ */
+export function roleStroke(
+  theme: Theme,
+  role: Role,
+  width: number,
+): { stroke: string; strokeWidth?: number; dash?: readonly number[] } {
+  const paint = theme.roles[role];
+  const w = paint.weight === undefined ? width : (width * paint.weight) / DEFAULT_WEIGHT;
+  if (w <= 0) return { stroke: 'none' };
+  const dash = dashPattern(paint.dashes, w);
+  return dash
+    ? { stroke: paint.stroke, strokeWidth: w, dash }
+    : { stroke: paint.stroke, strokeWidth: w };
+}
+
+function dashPattern(style: DashStyle | undefined, width: number): number[] | undefined {
+  const u = Math.max(1, width);
+  if (style === 'dashed') return [3 * u, 2 * u];
+  if (style === 'dotted') return [u, 1.5 * u];
+  if (style === 'dash-dot') return [3 * u, 1.5 * u, u, 1.5 * u];
+  return undefined;
+}
+
+function resolveRole(base: RolePaint, user: RoleStyle | undefined): RolePaint {
+  if (!user) return base;
+  const fill = user.fill === undefined ? base.fill : expandHex(user.fill);
+  const out: { -readonly [K in keyof RolePaint]: RolePaint[K] } = {
+    fill,
+    stroke: user.outline === undefined ? base.stroke : expandHex(user.outline),
+    text: user.fill === undefined ? base.text : textOn(fill, base.text),
+  };
+  if (user.weight !== undefined) out.weight = user.weight;
+  if (user.dashes !== undefined && user.dashes !== 'solid') out.dashes = user.dashes;
+  return out;
+}
+
 export function resolveTheme(style: StyleOptions | undefined): Theme {
   const base = PRESETS[style?.preset ?? 'classic'];
   if (!style) return base;
@@ -346,6 +418,11 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
     ...base,
     nodeRadius: style.nodeRadius ?? base.nodeRadius,
     nodeSpacing: style.nodeSpacing ?? base.nodeSpacing,
+    roles: {
+      input: resolveRole(base.roles.input, style.input),
+      hidden: resolveRole(base.roles.hidden, style.hidden),
+      output: resolveRole(base.roles.output, style.output),
+    },
     layerSpacing: style.layerSpacing ?? base.layerSpacing,
     direction: style.direction ?? base.direction,
     background,

@@ -25,8 +25,10 @@
   } from '@xematics/core';
   import Icon, { type IconName } from './Icon.svelte';
   import PresetThumb from './PresetThumb.svelte';
+  import type ColorPanelComponent from './ColorPanel.svelte';
+  import type { ColorTarget } from '../color-target.ts';
 
-  const TABS = ['File', 'Home', 'View', 'Animate', 'Export', 'Help'] as const;
+  const TABS = ['File', 'Home', 'Design', 'View', 'Animate', 'Export', 'Help'] as const;
   type Tab = (typeof TABS)[number];
   let active = $state<Tab>('Home');
   let theme = $state(currentTheme());
@@ -68,17 +70,24 @@
   // A command in the temporary layer closes it.
   function onWindowClick(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    if (target.closest('.popup') && target.closest('button, a')) openGroup = '';
+    if (target.closest('.popup') && target.closest('button, a') && !target.closest('.split'))
+      openGroup = '';
     if (peek && target.closest('#ribbon-panel') && target.closest('button, a')) peek = false;
   }
 
   function onWindowPointer(event: PointerEvent) {
     const target = event.target as HTMLElement;
+    if (colorTarget && !target.closest('.colormenu, .split')) closeColor();
     if (openGroup && !target.closest('.popup, .foldbtn')) openGroup = '';
     if (peek && root && !root.contains(target)) peek = false;
   }
 
   function onWindowKey(event: KeyboardEvent) {
+    if (colorTarget && event.key === 'Escape') {
+      event.preventDefault();
+      closeColor();
+      return;
+    }
     if (openGroup && event.key === 'Escape') openGroup = '';
     if (peek && event.key === 'Escape') {
       peek = false;
@@ -229,6 +238,56 @@
     setTheme(theme);
   }
 
+  // Fill, Outline and the animation colors open a color panel under their button. The panel
+  // (swatches, picker) loads on first use.
+  let ColorPanel: typeof ColorPanelComponent | undefined = $state();
+  let colorTarget = $state<ColorTarget | undefined>();
+  let colorX = $state(0);
+  let colorY = $state(0);
+
+  const sameTarget = (a: ColorTarget | undefined, b: ColorTarget) =>
+    a !== undefined && JSON.stringify(a) === JSON.stringify(b);
+
+  async function openColor(target: ColorTarget, button: HTMLElement) {
+    const same = sameTarget(colorTarget, target);
+    closeColor();
+    if (same) return;
+    const r = button.getBoundingClientRect();
+    colorX = Math.max(4, Math.min(r.left, innerWidth - 290));
+    colorY = r.bottom + 4;
+    ColorPanel ??= (await import('./ColorPanel.svelte')).default;
+    colorTarget = target;
+    tool.colorOpen = true;
+  }
+
+  function closeColor() {
+    colorTarget = undefined;
+    tool.colorOpen = false;
+    tool.stylePreview = undefined;
+  }
+
+  // A new selection or tab closes the panel (it belongs to the old one).
+  $effect(() => {
+    void tool.selection;
+    void active;
+    untrack(closeColor);
+  });
+
+  const SPACING: Record<'layerSpacing' | 'nodeSpacing' | 'nodeRadius', [number, number]> = {
+    layerSpacing: [20, 2000],
+    nodeSpacing: [0, 200],
+    nodeRadius: [2, 100],
+  };
+
+  function setSpacing(key: keyof typeof SPACING, event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    const value = Number(input.value);
+    const [min, max] = SPACING[key];
+    if (input.value.trim() !== '' && Number.isFinite(value) && value >= min && value <= max)
+      tool.setSpacing(key, value);
+    else input.value = String(tool.spacing[key]);
+  }
+
   function setNumber(key: 'above' | 'first' | 'last', event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     const value = Number(input.value);
@@ -294,6 +353,27 @@
   >
     <Icon name={icon} size={26} /><span>{label}</span>
   </button>
+{/snippet}
+
+{#snippet colorButton(
+  icon: IconName,
+  label: string,
+  bar: string,
+  target: ColorTarget | undefined,
+  title: string,
+)}
+  <button
+    type="button"
+    class="small ic split"
+    {title}
+    aria-haspopup="dialog"
+    aria-expanded={target !== undefined && sameTarget(colorTarget, target)}
+    disabled={target === undefined}
+    onclick={(e) => target && openColor(target, e.currentTarget)}
+    ><Icon name={icon} size={18} {bar} /><span class="t">{label}</span><span class="arrow"
+      ><Icon name="chevron" size={11} /></span
+    ></button
+  >
 {/snippet}
 
 {#snippet small(icon: IconName, label: string, action: () => void, disabled = false)}
@@ -465,35 +545,12 @@
         </div>
       {/snippet}
       {@render group(1, 'Layers', 'plus', 'Layers', 'Layers', '', gHome1)}
-      {#snippet gHome2()}
-        <div class="gallery" role="group" aria-label="Preset">
-          {#each PRESET_IDS as id (id)}
-            <button
-              type="button"
-              class="thumb"
-              aria-pressed={tool.preset === id}
-              title={PRESET_NAMES[id]}
-              onclick={() => tool.setPreset(id)}
-            >
-              <PresetThumb {id} />
-              <span>{PRESET_NAMES[id]}</span>
-            </button>
-          {/each}
-        </div>
-        <div class="stack">
-          {@render toggle('Transparent background', tool.transparent, (on) =>
-            tool.setTransparent(on),
-          )}
-          {@render toggle('Right to left', tool.rightToLeft, (on) => tool.setRightToLeft(on))}
-        </div>
-      {/snippet}
-      {@render group(2, 'Style', 'canvas', 'Style', 'Style', '', gHome2)}
       {#snippet gHome3()}
         {@render toggle('Layer names', tool.labels.names, (on) => tool.setLabel('names', on))}
         {@render toggle('Neuron counts', tool.labels.sizes, (on) => tool.setLabel('sizes', on))}
         {@render toggle('Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
       {/snippet}
-      {@render group(3, 'Labels', 'tag', 'Labels', 'Labels', 'stack three', gHome3)}
+      {@render group(2, 'Labels', 'tag', 'Labels', 'Labels', 'stack three', gHome3)}
       {#snippet gHome4()}
         <label
           >Collapse above <input
@@ -526,7 +583,7 @@
         >
       {/snippet}
       {@render group(
-        4,
+        3,
         'Large layers',
         'fit',
         'Large layers',
@@ -566,8 +623,90 @@
             )}
           {/if}
         {/snippet}
-        {@render group(5, 'Network', 'layers', 'Network', 'Network', 'stack three numbers', gHome5)}
+        {@render group(4, 'Network', 'layers', 'Network', 'Network', 'stack three numbers', gHome5)}
       {/if}
+    {:else if active === 'Design'}
+      {#snippet gDesign0()}
+        {@const role = tool.selectedRole}
+        {@const which = role === 'hidden' ? 'every hidden layer' : `the ${role} layer`}
+        <div class="stack">
+          {@render colorButton(
+            'bucket',
+            'Fill',
+            role ? tool.theme.roles[role].fill : 'none',
+            role && { kind: 'role', role, part: 'fill' },
+            role ? `Fill of ${which}` : 'Fill: select a layer first',
+          )}
+          {@render colorButton(
+            'pen',
+            'Outline',
+            role ? tool.theme.roles[role].stroke : 'none',
+            role && { kind: 'role', role, part: 'outline' },
+            role ? `Outline of ${which}` : 'Outline: select a layer first',
+          )}
+          {@render small('undo', 'Reset colors', () => tool.resetColors(), !tool.customColors)}
+        </div>
+      {/snippet}
+      {@render group(0, 'Colors', 'palette', 'Colors', 'Colors', '', gDesign0)}
+      {#snippet gDesign1()}
+        <div class="stack numbers">
+          <label title="Minimum distance between layers; long labels can push layers further apart"
+            >Layer gap <input
+              type="number"
+              min="20"
+              max="2000"
+              step="5"
+              value={tool.spacing.layerSpacing}
+              onchange={(e) => setSpacing('layerSpacing', e)}
+            /></label
+          >
+          <label title="Space between neurons in a layer"
+            >Node gap <input
+              type="number"
+              min="0"
+              max="200"
+              value={tool.spacing.nodeSpacing}
+              onchange={(e) => setSpacing('nodeSpacing', e)}
+            /></label
+          >
+          <label title="Neuron size"
+            >Node radius <input
+              type="number"
+              min="2"
+              max="100"
+              value={tool.spacing.nodeRadius}
+              onchange={(e) => setSpacing('nodeRadius', e)}
+            /></label
+          >
+        </div>
+        <div class="stack">
+          {@render small('undo', 'Reset spacing', () => tool.resetSpacing(), !tool.customSpacing)}
+        </div>
+      {/snippet}
+      {@render group(1, 'Spacing', 'spacing', 'Spacing', 'Spacing', '', gDesign1)}
+      {#snippet gDesign2()}
+        <div class="gallery">
+          {#each PRESET_IDS as id (id)}
+            <button
+              type="button"
+              class="thumb"
+              aria-pressed={tool.preset === id}
+              title={PRESET_NAMES[id]}
+              onclick={() => tool.setPreset(id)}
+            >
+              <PresetThumb {id} />
+              <span>{PRESET_NAMES[id]}</span>
+            </button>
+          {/each}
+        </div>
+        <div class="stack">
+          {@render toggle('Transparent background', tool.transparent, (on) =>
+            tool.setTransparent(on),
+          )}
+          {@render toggle('Right to left', tool.rightToLeft, (on) => tool.setRightToLeft(on))}
+        </div>
+      {/snippet}
+      {@render group(2, 'Preset', 'canvas', 'Preset', 'Preset', '', gDesign2)}
     {:else if active === 'View'}
       {#snippet gView0()}
         {@render big('fit', 'Fit', () => (tool.zoom = 'fit'))}
@@ -653,6 +792,26 @@
         {@render toggle('Weight colors in still images', tool.weights, (on) => tool.setWeights(on))}
       {/snippet}
       {@render group(3, 'Layers and weights', 'layers', 'Layers', 'Layers', 'stack', gAnimate3)}
+      {#snippet gAnimate5()}
+        <div class="stack">
+          {@render colorButton(
+            'forward',
+            'Forward',
+            tool.motionColors.forward,
+            { kind: 'motion', key: 'forward' },
+            'Forward pass color',
+          )}
+          {@render colorButton(
+            'backward',
+            'Backward',
+            tool.motionColors.backward,
+            { kind: 'motion', key: 'backward' },
+            'Backward pass color',
+          )}
+          {@render small('undo', 'Reset colors', () => tool.resetMotion(), !tool.customMotion)}
+        </div>
+      {/snippet}
+      {@render group(4, 'Animation colors', 'palette', 'Colors', 'Colors', '', gAnimate5)}
       {#snippet gAnimate4()}
         {@render big('download', 'Animated SVG', () => exportAnimation('svg'), !tool.layout)}
         <div class="stack">
@@ -660,7 +819,7 @@
           {@render small('film', 'Video', () => exportAnimation('video'), !tool.layout)}
         </div>
       {/snippet}
-      {@render group(4, 'Save animation', 'download', 'Save', 'Save', '', gAnimate4)}
+      {@render group(5, 'Save animation', 'download', 'Save', 'Save', '', gAnimate4)}
     {:else if active === 'Export'}
       {#snippet gExport0()}
         {@render big('download', 'Export SVG', () => exportAs('svg'), !tool.layout, true)}
@@ -740,6 +899,11 @@
       {@render group(3, 'Privacy', 'check', 'Privacy', 'Privacy', 'stack', gHelp3)}
     {/if}
   </div>
+  {#if colorTarget && ColorPanel}
+    <div class="colormenu" style:left="{colorX}px" style:top="{colorY}px">
+      <ColorPanel target={colorTarget} onClose={closeColor} />
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -884,6 +1048,28 @@
     border-radius: 4px;
     background: var(--surface);
     box-shadow: 0 6px 14px rgb(0 0 0 / 0.25);
+  }
+
+  .colormenu {
+    position: fixed;
+    z-index: 30;
+    max-height: calc(100vh - 140px);
+    padding: 8px 10px;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--surface);
+    box-shadow: 0 8px 20px rgb(0 0 0 / 0.28);
+  }
+
+  .split .arrow {
+    display: inline-flex;
+    margin-left: -3px;
+    opacity: 0.7;
+  }
+
+  .split[aria-expanded='true'] {
+    background: var(--surface-2);
   }
 
   .stack {

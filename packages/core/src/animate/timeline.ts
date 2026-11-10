@@ -11,7 +11,7 @@
 
 import type { AnimationLook, AnimationOptions, AnimationScene } from '../model/schema.ts';
 import type { CircleItem, Paint, Scene, SceneItem } from '../scene.ts';
-import type { Theme } from '../style/theme.ts';
+import { expandHex, type Theme } from '../style/theme.ts';
 import { edgeWeight, mixColor, seeded, hash, weightPaint } from './random.ts';
 
 /** Paint values a keyframe can set. `tx`/`ty` move an item (the signal dots). */
@@ -137,6 +137,12 @@ export function buildTimeline(
   options: AnimationOptions | undefined,
 ): Timeline {
   const anim = resolveAnimation(options);
+  if (options?.forward !== undefined || options?.backward !== undefined) {
+    const motion = { ...theme.motion };
+    if (options.forward !== undefined) motion.forward = expandHex(options.forward);
+    if (options.backward !== undefined) motion.backward = expandHex(options.backward);
+    theme = { ...theme, motion };
+  }
   const { parts, layers } = partsOf(scene);
   const built =
     anim.look === 'learning'
@@ -180,16 +186,25 @@ function signal(parts: Part[], layers: number, theme: Theme, anim: ResolvedAnima
     let base: Props;
     let active: (color: string, dir: 1 | -1, k: 0 | 1) => Props;
     if (role === 'node') {
-      base = { fill: paint.fill ?? 'none', stroke: paint.stroke ?? 'none', strokeWidth: width };
+      // A dashed outline turns solid while the node is lit, so the highlight reads as one ring.
+      const dash = paint.dash ? { dash: paint.dash } : {};
+      const solid = paint.dash ? { dash: [] } : {};
+      base = {
+        fill: paint.fill ?? 'none',
+        stroke: paint.stroke ?? 'none',
+        strokeWidth: width,
+        ...dash,
+      };
       active = (color) =>
         hidden && anim.grayHidden
-          ? { fill: base.fill!, stroke: grayBorder, strokeWidth: width * 1.9 }
+          ? { fill: base.fill!, stroke: grayBorder, strokeWidth: width * 1.9, ...solid }
           : {
               fill: paint.fill
                 ? mixColor(paint.fill, color, anim.look === 'pulse' ? 0.45 : 0.25)
                 : 'none',
               stroke: color,
               strokeWidth: width * 1.9,
+              ...solid,
             };
     } else if (role === 'window') {
       base = { fill: paint.fill ?? 'none', stroke: paint.stroke ?? 'none', strokeWidth: width };
@@ -329,7 +344,12 @@ function training(parts: Part[], layers: number, theme: Theme, grayHidden: boole
     if (role === 'node') {
       const fill = paint.fill ?? '#ffffff';
       const stroke = paint.stroke ?? '#4b5563';
-      const base: Props = { fill, stroke, strokeWidth: width };
+      // No outline (weight 0) still gets the ring; a dashed outline turns solid for it.
+      const dashed = paint.dash !== undefined;
+      const base: Props = dashed
+        ? { fill, stroke, strokeWidth: width, dash: paint.dash }
+        : { fill, stroke, strokeWidth: width };
+      const solid = dashed ? { dash: [] } : {};
       const isOutput = layer === layers - 1;
       const hidden = layer > 0 && !isOutput;
       const neuron = item.kind === 'circle' ? Number(item.id.split('-')[2]) : -1;
@@ -347,11 +367,13 @@ function training(parts: Part[], layers: number, theme: Theme, grayHidden: boole
           fill: gray ? fill : mixColor(fill, blue, 0.1 + 0.8 * a),
           stroke: gray ? grayBorder : stroke,
           strokeWidth: gray ? width * 1.7 : width,
+          ...(dashed ? { dash: gray ? [] : paint.dash } : {}),
         };
         const ring: Props = {
           fill: lit.fill!,
           stroke: gray ? grayBorder : red,
           strokeWidth: width * 2,
+          ...solid,
         };
         const on = forwardAt(layer);
         stops.push([at(e, 0.02), base], [at(e, on), base], [at(e, on + 0.05), lit]);

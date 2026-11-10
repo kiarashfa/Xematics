@@ -258,7 +258,7 @@ A plain network such as `8-4-2-4-8` can be drawn the same way: turn on Draw as a
 
 ## Styles and presets
 
-A preset sets every color and shape at once. Pick one in the Home tab, or write it:
+A preset sets every color and shape at once. Pick one in the Design tab, or write it:
 
 ```yaml
 style: { preset: colorblind }
@@ -279,6 +279,41 @@ style: { preset: boxes }
 `}
   caption="The Layer boxes preset"
 />
+
+### Colors and outlines
+
+To change colors, select a layer (in the figure or the navigator), then open **Fill** or
+**Outline** in the Design tab. Colors belong to the kind of layer: input, hidden or output, so
+every hidden layer shares one color. Hover a swatch to see it on the figure, click to keep it, or
+open **More colors** to pick any color by hex, RGB or HSL. The Outline menu also sets the weight
+(None hides the outline) and the dashes. Text inside nodes turns dark or white to stay readable.
+Your colors stay when you switch presets; **Reset colors** brings back the preset's.
+
+```yaml
+style:
+  hidden: { fill: '#e8f4ea', outline: '#009e73', weight: 2, dashes: dashed }
+  output: { fill: '#1f2937' }
+```
+
+| Key       | Values                                    | Default      |
+| --------- | ----------------------------------------- | ------------ |
+| `fill`    | a quoted color                            | the preset's |
+| `outline` | a quoted color                            | the preset's |
+| `weight`  | 0 to 20 (outline width of a plain neuron) | 1.5          |
+| `dashes`  | `solid`, `dashed`, `dotted` or `dash-dot` | `solid`      |
+
+<Figure
+  id="g-colors"
+  source={`layers: [3, 5, 4, 2]
+style: { hidden: { fill: '#e8f4ea', outline: '#009e73', weight: 2, dashes: dashed }, output: { fill: '#1f2937' } }
+`}
+  caption="Custom colors for hidden and output layers"
+/>
+
+### Spacing
+
+The Spacing group of the Design tab sets the layer gap, the node gap and the node radius. The
+layer gap is a minimum: long labels can push layers further apart.
 
 Other style options:
 
@@ -320,19 +355,22 @@ under the figure. There are five looks:
 | `training` | Five examples in a loop: the signal goes forward, the error comes back, the weights change. |
 
 Pulse, Flow and Dots show the forward pass in blue, backpropagation in vermillion, or both in
-turn. The settings are saved with the diagram:
+turn. Change both colors with **Forward** and **Backward** in the Animate tab. The settings are
+saved with the diagram:
 
 ```yaml
-animation: { look: training, speed: 0.5, grayHidden: true }
+animation: { look: training, speed: 0.5, grayHidden: true, forward: '#009e73' }
 ```
 
-| Key          | Values                                          | Default |
-| ------------ | ----------------------------------------------- | ------- |
-| `look`       | `pulse`, `flow`, `dots`, `learning`, `training` | `pulse` |
-| `scene`      | `forward`, `backward` or `both`                 | `both`  |
-| `speed`      | 0.25 to 4                                       | 1       |
-| `loop`       | `true` or `false`                               | `true`  |
-| `grayHidden` | `true` or `false`                               | `false` |
+| Key          | Values                                          | Default      |
+| ------------ | ----------------------------------------------- | ------------ |
+| `look`       | `pulse`, `flow`, `dots`, `learning`, `training` | `pulse`      |
+| `scene`      | `forward`, `backward` or `both`                 | `both`       |
+| `speed`      | 0.25 to 4                                       | 1            |
+| `loop`       | `true` or `false`                               | `true`       |
+| `grayHidden` | `true` or `false`                               | `false`      |
+| `forward`    | a quoted color                                  | the preset's |
+| `backward`   | a quoted color                                  | the preset's |
 
 With `grayHidden`, hidden layers keep their gray and only get a darker border when the signal
 reaches them. Save the animation from the Animate tab:

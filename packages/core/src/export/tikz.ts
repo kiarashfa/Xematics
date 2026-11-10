@@ -43,10 +43,12 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   };
   const paintStyle = (p: Paint) => {
     const parts: string[] = [];
-    if (p.fill) parts.push(`fill=${color(p.fill)}`);
-    if (p.stroke)
+    if (p.fill) parts.push(p.fill === 'none' ? 'fill=none' : `fill=${color(p.fill)}`);
+    if (p.stroke === 'none') parts.push('draw=none');
+    else if (p.stroke)
       parts.push(`draw=${color(p.stroke)}`, `line width=${n((p.strokeWidth ?? 1) * PT_PER_PX)}pt`);
     if (p.opacity !== undefined && p.opacity < 1) parts.push(`opacity=${n(p.opacity)}`);
+    if (p.dash && p.dash.length >= 2) parts.push(dashStyle(p.dash, n));
     return parts.join(', ');
   };
   const roleOf = (item: SceneItem, prefix: string) =>
@@ -281,8 +283,7 @@ function genericItems(
     if (p.stroke && p.stroke !== 'none')
       parts.push(`draw=${color(p.stroke)}`, `line width=${n((p.strokeWidth ?? 1) * PT)}pt`);
     if (p.opacity !== undefined && p.opacity < 1) parts.push(`opacity=${n(p.opacity)}`);
-    if (p.dash && p.dash.length >= 2)
-      parts.push(`dash pattern=on ${n(p.dash[0]! * PT)}pt off ${n(p.dash[1]! * PT)}pt`);
+    if (p.dash && p.dash.length >= 2) parts.push(dashStyle(p.dash, n));
     return parts.join(', ');
   };
   const named = (item: SceneItem, body: string) => {
@@ -467,4 +468,12 @@ function normalizeHex(hex: string): string {
 function n(value: number): string {
   const rounded = Math.round(value * 100) / 100;
   return Object.is(rounded, -0) ? '0' : String(rounded);
+}
+
+/** A TikZ dash pattern from SVG-style lengths in px (every on/off pair). */
+function dashStyle(dash: readonly number[], n: (value: number) => string): string {
+  const pairs: string[] = [];
+  for (let i = 0; i + 1 < dash.length; i += 2)
+    pairs.push(`on ${n(dash[i]! * PT_PER_PX)}pt off ${n(dash[i + 1]! * PT_PER_PX)}pt`);
+  return `dash pattern=${pairs.join(' ')}`;
 }

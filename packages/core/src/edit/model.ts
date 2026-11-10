@@ -7,8 +7,10 @@ import {
   type Layer,
   type LayerType,
   type Model,
+  type RoleStyle,
   type StyleOptions,
 } from '../model/schema.ts';
+import type { Role } from '../style/theme.ts';
 import {
   joinTokens,
   layerToken,
@@ -245,10 +247,18 @@ export function layerCount(layer: Layer):
 }
 
 export type AnimationPatch = Patch<AnimationOptions>;
+export type RolePatch = Patch<RoleStyle>;
+
+/** Changes one layer kind's colors and outline; 'solid' dashes and an empty block are dropped. */
+export function patchRole(model: Model, role: Role, patch: RolePatch): Model {
+  const next = clean({ ...model.style?.[role], ...patch });
+  if (next.dashes === 'solid') delete next.dashes;
+  return patchStyle(model, { [role]: isEmpty(next) ? undefined : next });
+}
 
 /** Changes animation settings; settings equal to the defaults are dropped, as is an empty block. */
 export function patchAnimation(model: Model, patch: AnimationPatch): Model {
-  const defaults: Required<AnimationOptions> = {
+  const defaults: Partial<Record<keyof AnimationOptions, unknown>> = {
     look: 'pulse',
     scene: 'both',
     speed: 1,

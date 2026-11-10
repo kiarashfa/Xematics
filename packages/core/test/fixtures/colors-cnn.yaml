@@ -1,0 +1,6 @@
+# Role colors and dotted outlines on feature maps and the dense head.
+layers: in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(16)-fc(4)
+style:
+  preset: colorblind
+  hidden: { fill: '#f6efa6', outline: '#8a7f00', weight: 1, dashes: dash-dot }
+  output: { outline: '#d55e00', dashes: dotted }

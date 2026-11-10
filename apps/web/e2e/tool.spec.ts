@@ -244,6 +244,7 @@ test.describe('desktop editor', () => {
 
   test('preset gallery switches the look and writes only the preset', async ({ page }) => {
     await openEditor(page);
+    await page.getByRole('tab', { name: 'Design' }).click();
     const style = page.getByRole('group', { name: 'Preset' });
     await style.getByRole('button', { name: 'Layer boxes' }).click();
     await expect(style.getByRole('button', { name: 'Layer boxes' })).toHaveAttribute(
@@ -256,6 +257,89 @@ test.describe('desktop editor', () => {
     await style.getByRole('button', { name: 'Classic' }).click();
     await expect(source(page)).not.toHaveValue(/style:/);
     await expect(page.locator('#pv-node-1-0')).toBeAttached();
+  });
+
+  test('Design tab colors the selected layer kind, with outline, picker and reset', async ({
+    page,
+  }) => {
+    await openEditor(page);
+    await page.getByRole('tab', { name: 'Design' }).click();
+    const fill = page.getByRole('button', { name: 'Fill', exact: true });
+    // Fill and Outline need a selected layer.
+    await expect(fill).toBeDisabled();
+    await page
+      .getByRole('navigation', { name: 'Layers' })
+      .getByRole('button', { name: /Hidden 1/ })
+      .click();
+    await page.getByRole('tab', { name: 'Design' }).click();
+    await fill.click();
+    const panel = page.getByRole('dialog', { name: 'Fill of hidden layers' });
+    await expect(panel).toBeVisible();
+    // The same-kind layer gets a frame too; the selected one a solid one.
+    await expect(page.locator('.pv-frame')).toHaveCount(2);
+    await expect(page.locator('.pv-frame-selected')).toHaveCount(1);
+    const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+    expect(results.violations.map((v) => v.id)).toEqual([]);
+    // Hovering previews without writing; clicking writes one edit.
+    await panel.getByRole('button', { name: '#009e73' }).first().hover();
+    await expect(page.locator('#pv-node-1-0')).toHaveCSS('fill', 'rgb(0, 158, 115)');
+    await expect(source(page)).not.toHaveValue(/009e73/);
+    await panel.getByRole('button', { name: '#009e73' }).first().click();
+    await expect(panel).toBeHidden();
+    await expect(source(page)).toHaveValue(/hidden: \{ fill: "?'?#009e73"?'? \}/);
+    await expect(page.locator('#pv-node-2-0')).toHaveCSS('fill', 'rgb(0, 158, 115)');
+
+    // Outline: weight and dashes, then a color typed in the picker.
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    const outline = page.getByRole('dialog', { name: 'Outline of hidden layers' });
+    await outline.getByRole('button', { name: '3 px' }).click();
+    await outline.getByRole('button', { name: 'Dashed' }).click();
+    await expect(source(page)).toHaveValue(/weight: 3/);
+    await expect(source(page)).toHaveValue(/dashes: dashed/);
+    await expect(page.locator('#pv-node-1-0')).toHaveCSS('stroke-dasharray', '9px, 6px');
+    await outline.getByRole('button', { name: 'More colors…' }).click();
+    await outline.getByRole('textbox', { name: 'Hex' }).fill('#abc');
+    await outline.getByRole('button', { name: 'OK' }).click();
+    await expect(source(page)).toHaveValue(/outline: "?'?#aabbcc/);
+
+    // Escape closes a panel and keeps the selection; Undo takes back one step at a time.
+    await page.getByRole('button', { name: 'Outline', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Outline of hidden layers' })).toBeHidden();
+    await expect(page.locator('.pv-frame-selected')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Undo' }).first().click();
+    await expect(source(page)).not.toHaveValue(/aabbcc/);
+    await expect(source(page)).toHaveValue(/dashes: dashed/);
+
+    await page.getByRole('button', { name: 'Reset colors' }).click();
+    await expect(source(page)).not.toHaveValue(/hidden:/);
+  });
+
+  test('Design tab spacing and Animate tab colors write the source', async ({ page }) => {
+    await openEditor(page);
+    await page.getByRole('tab', { name: 'Design' }).click();
+    const gap = page.getByRole('spinbutton', { name: 'Layer gap' });
+    await expect(gap).toHaveValue('110');
+    await gap.fill('160');
+    await gap.press('Enter');
+    await expect(source(page)).toHaveValue(/layerSpacing: 160/);
+    // Out of range goes back to the current value.
+    await gap.fill('5');
+    await gap.press('Enter');
+    await expect(gap).toHaveValue('160');
+    await page.getByRole('button', { name: 'Reset spacing' }).click();
+    await expect(source(page)).not.toHaveValue(/layerSpacing/);
+
+    await page.getByRole('tab', { name: 'Animate' }).click();
+    await page.getByRole('button', { name: 'Forward', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Forward pass color' })
+      .getByRole('button', { name: '#009e73' })
+      .first()
+      .click();
+    await expect(source(page)).toHaveValue(/forward: "?'?#009e73/);
+    await page.getByRole('button', { name: 'Reset colors' }).click();
+    await expect(source(page)).not.toHaveValue(/forward/);
   });
 
   test('layer boxes export is byte-identical to the Node golden file', async ({ page }) => {
@@ -345,6 +429,7 @@ test('the YAML reader loads only when a source needs it', async ({ page, isMobil
   await expect(page.getByRole('textbox', { name: /Layer sizes/ })).toHaveValue('784-128*2-10');
   expect(yamlLoaded).toBe(false);
   // A style change turns shorthand into YAML, which loads the reader first.
+  await page.getByRole('tab', { name: 'Design' }).click();
   await page
     .getByRole('group', { name: 'Preset' })
     .getByRole('button', { name: 'Layer boxes' })
@@ -464,6 +549,7 @@ test.describe('text and math', () => {
 
   test('right to left flow and node labels write minimal YAML', async ({ page }) => {
     await openEditor(page);
+    await page.getByRole('tab', { name: 'Design' }).click();
     await page.getByRole('switch', { name: 'Right to left' }).check();
     await expect(source(page)).toHaveValue(/style:\n {2}direction: rtl/);
     await page
@@ -496,7 +582,7 @@ test.describe('exports', () => {
       .getByRole('tablist', { name: 'Ribbon' })
       .getByRole('tab')
       .allInnerTexts();
-    expect(tabs).toEqual(['File', 'Home', 'View', 'Animate', 'Export', 'Help']);
+    expect(tabs).toEqual(['File', 'Home', 'Design', 'View', 'Animate', 'Export', 'Help']);
     await page.getByRole('tab', { name: 'Export' }).click();
     for (const group of ['Images', 'Documents', 'Share', 'Export options']) {
       await expect(page.getByRole('group', { name: group })).toBeVisible();
@@ -512,7 +598,7 @@ test.describe('exports', () => {
 
   test('the ribbon never scrolls and its captions line up', async ({ page }) => {
     await openEditor(page);
-    for (const tab of ['File', 'Home', 'View', 'Animate', 'Export', 'Help']) {
+    for (const tab of ['File', 'Home', 'Design', 'View', 'Animate', 'Export', 'Help']) {
       await page.getByRole('tab', { name: tab }).click();
       const panel = page.locator('#ribbon-panel');
       const fits = await panel.evaluate((el) => el.scrollHeight <= el.clientHeight);

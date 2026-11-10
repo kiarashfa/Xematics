@@ -31,6 +31,7 @@ import {
   parseModel,
   parseShorthand,
   parseWorkspace,
+  patchRole,
   patchStyle,
   prepareModel,
   PRESETS,
@@ -42,6 +43,8 @@ import {
   updateText,
   type Diagnostic,
   type Family,
+  type Role,
+  type RolePatch,
   type StylePatch,
   type Model,
   type Scene,
@@ -62,6 +65,19 @@ export type SaveStatus = 'saved' | 'saving' | 'error';
 export type Selection = { kind: 'diagram' } | { kind: 'layer'; index: number };
 
 const DEFAULTS = PRESETS.classic;
+const ROLE_KEYS = ['input', 'hidden', 'output'] as const;
+const RECENT_KEY = 'xm-recent-colors';
+
+function readRecent(): string[] {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]');
+    return Array.isArray(value)
+      ? value.filter((c): c is string => typeof c === 'string' && /^#[0-9a-f]{6}$/.test(c))
+      : [];
+  } catch {
+    return [];
+  }
+}
 const HISTORY_LIMIT = 200;
 /** Keystrokes closer together than this become one undo step. */
 const COALESCE_MS = 800;
@@ -144,9 +160,13 @@ export class ToolState {
   });
   valid = $derived(this.parsed.model !== undefined);
   errors = $derived(this.parsed.diagnostics.filter((d) => d.severity === 'error'));
+  /** A style change shown in the preview only (hovered swatch, dragged picker); not in the text. */
+  stylePreview = $state.raw<((model: Model) => Model) | undefined>(undefined);
+  /** The model the preview draws: the source's, with any previewed style change on top. */
+  shown = $derived(this.model && this.stylePreview ? this.stylePreview(this.model) : this.model);
   layout = $derived.by(() => {
     void this.textVersion;
-    return this.engine && this.model ? layoutModel(this.model, this.engine) : undefined;
+    return this.engine && this.shown ? layoutModel(this.shown, this.engine) : undefined;
   });
   warnings = $derived<Diagnostic[]>([
     ...this.parsed.diagnostics.filter((d) => d.severity === 'warning'),
@@ -160,7 +180,7 @@ export class ToolState {
   animation = $derived(resolveAnimation(this.model?.animation));
   timeline = $derived<Timeline | undefined>(
     this.playerOpen && this.layout
-      ? buildTimeline(this.layout.scene, resolveTheme(this.model?.style), this.model?.animation)
+      ? buildTimeline(this.layout.scene, resolveTheme(this.shown?.style), this.shown?.animation)
       : undefined,
   );
   preview = $derived(
@@ -320,6 +340,80 @@ export class ToolState {
     autoencoder: this.model?.style?.autoencoder === true,
   });
   preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');
+  /** The resolved style: role colors, spacing and animation colors as drawn. */
+  theme = $derived(resolveTheme(this.model?.style));
+  /** The kind (input, hidden, output) of the selected layer, read from the drawn diagram. */
+  selectedRole = $derived.by<Role | undefined>(() => {
+    if (this.selection.kind !== 'layer') return undefined;
+    const id = `layer-${this.selection.index}`;
+    const group = this.layout?.scene.items.find((item) => item.kind === 'group' && item.id === id);
+    const role = group?.classes?.find((c) => /^layer-(input|hidden|output)$/.test(c));
+    return role ? (role.slice(6) as Role) : undefined;
+  });
+  /** Effective spacing: the source's values, or the preset's (convolutional models have their own). */
+  spacing = $derived({
+    layerSpacing: this.theme.layerSpacing,
+    nodeSpacing: this.family === 'cnn' ? this.theme.maps.nodeSpacing : this.theme.nodeSpacing,
+    nodeRadius: this.family === 'cnn' ? this.theme.maps.nodeRadius : this.theme.nodeRadius,
+  });
+  customSpacing = $derived(
+    ['layerSpacing', 'nodeSpacing', 'nodeRadius'].some(
+      (key) => this.model?.style?.[key as 'layerSpacing'] !== undefined,
+    ),
+  );
+  customColors = $derived(ROLE_KEYS.some((role) => this.model?.style?.[role] !== undefined));
+  motionColors = $derived({
+    forward: this.model?.animation?.forward ?? this.theme.motion.forward,
+    backward: this.model?.animation?.backward ?? this.theme.motion.backward,
+  });
+  customMotion = $derived(
+    this.model?.animation?.forward !== undefined || this.model?.animation?.backward !== undefined,
+  );
+  /** A color panel is open (Escape then closes it instead of clearing the selection). */
+  colorOpen = $state(false);
+  /** Colors picked in this browser, newest first. */
+  recentColors = $state<string[]>(readRecent());
+
+  /** Changes the colors or outline of every layer of one kind. */
+  setRole(role: Role, patch: RolePatch): void {
+    this.edit((model) => patchRole(model, role, patch));
+  }
+
+  resetColors(): void {
+    this.edit((model) =>
+      patchStyle(model, { input: undefined, hidden: undefined, output: undefined }),
+    );
+  }
+
+  /** Changes a spacing; the preset's own value is removed from the source. */
+  setSpacing(key: 'layerSpacing' | 'nodeSpacing' | 'nodeRadius', value: number): void {
+    const base = PRESETS[this.preset];
+    const preset = key !== 'layerSpacing' && this.family === 'cnn' ? base.maps[key] : base[key];
+    this.edit((model) => patchStyle(model, { [key]: value === preset ? undefined : value }));
+  }
+
+  resetSpacing(): void {
+    this.edit((model) =>
+      patchStyle(model, { layerSpacing: undefined, nodeSpacing: undefined, nodeRadius: undefined }),
+    );
+  }
+
+  setMotion(key: 'forward' | 'backward', color: string | undefined): void {
+    this.edit((model) => patchAnimation(model, { [key]: color }));
+  }
+
+  resetMotion(): void {
+    this.edit((model) => patchAnimation(model, { forward: undefined, backward: undefined }));
+  }
+
+  rememberColor(color: string): void {
+    this.recentColors = [color, ...this.recentColors.filter((c) => c !== color)].slice(0, 10);
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(this.recentColors));
+    } catch {
+      // Private mode: recent colors last for this visit.
+    }
+  }
 
   // Settings equal to the preset default are removed, so the source stays short.
   setLabel(key: 'names' | 'sizes' | 'ops', on: boolean): void {

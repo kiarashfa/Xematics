@@ -9,7 +9,7 @@
 import { mixColor } from '../animate/random.ts';
 import type { DenseLayer, Model } from '../model/schema.ts';
 import type { Paint } from '../scene.ts';
-import type { RolePaint, TextStyle, Theme } from '../style/theme.ts';
+import { roleStroke, type RolePaint, type TextStyle, type Theme } from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
 import { Painter } from './draw.ts';
 import { cleanLabel, slotsOf, type LayoutResult, type Slot } from './mlp.ts';
@@ -271,7 +271,7 @@ export function layoutAutoencoder(model: Model, theme: Theme, engine: TextEngine
     const p = theme.roles[role];
     const fill =
       c.kind === 'latent' || c.kind === 'mean' || c.kind === 'sampled' ? latentFill : p.fill;
-    const paint: Paint = { fill, stroke: p.stroke, strokeWidth: theme.nodeStrokeWidth * 0.85 };
+    const paint: Paint = { fill, ...roleStroke(theme, role, theme.nodeStrokeWidth * 0.85) };
     for (const n of ys(k)) {
       if (n.slot === 'ellipsis') {
         const id = `ellipsis-${k}${n.part}`;

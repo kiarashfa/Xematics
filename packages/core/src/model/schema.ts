@@ -61,6 +61,10 @@ export const DIRECTIONS = ['ltr', 'rtl'] as const;
 export const ANIMATION_LOOKS = ['pulse', 'flow', 'dots', 'learning', 'training'] as const;
 /** Which way the signal looks (pulse, flow, dots) run. */
 export const ANIMATION_SCENES = ['forward', 'backward', 'both'] as const;
+/** Outline patterns for a layer kind's nodes. */
+export const DASH_STYLES = ['solid', 'dashed', 'dotted', 'dash-dot'] as const;
+/** Layer kinds whose colors a style can set. */
+export const ROLES = ['input', 'hidden', 'output'] as const;
 
 /** Activation names are identifiers so they stay valid in the shorthand: relu, leaky_relu, softmax. */
 export const ACTIVATION_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -93,6 +97,21 @@ function text(max: number) {
 }
 
 const flag = () => v.boolean('must be true or false.');
+
+const COLOR_MESSAGE = "must be a quoted hex color like '#1f77b4'.";
+const color = () => v.pipe(v.string(COLOR_MESSAGE), v.regex(HEX_COLOR, COLOR_MESSAGE));
+
+/** Fill and outline of one layer kind (input, hidden or output); unset parts keep the preset's. */
+export const RoleStyleSchema = v.strictObject(
+  {
+    fill: v.optional(color()),
+    outline: v.optional(color()),
+    /** Outline width in px for plain neurons (other shapes scale with it); 0 hides the outline. */
+    weight: v.optional(decimal(0, 20)),
+    dashes: v.optional(v.picklist(DASH_STYLES, `must be one of: ${DASH_STYLES.join(', ')}.`)),
+  },
+  "must be an object like { fill: '#d4e8f5', outline: '#0072b2' }.",
+);
 
 /** Collapse rule: layers with more than `above` neurons show the `first` and `last` ones around an ellipsis. */
 export const CollapseSchema = v.strictObject(
@@ -367,6 +386,10 @@ export const StyleSchema = v.strictObject(
     funnel: v.optional(v.picklist(FUNNEL_LOOKS, `must be one of: ${FUNNEL_LOOKS.join(', ')}.`)),
     /** Draw a fully connected network as an autoencoder: funnels meeting at its smallest layer. */
     autoencoder: v.optional(flag()),
+    /** Colors and outlines of the input, hidden and output layers, over the preset's. */
+    input: v.optional(RoleStyleSchema),
+    hidden: v.optional(RoleStyleSchema),
+    output: v.optional(RoleStyleSchema),
   },
   'must be an object like { preset: classic }.',
 );
@@ -381,6 +404,9 @@ export const AnimationSchema = v.strictObject(
     loop: v.optional(flag()),
     /** Hidden layers keep their fill and only get a darker border when the flow reaches them. */
     grayHidden: v.optional(flag()),
+    /** Colors of the forward signal and the backward error (default: the preset's). */
+    forward: v.optional(color()),
+    backward: v.optional(color()),
   },
   'must be an object like { look: pulse, scene: both }.',
 );
@@ -418,6 +444,8 @@ export type GanLayer = Extract<Layer, { type: 'gan' }>;
 export type AutoencoderLayer = Extract<Layer, { type: 'autoencoder' }>;
 export type RecurrentLook = (typeof RECURRENT_LOOKS)[number];
 export type FunnelLook = (typeof FUNNEL_LOOKS)[number];
+export type DashStyle = (typeof DASH_STYLES)[number];
+export type RoleStyle = v.InferOutput<typeof RoleStyleSchema>;
 export type Padding = (typeof PADDINGS)[number];
 export type PoolMode = (typeof POOL_MODES)[number];
 

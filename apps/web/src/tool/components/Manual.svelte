@@ -158,7 +158,10 @@ layers:
       <dt><code>layers</code></dt>
       <dd>The layers, input first.</dd>
       <dt><code>style</code></dt>
-      <dd>Options for the whole figure: preset, labels, collapse rule, weights.</dd>
+      <dd>
+        Options for the whole figure: preset, labels, collapse rule, weights, spacing, and the
+        colors of the input, hidden and output layers.
+      </dd>
       <dt><code>animation</code></dt>
       <dd>Look, scene, speed and loop for the Animate tab.</dd>
     </dl>

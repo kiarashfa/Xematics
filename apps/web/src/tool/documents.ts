@@ -14,7 +14,9 @@ export const EXAMPLES = [
 export function documentName(text: string): string {
   const title = /^\s*title:\s*['"]?(.+?)['"]?\s*$/m.exec(text)?.[1];
   const first = text.trim().split('\n')[0] ?? '';
-  return (title ?? first).slice(0, 48) || 'Untitled';
+  // A YAML key or a JSON brace says nothing about the diagram (style edits turn shorthand into YAML).
+  const plain = /^(\{|[A-Za-z_]+:)/.test(first) ? '' : first;
+  return (title ?? plain).slice(0, 48) || 'Untitled';
 }
 
 /** Style presets in the order the ribbon shows them. */
