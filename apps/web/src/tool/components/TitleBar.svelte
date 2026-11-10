@@ -23,6 +23,20 @@
       (visitor.dot === 'pending' || visitor.dot === 'auth'),
   );
 
+  // The title renames in place: Enter or leaving the field saves, Escape cancels.
+  let renaming = $state(false);
+
+  function finish(input: HTMLInputElement, save: boolean) {
+    if (!renaming) return;
+    renaming = false;
+    if (save && input.value.trim() !== (tool.model?.title ?? '')) tool.setTitle(input.value);
+  }
+
+  const focus = (input: HTMLInputElement) => {
+    input.focus();
+    input.select();
+  };
+
   async function saveNow() {
     const cloud = await import('../../user/cloud.ts');
     try {
@@ -52,7 +66,33 @@
     disabled={!tool.canRedo}
     onclick={() => tool.redo()}><Icon name="redo" size={16} /></button
   >
-  <h1 class="title">{tool.model?.title || 'Untitled diagram'}</h1>
+  <h1 class="title">
+    {#if renaming}
+      <input
+        class="rename"
+        aria-label="Diagram title"
+        value={tool.model?.title ?? ''}
+        placeholder="Untitled diagram"
+        {@attach focus}
+        onkeydown={(e) => {
+          if (e.key === 'Enter') finish(e.currentTarget, true);
+          else if (e.key === 'Escape') {
+            e.preventDefault();
+            finish(e.currentTarget, false);
+          }
+        }}
+        onblur={(e) => finish(e.currentTarget, true)}
+      />
+    {:else}
+      <button
+        type="button"
+        class="name"
+        title="Rename"
+        disabled={!tool.valid}
+        onclick={() => (renaming = true)}>{tool.model?.title || 'Untitled diagram'}</button
+      >
+    {/if}
+  </h1>
   {#if needsClick}
     <button type="button" class="saved retry" onclick={saveNow}
       >{visitor.dot === 'auth' ? `Sign in to ${where} again` : `Save to ${where}`}</button
@@ -141,6 +181,39 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .name {
+    max-width: 100%;
+    padding: 2px 8px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: text;
+  }
+
+  .name:hover:not(:disabled) {
+    border-color: currentColor;
+  }
+
+  .name:disabled {
+    cursor: default;
+  }
+
+  .rename {
+    width: min(360px, 100%);
+    padding: 2px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    background: var(--bg);
+    color: var(--ink);
+    font: inherit;
+    text-align: center;
   }
 
   .saved {

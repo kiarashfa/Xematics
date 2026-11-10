@@ -22,6 +22,11 @@
       ? ''
       : ` · ${tool.stats.edges} lines drawn`}</span
   >
+  {#if tool.layerError.message}
+    <span class="field-error" role="alert"
+      ><Icon name="alert" size={14} />{tool.layerError.message}</span
+    >
+  {/if}
   <span class="notice" role="status" aria-live="polite">{tool.notice}</span>
   <span class="grow"></span>
   <span>{PRESET_NAMES[tool.preset]}</span>
@@ -65,6 +70,13 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+  }
+
+  .field-error {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: light-dark(#b42318, #ff9b8f);
   }
 
   .ok {

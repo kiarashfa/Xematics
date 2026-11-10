@@ -4,7 +4,7 @@
   import Canvas from './components/Canvas.svelte';
   import EmbedDialog from './components/EmbedDialog.svelte';
   import ExportOptions from './components/ExportOptions.svelte';
-  import FormatPane from './components/FormatPane.svelte';
+  import DescriptionDialog from './components/DescriptionDialog.svelte';
   import FormulaBar from './components/FormulaBar.svelte';
   import Navigator from './components/Navigator.svelte';
   import PhoneTool from './components/PhoneTool.svelte';
@@ -28,15 +28,13 @@
     [
       tool.showNavigator ? 'minmax(240px, 300px)' : '',
       'minmax(0, 1fr)',
-      tool.showFormat ? 'minmax(220px, 270px)' : '',
+      tool.manual ? 'minmax(260px, 320px)' : '',
     ]
       .filter(Boolean)
       .join(' '),
   );
 
   onMount(() => {
-    // Narrow windows give the canvas more room; the View tab brings the format pane back.
-    if (innerWidth < 1100) tool.showFormat = false;
     visitor.start();
     loadEngine().then(
       (engine) => (tool.engine = engine),
@@ -168,10 +166,8 @@
         </div>
       {/if}
       <Canvas />
-      {#if tool.showFormat}
-        <div class="right">
-          {#if tool.manual}<Manual />{:else}<FormatPane />{/if}
-        </div>
+      {#if tool.manual}
+        <div class="right"><Manual /></div>
       {/if}
     </div>
     <StatusBar onReveal={revealFirstError} />
@@ -182,6 +178,8 @@
   <ExportOptions />
 {:else if tool.dialog === 'embed'}
   <EmbedDialog />
+{:else if tool.dialog === 'description'}
+  <DescriptionDialog />
 {/if}
 
 <style>

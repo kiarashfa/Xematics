@@ -97,12 +97,13 @@ test.describe('desktop editor', () => {
     );
   });
 
-  test('format pane edits convolution layers and changes layer types', async ({ page }) => {
+  test('Layer tab edits convolution layers and changes layer types', async ({ page }) => {
     await openEditor(page);
     await source(page).fill('in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-10');
     const nav = page.getByRole('navigation', { name: 'Layers' });
     await expect(nav).toContainText('28×28×8');
-    await nav.getByRole('button', { name: /Conv/ }).click();
+    // A double-click opens the layer's settings in the ribbon's Layer tab.
+    await nav.getByRole('button', { name: /Conv/ }).dblclick();
     await page.getByRole('spinbutton', { name: 'Filters' }).fill('12');
     await page.getByRole('spinbutton', { name: 'Filters' }).press('Enter');
     await page.getByRole('spinbutton', { name: 'Stride height' }).fill('2');
@@ -116,6 +117,7 @@ test.describe('desktop editor', () => {
     await expect(source(page)).toHaveValue(
       'in(28x28x1)-conv(12,3x3,s2):relu-conv(16,3x3)-flatten-10',
     );
+    await page.getByRole('tab', { name: 'Home' }).click();
     await page.getByRole('switch', { name: 'Operations' }).uncheck();
     await expect(source(page)).toHaveValue(/labels: { ops: false }/);
     await expect(page.locator('#pv-op-1')).not.toBeAttached();
@@ -153,8 +155,8 @@ test.describe('desktop editor', () => {
     await expect(page.locator('#pv-frame-1-0')).toBeAttached();
     await neurons.uncheck();
     const nav = page.getByRole('navigation', { name: 'Layers' });
-    await nav.getByRole('button', { name: /RNN/ }).click();
-    await page.getByRole('checkbox', { name: /Bidirectional/ }).check();
+    await nav.getByRole('button', { name: /RNN/ }).dblclick();
+    await page.getByRole('switch', { name: /Bidirectional/ }).check();
     await expect(source(page)).toHaveValue(/type: rnn, units: 4, bidirectional: true/);
     await expect(page.locator('#pv-box-1-0-b')).toBeAttached();
   });
@@ -225,7 +227,7 @@ test.describe('desktop editor', () => {
     await page
       .getByRole('navigation', { name: 'Layers' })
       .getByRole('button', { name: /Hidden 1/ })
-      .click();
+      .dblclick();
     await page.getByRole('textbox', { name: 'Name' }).fill('Encoder');
     await expect(source(page)).toHaveValue(/units: 16, activation: relu, name: Encoder/);
     await page.getByRole('button', { name: 'Undo' }).first().click();
@@ -342,6 +344,64 @@ test.describe('desktop editor', () => {
     await expect(source(page)).not.toHaveValue(/forward/);
   });
 
+  test('Layer tab: a click selects, a double-click opens it, bad values show why', async ({
+    page,
+  }) => {
+    await openEditor(page);
+    await page.getByRole('tab', { name: 'Design' }).click();
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await nav.getByRole('button', { name: /Digits/ }).click();
+    // A click shows the tab but keeps the ribbon where it is.
+    await expect(page.getByRole('tab', { name: 'Layer' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Design' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await page.locator('#pv-node-3-0').dblclick();
+    await expect(page.getByRole('tab', { name: 'Layer' })).toHaveAttribute('aria-selected', 'true');
+    const neurons = page.getByRole('spinbutton', { name: 'Neurons' });
+    await neurons.fill('0');
+    await neurons.press('Enter');
+    await expect(neurons).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('footer.status')).toContainText('Neurons must be a whole number');
+    await expect(source(page)).toHaveValue(/units: 10, name: Digits/);
+    await neurons.fill('12');
+    await neurons.press('Enter');
+    await expect(source(page)).toHaveValue(/units: 12, name: Digits/);
+    await expect(page.locator('footer.status')).not.toContainText('Neurons must be');
+    // Without a selection the tab goes away and the ribbon returns to Design. (Escape inside a
+    // field keeps the selection, so leave the field first.)
+    await neurons.evaluate((el) => (el as HTMLElement).blur());
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Layer' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Design' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  test('the title renames in the title bar and the description is in File', async ({ page }) => {
+    await openEditor(page);
+    await page.getByTitle('Rename').click();
+    const title = page.getByRole('textbox', { name: 'Diagram title' });
+    await title.fill('Digit reader');
+    await title.press('Enter');
+    await expect(source(page)).toHaveValue(/title: Digit reader/);
+    await expect(page.getByRole('heading', { name: 'Digit reader' })).toBeVisible();
+    // Escape cancels a rename.
+    await page.getByTitle('Rename').click();
+    await page.getByRole('textbox', { name: 'Diagram title' }).fill('Nope');
+    await page.getByRole('textbox', { name: 'Diagram title' }).press('Escape');
+    await expect(source(page)).not.toHaveValue(/Nope/);
+    await page.getByRole('tab', { name: 'File' }).click();
+    await page.getByRole('button', { name: 'Description…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Description' });
+    await dialog.getByRole('textbox').fill('A small digit classifier.');
+    await dialog.getByRole('button', { name: 'OK' }).click();
+    await expect(source(page)).toHaveValue(/description: A small digit classifier\./);
+    await expect(page.getByRole('img', { name: 'Digit reader' })).toBeVisible();
+  });
+
   test('layer boxes export is byte-identical to the Node golden file', async ({ page }) => {
     await openEditor(page);
     await source(page).fill(
@@ -363,7 +423,7 @@ test.describe('desktop editor', () => {
     const nav = page.getByRole('navigation', { name: 'Layers' });
     await expect(nav.getByRole('button', { name: /Hidden 3/ })).toBeVisible();
     await expect(page.getByRole('textbox', { name: /Layer sizes/ })).toHaveValue('784-128*3-10');
-    await nav.getByRole('button', { name: /Hidden 3/ }).click();
+    await nav.getByRole('button', { name: /Hidden 3/ }).dblclick();
     await page.getByRole('spinbutton', { name: 'Neurons' }).fill('64');
     await page.getByRole('spinbutton', { name: 'Neurons' }).press('Enter');
     await expect(source(page)).toHaveValue('784-128*2-64-10');
@@ -555,12 +615,13 @@ test.describe('text and math', () => {
     await page
       .getByRole('navigation', { name: 'Layers' })
       .getByRole('button', { name: /Pixels/ })
-      .click();
+      .dblclick();
     await page.getByRole('textbox', { name: 'Node labels' }).fill('$x_{i}$');
     await expect(source(page)).toHaveValue(
       /nodeLabel: \$x_\{i\}\$|nodeLabel: "\$x_\{i\}\$"|nodeLabel: '\$x_\{i\}\$'/,
     );
     await expect(page.locator('#pv-nodelabel-0-0')).toBeAttached();
+    await page.getByRole('tab', { name: 'Design' }).click();
     await page.getByRole('switch', { name: 'Right to left' }).uncheck();
     await expect(source(page)).not.toHaveValue(/direction/);
   });
@@ -583,6 +644,26 @@ test.describe('exports', () => {
       .getByRole('tab')
       .allInnerTexts();
     expect(tabs).toEqual(['File', 'Home', 'Design', 'View', 'Animate', 'Export', 'Help']);
+    // The Layer tab appears between Home and Design only while a layer is selected.
+    await page
+      .getByRole('navigation', { name: 'Layers' })
+      .getByRole('button', { name: /Pixels/ })
+      .click();
+    await expect(page.getByRole('tablist', { name: 'Ribbon' }).getByRole('tab')).toHaveText([
+      'File',
+      'Home',
+      'Layer',
+      'Design',
+      'View',
+      'Animate',
+      'Export',
+      'Help',
+    ]);
+    await page.getByRole('tab', { name: 'Layer' }).click();
+    const layer = await new AxeBuilder({ page }).withTags(WCAG).analyze();
+    expect(layer.violations.map((v) => v.id)).toEqual([]);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tab', { name: 'Layer' })).toHaveCount(0);
     await page.getByRole('tab', { name: 'Export' }).click();
     for (const group of ['Images', 'Documents', 'Share', 'Export options']) {
       await expect(page.getByRole('group', { name: group })).toBeVisible();
@@ -620,12 +701,13 @@ test.describe('exports', () => {
     await page.getByRole('button', { name: 'Keyboard' }).click();
     await expect(page.locator('#ribbon-panel')).toBeHidden();
     await expect(page.getByRole('complementary', { name: 'Manual' })).toContainText('Ctrl');
-    // Pinning brings the ribbon back; leaving Help restores the format pane.
+    // Pinning brings the ribbon back; the manual stays open on other tabs until it is closed.
     await page.getByRole('button', { name: 'Pin the ribbon' }).click();
     await expect(page.locator('#ribbon-panel')).toBeVisible();
     await page.getByRole('tab', { name: 'Home' }).click();
+    await expect(page.getByRole('complementary', { name: 'Manual' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close the manual' }).click();
     await expect(page.getByRole('complementary', { name: 'Manual' })).toHaveCount(0);
-    await expect(page.getByRole('complementary', { name: 'Format' })).toBeVisible();
   });
 
   test('PDF and TikZ match the Node golden files', async ({ page }) => {

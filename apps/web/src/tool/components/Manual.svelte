@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tool } from '../state.svelte.ts';
+  import Icon from './Icon.svelte';
 
   const TITLES = {
     shorthand: 'Shorthand',
@@ -19,7 +20,7 @@
     [['Alt', '↑'], 'Move the selected layer left'],
     [['Alt', '↓'], 'Move the selected layer right'],
     [['Delete'], 'Remove the selected layer'],
-    [['Escape'], 'Select the whole diagram'],
+    [['Escape'], 'Close an open color menu, or select the whole diagram'],
     [['Space'], 'Play or pause, while the Animate tab is open'],
     [['+', '−', '0'], 'Zoom in, out or to fit, while the figure has focus'],
   ];
@@ -28,8 +29,12 @@
 <aside class="manual" aria-label="Manual">
   <div class="head">
     <h2>Manual: {tool.manual ? TITLES[tool.manual] : ''}</h2>
-    <button type="button" class="close" onclick={() => (tool.manual = undefined)}
-      >Back to format</button
+    <button
+      type="button"
+      class="close"
+      aria-label="Close the manual"
+      title="Close the manual"
+      onclick={() => (tool.manual = undefined)}><Icon name="close" size={16} /></button
     >
   </div>
 
@@ -163,7 +168,7 @@ layers:
         colors of the input, hidden and output layers.
       </dd>
       <dt><code>animation</code></dt>
-      <dd>Look, scene, speed and loop for the Animate tab.</dd>
+      <dd>Look, scene, speed, loop and the forward and backward colors for the Animate tab.</dd>
     </dl>
     <h3>Layer options</h3>
     <dl>
@@ -189,7 +194,7 @@ layers:
   {:else if tool.manual === 'keyboard'}
     <p>
       On a Mac, use Cmd instead of Ctrl. Delete, Escape and the layer keys work when the cursor is
-      not in a text field.
+      not in a text field. A double-click on a layer opens its Layer tab.
     </p>
     <table>
       <tbody>
@@ -243,13 +248,21 @@ layers:
   }
 
   .close {
+    display: grid;
     flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
     border: 0;
+    border-radius: 3px;
     background: none;
-    color: var(--accent);
-    font: 0.8rem var(--font-sans);
+    color: var(--muted);
     cursor: pointer;
-    text-decoration: underline;
+  }
+
+  .close:hover {
+    background: var(--surface-2);
+    color: var(--ink);
   }
 
   code,

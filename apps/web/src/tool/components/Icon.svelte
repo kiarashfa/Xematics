@@ -57,6 +57,10 @@
     pen: 'M15 2l4 4-10 10H5v-4z|M12.5 4.5l4 4',
     forward: 'M3 9h15|M13 4l5 5-5 5',
     backward: 'M21 9H6|M11 4 6 9l5 5',
+    info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z|M12 11v6|M12 7h.01',
+    size: 'M4 20V4|M4 20h16|M8 16l4-4 3 3 5-5',
+    kernel: 'M4 4h16v16H4z|M4 10h6v6H4z',
+    stride: 'M3 12h6|M13 12h6|M7 9l3 3-3 3|M17 9l3 3-3 3',
   } as const;
 
   export type IconName = keyof typeof PATHS;

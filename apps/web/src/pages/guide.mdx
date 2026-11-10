@@ -1,13 +1,19 @@
 ---
 layout: ../layouts/GuideLayout.astro
 title: Syntax and export guide
-description: How to write networks in Xematics (shorthand, YAML and JSON), fully connected and convolutional layers, every style option, animations, math and right-to-left labels, and how to export to SVG, PNG, PDF, TikZ, GIF and video.
+description: How to write networks in Xematics (shorthand, YAML and JSON), fully connected, convolutional, recurrent and Transformer layers, colors and every style option, animations, math and right-to-left labels, and how to export to SVG, PNG, PDF, TikZ, GIF and video.
 ---
 
 import Figure from '../components/Figure.astro';
 
-Everything you can do in the editor's forms you can also write as text. This page covers the
+Everything you can do in the editor's ribbon you can also write as text. This page covers the
 syntax, every option, and the export formats. Each figure here opens in the editor.
+
+In the editor, click a layer (in the figure or the navigator) to select it: a **Layer** tab
+appears in the ribbon with every setting of that layer, from its name and size to its kernel or
+activation. Double-click a layer to open that tab. Rename the diagram by clicking its title at the
+top, and write its description (the alt text) under File, Properties. On phones, tap a layer card
+for the same settings.
 
 ## Shorthand
 
@@ -52,6 +58,7 @@ the canonical file format and opens again in the editor.
 | `description` | Alternative text. Without it, a description is generated. |
 | `layers`      | The list of layers, input first.                          |
 | `style`       | Options for the whole figure (see Styles and presets).    |
+| `animation`   | How the figure moves (see Animation).                     |
 
 Mistakes are reported with their line and column, and unknown keys suggest what you probably
 meant. While the source has an error, the preview keeps the last valid figure.
@@ -154,7 +161,7 @@ layers:
 Every feature map is a stack of sheets, one per channel up to seven, with its size underneath
 (28×28×8). Rays show the window each convolution or pooling step reads. The step itself is
 written above it, like conv 3×3 or max 2×2; turn these off with the Operations switch or
-`style: { labels: { ops: false } }`. Dense layers after the maps follow the preset: neurons and
+`style: { labels: { ops: false } }` (Home tab, Labels group). Dense layers after the maps follow the preset: neurons and
 connections, or bars with Layer boxes.
 
 When a window does not fit its input, or a convolution follows a flat layer, the editor warns
@@ -289,6 +296,10 @@ open **More colors** to pick any color by hex, RGB or HSL. The Outline menu also
 (None hides the outline) and the dashes. Text inside nodes turns dark or white to stay readable.
 Your colors stay when you switch presets; **Reset colors** brings back the preset's.
 
+The selected layer gets a frame, and the other layers of its kind a lighter one, so you can see
+which layers a color will change. On phones, select a layer card, then open Design in the
+commands.
+
 ```yaml
 style:
   hidden: { fill: '#e8f4ea', outline: '#009e73', weight: 2, dashes: dashed }
@@ -312,8 +323,9 @@ style: { hidden: { fill: '#e8f4ea', outline: '#009e73', weight: 2, dashes: dashe
 
 ### Spacing
 
-The Spacing group of the Design tab sets the layer gap, the node gap and the node radius. The
-layer gap is a minimum: long labels can push layers further apart.
+The Spacing group of the Design tab sets the layer gap, the node gap and the node radius, and
+**Reset spacing** brings back the preset's. The layer gap is a minimum: long labels can push
+layers further apart. The Design tab also holds **Transparent background** and **Right to left**.
 
 Other style options:
 
@@ -414,7 +426,8 @@ Labels can use any of these scripts, and each label may mix them:
 The fonts load only when a label needs them. Each label reads in the direction of its first
 letter, so a Persian name with a Latin word inside still reads right to left.
 
-To mirror the whole figure, with the input on the right, set the flow direction:
+To mirror the whole figure, with the input on the right, turn on Right to left in the Design tab,
+or set the flow direction:
 
 <Figure
   id="g-rtl"
@@ -503,20 +516,21 @@ Use `-` instead of a file name to read from standard input, for example
 
 On a Mac, use Cmd instead of Ctrl.
 
-| Keys                         | Action                                              |
-| ---------------------------- | --------------------------------------------------- |
-| Ctrl Z, Ctrl Shift Z, Ctrl Y | Undo and redo                                       |
-| Ctrl S                       | Save now (every change is also saved by itself)     |
-| Ctrl O                       | Open a diagram source file as a new document        |
-| Ctrl E                       | Export again in the last format                     |
-| Ctrl Enter or Insert         | Add a layer after the selected one                  |
-| Alt Up, Alt Down             | Move the selected layer                             |
-| Delete                       | Remove the selected layer                           |
-| Escape                       | Select the whole diagram                            |
-| Space                        | Play or pause, while the Animate tab is open        |
-| Plus, Minus, 0               | Zoom in, out, or to fit, while the figure has focus |
+| Keys                         | Action                                                |
+| ---------------------------- | ----------------------------------------------------- |
+| Ctrl Z, Ctrl Shift Z, Ctrl Y | Undo and redo                                         |
+| Ctrl S                       | Save now (every change is also saved by itself)       |
+| Ctrl O                       | Open a diagram source file as a new document          |
+| Ctrl E                       | Export again in the last format                       |
+| Ctrl Enter or Insert         | Add a layer after the selected one                    |
+| Alt Up, Alt Down             | Move the selected layer                               |
+| Delete                       | Remove the selected layer                             |
+| Escape                       | Close an open color menu, or select the whole diagram |
+| Space                        | Play or pause, while the Animate tab is open          |
+| Plus, Minus, 0               | Zoom in, out, or to fit, while the figure has focus   |
 
-Delete, Escape and the layer keys work when the cursor is not in a text field.
+Delete, Escape and the layer keys work when the cursor is not in a text field. A double-click on a
+layer opens its Layer tab.
 
 ## Sharing and privacy
 

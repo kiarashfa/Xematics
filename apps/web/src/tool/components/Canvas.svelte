@@ -90,7 +90,11 @@
       '[id^="pv-node-"],[id^="pv-layer-"],[id^="pv-name-"],[id^="pv-size-"],[id^="pv-op-"],[id^="pv-ellipsis-"]',
     );
     const index = target ? Number(target.id.split('-')[2]) : NaN;
-    tool.select(Number.isInteger(index) ? { kind: 'layer', index } : { kind: 'diagram' });
+    if (!Number.isInteger(index)) tool.select({ kind: 'diagram' });
+    // A double-click opens the layer's settings in the Layer tab. The first click redraws the
+    // preview, so the browser sends no dblclick event: the click count tells instead.
+    else if (event.detail >= 2) tool.openLayer(index);
+    else tool.select({ kind: 'layer', index });
   }
 
   function onWheel(event: WheelEvent) {

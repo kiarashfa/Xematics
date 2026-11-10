@@ -24,13 +24,33 @@
     type AnimationScene,
   } from '@xematics/core';
   import Icon, { type IconName } from './Icon.svelte';
+  import LayerTab from './LayerTab.svelte';
   import PresetThumb from './PresetThumb.svelte';
   import type ColorPanelComponent from './ColorPanel.svelte';
   import type { ColorTarget } from '../color-target.ts';
 
-  const TABS = ['File', 'Home', 'Design', 'View', 'Animate', 'Export', 'Help'] as const;
+  const TABS = ['File', 'Home', 'Layer', 'Design', 'View', 'Animate', 'Export', 'Help'] as const;
   type Tab = (typeof TABS)[number];
   let active = $state<Tab>('Home');
+  // The Layer tab is contextual (like Office's Shape Format): it is there only while a layer is
+  // selected. Selecting does not switch to it; a double-click on a layer does.
+  const tabs = $derived(TABS.filter((t) => t !== 'Layer' || tool.selection.kind === 'layer'));
+  let beforeLayer: Tab = 'Home';
+
+  $effect(() => {
+    if (tool.layerTabRequest === 0) return;
+    untrack(() => {
+      if (tool.selection.kind !== 'layer') return;
+      if (active !== 'Layer') beforeLayer = active;
+      active = 'Layer';
+      peek = collapsed;
+    });
+  });
+
+  // Without a selection the Layer tab goes away, and the ribbon goes back to where it was.
+  $effect(() => {
+    if (tool.selection.kind !== 'layer' && untrack(() => active) === 'Layer') active = beforeLayer;
+  });
   let theme = $state(currentTheme());
   let sourceInput: HTMLInputElement | undefined = $state();
   let workspaceInput: HTMLInputElement | undefined = $state();
@@ -64,6 +84,7 @@
   function pickTab(tab: Tab) {
     // Clicking the open tab again closes the temporary layer.
     peek = collapsed && (tab !== active || !peek);
+    if (tab === 'Layer' && active !== 'Layer') beforeLayer = active;
     active = tab;
   }
 
@@ -95,14 +116,9 @@
     }
   }
 
-  // The manual belongs to the Help tab: leaving it brings the format pane back.
-  $effect(() => {
-    if (active !== 'Help') untrack(() => (tool.manual = undefined));
-  });
-
+  // The manual opens in a pane on the right and stays until its close button.
   function openManual(topic: NonNullable<typeof tool.manual>) {
     tool.manual = tool.manual === topic ? undefined : topic;
-    if (tool.manual) tool.showFormat = true;
   }
 
   // Responsive layout, like Office: as the window narrows, small buttons lose their labels
@@ -218,11 +234,11 @@
   }
 
   function onTabKey(event: KeyboardEvent) {
-    const i = TABS.indexOf(active);
+    const i = tabs.indexOf(active);
     const next = event.key === 'ArrowRight' ? i + 1 : event.key === 'ArrowLeft' ? i - 1 : -2;
     if (next === -2) return;
     event.preventDefault();
-    active = TABS[(next + TABS.length) % TABS.length]!;
+    active = tabs[(next + tabs.length) % tabs.length]!;
     document.getElementById(`ribbon-tab-${active}`)?.focus();
   }
 
@@ -399,12 +415,14 @@
 <div class="ribbon" class:collapsed bind:this={root}>
   <div class="tabs">
     <div class="list" role="tablist" aria-label="Ribbon">
-      {#each TABS as tab (tab)}
+      {#each tabs as tab (tab)}
         <button
           type="button"
           role="tab"
           id={`ribbon-tab-${tab}`}
           class:file={tab === 'File'}
+          class:context={tab === 'Layer'}
+          title={tab === 'Layer' ? 'Settings of the selected layer' : undefined}
           aria-selected={active === tab && showPanel}
           aria-controls="ribbon-panel"
           tabindex={active === tab ? 0 : -1}
@@ -442,6 +460,21 @@
         </div>
       {/snippet}
       {@render group(0, 'Document', 'file', 'Document', 'Document', '', gFile0)}
+      {#snippet gFileProps()}
+        <div class="stack numbers">
+          <label
+            >Title <input
+              class="title"
+              value={tool.model?.title ?? ''}
+              placeholder="Untitled diagram"
+              disabled={!tool.valid}
+              onchange={(e) => tool.setTitle(e.currentTarget.value)}
+            /></label
+          >
+          {@render small('edit', 'Description…', () => (tool.dialog = 'description'), !tool.valid)}
+        </div>
+      {/snippet}
+      {@render group(1, 'Properties', 'info', 'Properties', 'Properties', '', gFileProps)}
       {#snippet gFile1()}
         <select
           class="documents"
@@ -458,7 +491,7 @@
           workspace</span
         >
       {/snippet}
-      {@render group(1, 'Documents', 'layers', 'Documents', 'Documents', 'stack', gFile1)}
+      {@render group(2, 'Documents', 'layers', 'Documents', 'Documents', 'stack', gFile1)}
       {#snippet gFile2()}
         {#each EXAMPLES as example (example.name)}
           <button type="button" class="small" onclick={() => tool.newDocument(example.text)}
@@ -467,7 +500,7 @@
         {/each}
       {/snippet}
       {@render group(
-        2,
+        3,
         'Examples',
         'cards',
         'Examples',
@@ -480,7 +513,7 @@
         {@render big('download', 'Download save file', saveWorkspace)}
       {/snippet}
       {@render group(
-        3,
+        4,
         'Workspace',
         'open',
         'Workspace',
@@ -491,13 +524,13 @@
       {#snippet gFile4()}
         {@render big('link', 'Copy link', copyShareLink, !tool.ready)}
       {/snippet}
-      {@render group(4, 'Share', 'link', 'Share', 'Share', '', gFile4)}
+      {@render group(5, 'Share', 'link', 'Share', 'Share', '', gFile4)}
       {#snippet gFile5()}
         <a class="big" href={import.meta.env.BASE_URL}
           ><Icon name="close" size={26} /><span>Close editor</span></a
         >
       {/snippet}
-      {@render group(5, 'Close', 'close', 'Close', 'Back to the site', '', gFile5)}
+      {@render group(6, 'Close', 'close', 'Close', 'Back to the site', '', gFile5)}
       <input
         bind:this={sourceInput}
         type="file"
@@ -625,6 +658,8 @@
         {/snippet}
         {@render group(4, 'Network', 'layers', 'Network', 'Network', 'stack three numbers', gHome5)}
       {/if}
+    {:else if active === 'Layer'}
+      <LayerTab {group} />
     {:else if active === 'Design'}
       {#snippet gDesign0()}
         {@const role = tool.selectedRole}
@@ -719,7 +754,6 @@
       {@render group(0, 'Zoom', 'fit', 'Zoom', 'Zoom', '', gView0)}
       {#snippet gView1()}
         {@render toggle('Layers and source', tool.showNavigator, (on) => (tool.showNavigator = on))}
-        {@render toggle('Format pane', tool.showFormat, (on) => (tool.showFormat = on))}
       {/snippet}
       {@render group(1, 'Panes', 'panelRight', 'Panes', 'Panes', 'stack', gView1)}
       {#snippet gView2()}
@@ -963,6 +997,35 @@
   .tabs button[aria-selected='true'] {
     border-bottom-color: var(--accent);
     font-weight: 700;
+  }
+
+  /* The contextual Layer tab has its own color and a band on top, like Office's Shape Format. */
+  .tabs button.context {
+    position: relative;
+    border-radius: 3px 3px 0 0;
+    background: color-mix(in srgb, var(--context) 10%, transparent);
+    color: var(--context);
+    font-weight: 700;
+  }
+
+  .tabs button.context::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    background: var(--context);
+    content: '';
+  }
+
+  .tabs button.context[aria-selected='true'] {
+    border-bottom-color: var(--context);
+  }
+
+  .numbers input.title {
+    width: 170px;
+    font-family: var(--font-sans);
   }
 
   .tabs button.file {

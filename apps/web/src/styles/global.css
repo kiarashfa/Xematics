@@ -16,6 +16,8 @@
   --accent-ink: light-dark(#ffffff, #0f1d2b);
   --canvas: light-dark(#e9e3d7, #0e0d0b);
   --danger: light-dark(#b3261e, #f2a29b);
+  /* Contextual ribbon tabs (Layer). */
+  --context: light-dark(#9a4a18, #f0a46b);
   --mark-accent: var(--accent);
 }
 

@@ -45,6 +45,7 @@
             ? 'true'
             : undefined}
           onclick={() => tool.select({ kind: 'layer', index: i })}
+          ondblclick={() => tool.openLayer(i)}
           onkeydown={onKey}
         >
           <span class={`dot role-${roleOf(i, layers.length)}`} aria-hidden="true"></span>

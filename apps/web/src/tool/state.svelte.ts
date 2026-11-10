@@ -31,6 +31,7 @@ import {
   parseModel,
   parseShorthand,
   parseWorkspace,
+  patchModel,
   patchRole,
   patchStyle,
   prepareModel,
@@ -100,10 +101,13 @@ export class ToolState {
   /** Style preset for new diagrams (set on the profile page). */
   defaultPreset = $state<string | undefined>(undefined);
   /** The open editor dialog, if any. */
-  dialog = $state<'export-options' | 'embed' | undefined>(undefined);
+  dialog = $state<'export-options' | 'embed' | 'description' | undefined>(undefined);
   showNavigator = $state(true);
-  showFormat = $state(true);
-  /** The manual page shown in the right pane instead of the format pane (set from the Help tab). */
+  /** A layer field value that was not accepted: which field, and why (shown there and in the status bar). */
+  layerError = $state({ key: '', message: '' });
+  /** Bumped to ask the ribbon to open the Layer tab (double-click on a layer). */
+  layerTabRequest = $state(0);
+  /** The manual page shown in a pane on the right (opened from the Help tab, closed with ×). */
   manual = $state<'shorthand' | 'convolutions' | 'networks' | 'yaml' | 'keyboard' | undefined>(
     undefined,
   );
@@ -291,6 +295,24 @@ export class ToolState {
 
   select(selection: Selection): void {
     this.selection = selection;
+    this.layerError = { key: '', message: '' };
+  }
+
+  /** Selects a layer and opens its Layer tab (double-click). */
+  openLayer(index: number): void {
+    this.select({ kind: 'layer', index });
+    this.layerTabRequest++;
+  }
+
+  /** Changes the diagram's title; empty removes it. */
+  setTitle(title: string): void {
+    const value = title.trim();
+    this.edit((m) => patchModel(m, { title: value || undefined }));
+  }
+
+  setDescription(description: string): void {
+    const value = description.trim();
+    this.edit((m) => patchModel(m, { description: value || undefined }));
   }
 
   addLayer(): void {
