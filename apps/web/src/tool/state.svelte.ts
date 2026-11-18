@@ -8,6 +8,7 @@ import {
   applyStructure,
   isTikzFont,
   layerParamCounts,
+  LIMITS,
   totalParams,
   buildTimeline,
   patchAnimation,
@@ -346,6 +347,14 @@ export class ToolState {
     this.edit((m) => patchModel(m, { description: value || undefined }));
   }
 
+  /** Words of the attention figures, separated by spaces; empty goes back to t1, t2... */
+  setTokens(text: string): boolean {
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length > LIMITS.words || words.some((w) => w.length > LIMITS.word)) return false;
+    this.edit((m) => patchModel(m, { tokens: words.length > 0 ? words : undefined }));
+    return true;
+  }
+
   addLayer(): void {
     const count = this.model?.layers.length ?? 0;
     const at = this.selection.kind === 'layer' ? this.selection.index + 1 : Math.max(1, count - 1);
@@ -395,6 +404,7 @@ export class ToolState {
     steps: this.model?.style?.steps ?? 4,
     plainFunnel: this.model?.style?.funnel === 'plain',
     training: this.model?.style?.training === true,
+    transformer: this.model?.style?.transformer ?? 'pipeline',
     autoencoder: this.model?.style?.autoencoder === true,
   });
   preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');

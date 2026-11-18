@@ -286,6 +286,13 @@
         {@render toggle('layers', 'Training arrows', tool.network.training, (on) =>
           tool.setNetwork({ training: on || undefined }),
         )}
+      {:else if tool.family === 'transformer'}
+        {@render toggle('layers', 'Token flow', tool.network.transformer === 'tokens', (on) =>
+          tool.setNetwork({ transformer: on ? 'tokens' : undefined }),
+        )}
+        {@render toggle('layers', 'Heat map', tool.network.transformer === 'heatmap', (on) =>
+          tool.setNetwork({ transformer: on ? 'heatmap' : undefined }),
+        )}
       {:else if tool.family === 'mlp'}
         {@render toggle('layers', 'Draw as autoencoder', tool.network.autoencoder, (on) =>
           tool.setNetwork({ autoencoder: on || undefined }),

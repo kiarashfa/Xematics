@@ -481,6 +481,25 @@
         (e) => setNumber('length', 1, LIMITS.steps, 'Length', e),
         'Length (tokens)',
       )}
+      <label
+        >Words<input
+          class="text"
+          aria-label="Token words"
+          title={`Shown by Token flow and Heat map; up to ${LIMITS.words} words`}
+          placeholder="The cat sat"
+          spellcheck="false"
+          value={tool.model?.tokens?.join(' ') ?? ''}
+          aria-invalid={bad('words')}
+          onchange={(e) => {
+            if (tool.setTokens(e.currentTarget.value)) tool.layerError = { key: '', message: '' };
+            else
+              tool.layerError = {
+                key: 'words',
+                message: `Use up to ${LIMITS.words} words of at most ${LIMITS.word} letters.`,
+              };
+          }}
+        /></label
+      >
     </div>
   {/if}
 {/snippet}

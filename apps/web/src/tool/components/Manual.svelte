@@ -145,6 +145,10 @@
       </dd>
     </dl>
     <p><code>tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax</code></p>
+    <p>
+      Token flow and Heat map on the Home tab draw attention between the tokens; give the words in
+      the Tokens layer, or as <code>tokens: [The, cat, sat]</code> in YAML.
+    </p>
     <h3>GANs</h3>
     <p>
       <code>gan(100-256-784 | 784-256-1)</code>: the generator before the bar, starting with the

@@ -1,0 +1,2 @@
+style: { transformer: tokens }
+layers: 'tokens(512)-embed(512)-encoder(2,8)-fc(2):softmax'

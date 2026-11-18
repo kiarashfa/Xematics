@@ -100,6 +100,8 @@ export interface Theme {
   readonly autoencoder: boolean;
   /** GANs: dashed loss arrows from the score back to both networks. */
   readonly training: boolean;
+  /** Transformers: the block pipeline, attention between tokens, or one block's attention matrix. */
+  readonly transformer: 'pipeline' | 'tokens' | 'heatmap';
   /** Convolutional models: feature maps drawn as stacks of sheets, one per channel. */
   readonly maps: {
     /** Pooling layers get their own tint; other maps use the role paints. */
@@ -184,6 +186,7 @@ const CLASSIC: Theme = {
   funnel: 'neurons',
   autoencoder: false,
   training: false,
+  transformer: 'pipeline',
   maps: {
     pool: { fill: '#dfe3e8', stroke: '#4b5563' },
     window: '#aeb3b9',
@@ -447,6 +450,7 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
     funnel: style.funnel ?? base.funnel,
     autoencoder: style.autoencoder ?? base.autoencoder,
     training: style.training ?? base.training,
+    transformer: style.transformer ?? base.transformer,
     maps: {
       ...base.maps,
       nodeRadius: style.nodeRadius ?? base.maps.nodeRadius,

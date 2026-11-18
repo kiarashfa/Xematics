@@ -627,7 +627,7 @@
         'stack numbers',
         gHome4,
       )}
-      {#if tool.family === 'rnn' || tool.family === 'gan' || tool.family === 'mlp'}
+      {#if ['rnn', 'gan', 'mlp', 'transformer'].includes(tool.family)}
         {#snippet gHome5()}
           {#if tool.family === 'rnn'}
             {@render toggle('Neurons per step', tool.network.neurons, (on) =>
@@ -655,6 +655,13 @@
             )}
             {@render toggle('Training arrows', tool.network.training, (on) =>
               tool.setNetwork({ training: on || undefined }),
+            )}
+          {:else if tool.family === 'transformer'}
+            {@render toggle('Token flow', tool.network.transformer === 'tokens', (on) =>
+              tool.setNetwork({ transformer: on ? 'tokens' : undefined }),
+            )}
+            {@render toggle('Heat map', tool.network.transformer === 'heatmap', (on) =>
+              tool.setNetwork({ transformer: on ? 'heatmap' : undefined }),
             )}
           {:else}
             {@render toggle('Draw as autoencoder', tool.network.autoencoder, (on) =>

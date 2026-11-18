@@ -79,6 +79,8 @@ describe('TikZ export', () => {
     'unet.yaml',
     'dcgan.txt',
     'gan-training.yaml',
+    'tf-tokens.yaml',
+    'tf-heatmap.yaml',
     'params.yaml',
     'weights.yaml',
     'rnn-lstm.txt',

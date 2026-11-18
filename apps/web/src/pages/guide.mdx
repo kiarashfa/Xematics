@@ -295,6 +295,32 @@ tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax
 An encoder followed by a decoder gets two rows, the encoder on top, its output feeding the
 decoder's cross attention. In YAML: `{ type: encoder, blocks: 6, heads: 8, ff: 2048 }`.
 
+### Attention between tokens
+
+**Token flow** on the Home tab (`style: { transformer: tokens }`) draws attention itself: one node
+per token in the embedding and in each block (the first ones and the last), with a line from every
+token a block reads, wider and darker for more attention. Decoder blocks only look back at earlier
+tokens; encoder blocks read all of them. **Heat map** (`style: { transformer: heatmap }`) shows the
+last block as a matrix instead. Give the words in the Tokens layer's **Words** field, or in YAML:
+
+```yaml
+style: { transformer: tokens }
+tokens: [The, cat, sat, on, the, mat]
+layers: 'tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax'
+```
+
+<Figure
+  id="g-tokens"
+  source={`style: { transformer: tokens }
+tokens: [The, cat, sat, on, the, mat]
+layers: "tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax"
+`}
+  caption="Token flow: each token attends to itself and earlier tokens"
+/>
+
+The weights are made up but repeatable: they show how attention works, not what a trained
+model learned.
+
 ## GANs and autoencoders
 
 A GAN holds two networks: the generator, from noise to a fake sample, and the discriminator, from

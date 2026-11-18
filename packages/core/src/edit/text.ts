@@ -18,6 +18,7 @@ export function toPlain(model: Model): Record<string, Plain> {
   const out: Record<string, Plain> = { version: model.version };
   if (model.title !== undefined) out['title'] = model.title;
   if (model.description !== undefined) out['description'] = model.description;
+  if (model.tokens !== undefined) out['tokens'] = [...model.tokens];
   out['layers'] = model.layers.map((layer) => {
     const { type, ...rest } = layer;
     return (type === 'dense' ? rest : layer) as Plain;
@@ -45,6 +46,8 @@ function createNode(doc: Document, path: Path, value: Plain): Node {
       for (const pair of n.items)
         mark(pair.value, [...p, String((pair.key as { value?: unknown })?.value)]);
     } else if (isSeq(n)) {
+      // The word list of the attention figures reads best on one line too.
+      if (p.length === 1 && p[0] === 'tokens') n.flow = true;
       n.items.forEach((item, i) => mark(item, [...p, i]));
     }
   };

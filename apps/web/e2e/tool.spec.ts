@@ -185,6 +185,31 @@ test.describe('desktop editor', () => {
     await expect(page.locator('#pv-sheet-1-0')).toBeAttached();
   });
 
+  test('Transformer token flow, heat map and words', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('tokens(16)-embed(8)-decoder(2,2)-fc(4)');
+    await page.getByRole('tab', { name: 'Home' }).click();
+    // A narrow ribbon folds the Network group into a popup; open it when its switches are hidden.
+    const networkSwitch = async (name: string) => {
+      const toggle = page.getByRole('switch', { name });
+      if (!(await toggle.isVisible())) {
+        await page.getByRole('button', { name: 'Network', exact: true }).click();
+      }
+      return toggle;
+    };
+    await (await networkSwitch('Token flow')).check();
+    await expect(source(page)).toHaveValue(/transformer: tokens/);
+    await expect(page.locator('#pv-node-2-0')).toBeAttached();
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await nav.getByRole('button', { name: /Tokens/ }).dblclick();
+    await page.getByRole('textbox', { name: 'Token words' }).fill('I see you');
+    await page.getByRole('textbox', { name: 'Token words' }).press('Enter');
+    await expect(source(page)).toHaveValue(/tokens: \[ I, see, you \]/);
+    await page.getByRole('tab', { name: 'Home' }).click();
+    await (await networkSwitch('Heat map')).check();
+    await expect(page.locator('#pv-cell-2-2')).toBeAttached();
+  });
+
   test('recurrent, GAN, Transformer and autoencoder figures match the Node goldens', async ({
     page,
   }) => {

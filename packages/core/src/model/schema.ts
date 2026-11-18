@@ -13,6 +13,9 @@ export const LIMITS = {
   label: 200,
   title: 300,
   description: 2000,
+  /** Token words of the attention figures: how many, and how long each. */
+  words: 12,
+  word: 24,
   activation: 40,
   /** Height and width of an image or feature map. */
   side: 100_000,
@@ -55,6 +58,8 @@ export const LAYER_TYPES = [
 export const RECURRENT_TYPES = ['rnn', 'lstm', 'gru'] as const;
 /** How recurrent networks are drawn: one cell per step, or each step as a small network of neurons. */
 export const RECURRENT_LOOKS = ['unrolled', 'neurons'] as const;
+/** How Transformers are drawn: the block pipeline, attention between tokens, or one block's matrix. */
+export const TRANSFORMER_LOOKS = ['pipeline', 'tokens', 'heatmap'] as const;
 /** How a GAN's networks are drawn inside their funnels. */
 export const FUNNEL_LOOKS = ['neurons', 'plain'] as const;
 export const PADDINGS = ['same', 'valid'] as const;
@@ -530,6 +535,10 @@ export const StyleSchema = v.strictObject(
     cell: v.optional(flag()),
     /** GANs: draw each network's neurons inside its funnel, or only its name. */
     funnel: v.optional(v.picklist(FUNNEL_LOOKS, `must be one of: ${FUNNEL_LOOKS.join(', ')}.`)),
+    /** Transformers: the block pipeline, attention between tokens, or one block's attention matrix. */
+    transformer: v.optional(
+      v.picklist(TRANSFORMER_LOOKS, `must be one of: ${TRANSFORMER_LOOKS.join(', ')}.`),
+    ),
     /** GANs: dashed loss arrows from the score back to the discriminator and the generator. */
     training: v.optional(flag()),
     /** Draw a fully connected network as an autoencoder: funnels meeting at its smallest layer. */
@@ -564,6 +573,14 @@ export const ModelSchema = v.strictObject(
     version: v.literal(MODEL_VERSION, `must be ${MODEL_VERSION}.`),
     title: v.optional(text(LIMITS.title)),
     description: v.optional(text(LIMITS.description)),
+    /** Words shown for the tokens in the Transformer token-flow and heat-map looks. */
+    tokens: v.optional(
+      v.pipe(
+        v.array(text(LIMITS.word), 'must be a list of words, like [The, cat, sat].'),
+        v.minLength(1, 'must have at least one word.'),
+        v.maxLength(LIMITS.words, `must have at most ${LIMITS.words} words.`),
+      ),
+    ),
     layers: v.pipe(
       v.array(LayerSchema, 'must be a list of layers.'),
       v.minLength(1, 'must contain at least one layer.'),

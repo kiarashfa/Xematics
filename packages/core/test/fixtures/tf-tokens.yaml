@@ -1,0 +1,3 @@
+style: { transformer: tokens }
+tokens: [The, cat, sat, on, the, mat]
+layers: 'tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax'

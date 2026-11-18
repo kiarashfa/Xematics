@@ -957,7 +957,8 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
     model.title !== undefined ||
     model.description !== undefined ||
     model.style !== undefined ||
-    model.animation !== undefined
+    model.animation !== undefined ||
+    model.tokens !== undefined
   ) {
     return undefined;
   }

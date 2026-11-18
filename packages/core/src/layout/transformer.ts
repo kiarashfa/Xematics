@@ -21,6 +21,7 @@ import { Painter, type Point } from './draw.ts';
 import type { Label } from './label.ts';
 import { cleanLabel, labelReporter, roleOf, type LayoutResult } from './mlp.ts';
 import { layerNameText, sequenceAutoNames } from './names.ts';
+import { layoutAttention } from './tokens.ts';
 
 const BAR_W = 16;
 const GAP = 22;
@@ -52,6 +53,7 @@ interface Piece {
 }
 
 export function layoutTransformer(model: Model, theme: Theme, engine: TextEngine): LayoutResult {
+  if (theme.transformer !== 'pipeline') return layoutAttention(model, theme, engine);
   const painter = new Painter(theme, engine, []);
   const inferred = inferShapes(model);
   painter.diagnostics.push(...inferred.diagnostics);

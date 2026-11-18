@@ -51,7 +51,7 @@ const isEmpty = (value: object) => Object.keys(value).length === 0;
 
 export function patchModel(
   model: Model,
-  patch: Patch<Pick<Model, 'title' | 'description'>>,
+  patch: Patch<Pick<Model, 'title' | 'description' | 'tokens'>>,
 ): Model {
   return clean({ ...model, ...patch });
 }
