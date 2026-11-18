@@ -1,5 +1,5 @@
-// The examples gallery: classic networks that together show every preset and feature.
-// Each source is exactly what opens in the editor.
+// The examples gallery: classic networks that together show every feature and the light presets
+// (the page stays light, so dark presets are left to the guide). Each source opens in the editor.
 
 export interface Example {
   readonly slug: string;
@@ -135,7 +135,71 @@ layers: tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax
     note: 'The translation model: the encoder output feeds the decoder through cross attention.',
     source: `title: Encoder-decoder Transformer
 layers: tokens(512)-embed(512)-encoder(6,8)-decoder(6,8)-fc(37000):softmax
-style: { preset: colorblind-dark }
+`,
+  },
+  {
+    slug: 'resnet',
+    title: 'Residual network',
+    note: 'Each res( ) block adds its input back to its output, as in ResNet.',
+    source: `title: Residual network
+layers: in(32x32x3)-conv(16,3x3):relu-res(conv(16,3x3):relu*2)*2-gap-fc(10):softmax
+`,
+  },
+  {
+    slug: 'unet',
+    title: 'U-Net',
+    note: 'Nested stacking skips draw a U: the encoder goes down, the decoder comes back up.',
+    source: `title: U-Net
+layers:
+  - { type: input, shape: [128, 128, 1], name: Image }
+  - { type: conv, filters: 64, kernel: 3, activation: relu }
+  - { type: pool, size: 2 }
+  - { type: conv, filters: 128, kernel: 3, activation: relu }
+  - { type: pool, size: 2 }
+  - { type: conv, filters: 256, kernel: 3, activation: relu, name: Bottleneck }
+  - { type: up, size: 2 }
+  - { type: conv, filters: 128, kernel: 3, activation: relu, skip: { from: 4, op: concat } }
+  - { type: up, size: 2 }
+  - { type: conv, filters: 64, kernel: 3, activation: relu, skip: { from: 2, op: concat } }
+  - { type: conv, filters: 2, kernel: 1, activation: softmax, name: Mask }
+`,
+  },
+  {
+    slug: 'dcgan',
+    title: 'Convolutional GAN',
+    note: 'A DCGAN: feature maps inside the funnels, with the training losses drawn under it.',
+    source: `title: Convolutional GAN
+style: { training: true }
+layers: gan(100-reshape(4x4x256)-deconv(128,4x4,s2):relu-deconv(64,4x4,s2):relu-deconv(3,4x4,s2):tanh | in(32x32x3)-conv(64,4x4,s2):relu-conv(128,4x4,s2):relu-flatten-1:sigmoid)
+`,
+  },
+  {
+    slug: 'attention',
+    title: 'Attention between tokens',
+    note: 'Token flow: every token attends to itself and earlier ones, line width is the weight.',
+    source: `title: Attention between tokens
+style: { transformer: tokens }
+tokens: [The, cat, sat, on, the, mat]
+layers: tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax
+`,
+  },
+  {
+    slug: 'attention-map',
+    title: 'Attention heat map',
+    note: 'The same attention as a matrix: queries down the side, keys along the top.',
+    source: `title: Attention heat map
+style: { transformer: heatmap }
+tokens: [The, cat, sat, on, the, mat]
+layers: tokens(1024)-embed(768)-decoder(12,12)-fc(50257):softmax
+`,
+  },
+  {
+    slug: 'paper',
+    title: 'Figure for a LaTeX paper',
+    note: "Latin Modern labels to match the text, with each layer's parameter count.",
+    source: `title: Figure for a LaTeX paper
+style: { font: latin-modern-roman, labels: { params: true } }
+layers: in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(64):relu-fc(10):softmax
 `,
   },
   {
@@ -177,15 +241,14 @@ style: { direction: rtl }
   },
   {
     slug: 'slides',
-    title: 'Network for dark slides',
-    note: 'Colorblind dark preset for presentations on a dark background.',
-    source: `title: Network for dark slides
+    title: 'Network for slides',
+    note: 'A small, clearly named network that reads well on a projector.',
+    source: `title: Network for slides
 layers:
   - { units: 6, name: Input }
   - { units: 10, activation: relu }
   - { units: 10, activation: relu }
   - { units: 4, name: Output }
-style: { preset: colorblind-dark }
 `,
   },
 ];

@@ -435,19 +435,23 @@ style: { hidden: { fill: '#e8f4ea', outline: '#009e73', weight: 2, dashes: dashe
 
 The Spacing group of the Design tab sets the layer gap, the node gap and the node radius, and
 **Reset spacing** brings back the preset's. The layer gap is a minimum: long labels can push
-layers further apart. The Design tab also holds **Transparent background** and **Right to left**.
+layers further apart. The Design tab also holds **Transparent background**, **Right to left** and
+**Font**.
 
 Other style options:
 
-| Key            | Values                          | Default         |
-| -------------- | ------------------------------- | --------------- |
-| `labels`       | `{ names, sizes, ops }`         | all shown       |
-| `background`   | `transparent` or a quoted color | the preset's    |
-| `nodeRadius`   | 2 to 100                        | 12 (CNN: 8)     |
-| `nodeSpacing`  | 0 to 200                        | 9 (CNN: 5)      |
-| `layerSpacing` | 20 to 2000                      | 110 (boxes: 96) |
-| `direction`    | `ltr` or `rtl`                  | `ltr`           |
-| `weights`      | `true` or `false`               | `false`         |
+| Key            | Values                                             | Default         |
+| -------------- | -------------------------------------------------- | --------------- |
+| `labels`       | `{ names, sizes, ops, params }`                    | all but params  |
+| `background`   | `transparent` or a quoted color                    | the preset's    |
+| `nodeRadius`   | 2 to 100                                           | 12 (CNN: 8)     |
+| `nodeSpacing`  | 0 to 200                                           | 9 (CNN: 5)      |
+| `layerSpacing` | 20 to 2000                                         | 110 (boxes: 96) |
+| `direction`    | `ltr` or `rtl`                                     | `ltr`           |
+| `weights`      | `true` or `false`                                  | `false`         |
+| `font`         | `inter`, `latin-modern-roman`, `latin-modern-sans` | `inter`         |
+| `transformer`  | `pipeline`, `tokens`, `heatmap`                    | `pipeline`      |
+| `training`     | `true` or `false` (GANs)                           | `false`         |
 
 Write colors in quotes, like `background: '#ffffff'`, because YAML treats `#` as a comment.
 
@@ -687,8 +691,8 @@ picture. The circle at the top right of every page opens [your profile](../user/
   a favorite (favorites stay on top) or deletes it.
 - **Recently deleted** keeps deleted diagrams for 30 days, so you can restore them.
 - **Export** downloads the diagrams shown as one ZIP file, in SVG, PNG, PDF, TikZ or source.
-- **Defaults**: the style for new diagrams and the editor's export settings, saved with your
-  diagrams so they follow you to other devices.
+- **Defaults**: the style for new diagrams and the editor's export settings (including the TikZ
+  font), saved with your diagrams so they follow you to other devices.
 - **Cloud save**: connect Google Drive or Dropbox and your save updates by itself. Connect the same
   account on another device to bring everything there.
 - **Save file**: download it, or open one; it joins what is already here, and the newer edit of

@@ -3,11 +3,28 @@ import { EXAMPLES } from '../examples.ts';
 import { editorLink, figure, sourceSummary } from '../figures.ts';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const NUMERALS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+/** Plate numbers as Roman numerals: 1 is I, 24 is XXIV. */
+function roman(n: number): string {
+  const steps: [number, string][] = [
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ];
+  let out = '';
+  for (const [value, letters] of steps) {
+    while (n >= value) {
+      out += letters;
+      n -= value;
+    }
+  }
+  return out;
+}
 const plates = await Promise.all(
   EXAMPLES.map(async (example, i) => ({
     ...example,
-    numeral: NUMERALS[i] ?? String(i + 1),
+    numeral: roman(i + 1),
     svg: await figure(example.source, `ex-${example.slug}-`),
     link: await editorLink(example.source),
     summary: sourceSummary(example.source),
@@ -17,11 +34,11 @@ const plates = await Promise.all(
 
 <BaseLayout
   title="Examples"
-  description="Twelve neural network diagrams to start from: perceptron, XOR, MLPs, convolutional networks, an MNIST classifier, an autoencoder and more, each one click away from the editor."
+  description="Neural network diagrams to start from: MLPs, convolutional and residual networks, U-Net, recurrent networks, Transformers with attention, GANs and autoencoders, each one click away from the editor."
 >
   <div class="page examples">
     <p class="kicker">Examples</p>
-    <h1>Twelve networks to start from</h1>
+    <h1>{plates.length} networks to start from</h1>
     <p class="lead">
       Each plate opens in the editor exactly as shown. Change a size, a name or the style, then
       export it.
