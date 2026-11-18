@@ -76,6 +76,7 @@ describe('TikZ export', () => {
     'cnn-math.yaml',
     'resnet.txt',
     'upsample.yaml',
+    'unet.yaml',
     'params.yaml',
     'weights.yaml',
     'rnn-lstm.txt',

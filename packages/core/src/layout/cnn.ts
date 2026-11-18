@@ -48,6 +48,13 @@ const SKIP_PITCH = 12;
 /** Room a join needs in the gap after its layer. */
 const JOIN_ROOM = 2 * JOIN_R + 18;
 
+/** Written over the top bridge of a U-Net. */
+const BRIDGE_TEXT = 'copy and concatenate';
+/** U-Net layout: indent per level, the shortest bridge, and the space between rows. */
+const U_INDENT = 40;
+const U_BRIDGE = 70;
+const U_ROW_GAP = 34;
+
 /** Layers drawn with the pooling tint: they resample a map and learn nothing. */
 const resamples = (layer: Layer) => layer.type === 'pool' || layer.type === 'up';
 
@@ -144,6 +151,9 @@ export function cnnLabels(model: Model, theme: Theme): { text: string; style: Te
     const op = opText(layer);
     if (theme.labels.ops && op && i > 0) out.push({ text: op, style: theme.maps.opText });
   });
+  if (model.layers.some((l) => skipOf(l)?.op === 'concat')) {
+    out.push({ text: BRIDGE_TEXT, style: theme.maps.opText });
+  }
   return out;
 }
 
@@ -290,6 +300,25 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
 
   // Horizontal placement, in the forward (left to right) direction.
   const labelHalf = (p: Part) => Math.max(p.name?.width ?? 0, p.size?.width ?? 0) / 2;
+  /** Space between two neighbouring layers on one row: connector, op label and labels. */
+  const pairGap = (previous: Part, part: Part) => {
+    const connector = connectorKind(previous, part);
+    const base =
+      connector === 'rays'
+        ? GAP_MAP
+        : connector === 'fan'
+          ? GAP_FAN
+          : connector === 'edges'
+            ? GAP_NODES
+            : GAP_ARROW;
+    const opRoom = part.op ? part.op.width + theme.labelPadding : 0;
+    const centers =
+      labelHalf(previous) +
+      labelHalf(part) +
+      theme.labelPadding -
+      (previous.extent + part.extent) / 2;
+    return Math.max(base * scale, opRoom, centers);
+  };
   const lefts: number[] = [];
   parts.forEach((part, i) => {
     const previous = parts[i - 1];
@@ -319,7 +348,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
   const last = parts.at(-1)!;
   // A join after the last layer needs room on its right.
   const tail = joins.has(parts.length - 1) ? JOIN_ROOM : 0;
-  const width =
+  let width =
     lefts.at(-1)! +
     last.extent +
     Math.max(0, labelHalf(last) - last.extent / 2, tail) +
@@ -351,7 +380,142 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
     sizeBaseline = cursor + sizeLine.ascent;
     cursor = sizeBaseline + sizeLine.descent;
   }
-  const height = (anyName || anySize ? cursor : layersBottom) + theme.margin;
+  let height = (anyName || anySize ? cursor : layersBottom) + theme.margin;
+
+  // Where each layer sits: one center line here; the U-Net layout below gives each row its own.
+  const cys = parts.map(() => centerY);
+  const nameYs = parts.map(() => nameBaseline);
+  const sizeYs = parts.map(() => sizeBaseline);
+  const opAt = parts.map((p, i) =>
+    p.op && i > 0
+      ? { x: (lefts[i - 1]! + parts[i - 1]!.extent + lefts[i]!) / 2, y: opBaseline }
+      : undefined,
+  );
+  /** Whether a layer connects to the one before it on the same row. */
+  const linked = parts.map((_, i) => i > 0);
+  const elbows: { from: number; to: number; points: [number, number][] }[] = [];
+  const bridges: { source: number; target: number; y: number }[] = [];
+
+  const plan = uPlan(skips, parts.length);
+  if (plan) {
+    // A U-Net: encoder levels down the left, decoder levels up the right, the deepest layers at
+    // the bottom; dashed bridges carry each skip across its row.
+    const indent = U_INDENT * scale;
+    const run = (indices: readonly number[]) => {
+      const rel: number[] = [];
+      indices.forEach((i, k) => {
+        const part = parts[i]!;
+        if (k === 0) rel.push(Math.max(0, labelHalf(part) - part.extent / 2));
+        else {
+          const previous = parts[indices[k - 1]!]!;
+          rel.push(rel[k - 1]! + previous.extent + pairGap(previous, part));
+        }
+      });
+      const tailPart = parts[indices.at(-1)!]!;
+      const w =
+        rel.at(-1)! + tailPart.extent + Math.max(0, labelHalf(tailPart) - tailPart.extent / 2);
+      return { indices, rel, w };
+    };
+    const levels = plan.left.length;
+    const lefts_ = plan.left.map(run);
+    const rights = plan.right.map(run);
+    const bottom = run(plan.bottom);
+    const inner = Math.max(
+      ...lefts_.map((l, r) => l.w + rights[r]!.w + 2 * r * indent + U_BRIDGE),
+      bottom.w + 2 * levels * indent,
+    );
+    width = inner + 2 * theme.margin;
+    const place = (r: ReturnType<typeof run>, offset: number) =>
+      r.indices.forEach((i, k) => {
+        lefts[i] = offset + r.rel[k]!;
+        linked[i] = k > 0;
+      });
+    lefts_.forEach((l, r) => place(l, theme.margin + r * indent));
+    rights.forEach((l, r) => place(l, width - theme.margin - r * indent - l.w));
+    place(bottom, (width - bottom.w) / 2);
+
+    // Rows, top to bottom.
+    const rows = [...lefts_.map((l, r) => [...l.indices, ...rights[r]!.indices]), bottom.indices];
+    const labelsBottom: number[] = [];
+    let rowTop = theme.margin;
+    rows.forEach((indices) => {
+      const rowParts = indices.map((i) => parts[i]!);
+      const rowUp = Math.max(...rowParts.map((p) => p.up));
+      const rowDown = Math.max(...rowParts.map((p) => p.down));
+      const inRowOp = indices.some((i) => parts[i]!.op && linked[i]);
+      const band = inRowOp ? opLine.ascent + opLine.descent + theme.labelGap : 0;
+      const cy = rowTop + band + rowUp;
+      let y = cy + rowDown + theme.labelGap;
+      const rowNames = rowParts.flatMap((p) => (p.name ? [p.name] : []));
+      let nameY = 0;
+      let sizeY = 0;
+      if (rowNames.length > 0) {
+        nameY = y + Math.max(nameLine.ascent, ...rowNames.map((l) => l.ascent));
+        y = nameY + Math.max(nameLine.descent, ...rowNames.map((l) => l.descent)) + theme.lineGap;
+      }
+      if (rowParts.some((p) => p.size)) {
+        sizeY = y + sizeLine.ascent;
+        y = sizeY + sizeLine.descent;
+      }
+      const bottomY = rowNames.length > 0 || rowParts.some((p) => p.size) ? y : cy + rowDown;
+      for (const i of indices) {
+        cys[i] = cy;
+        nameYs[i] = nameY;
+        sizeYs[i] = sizeY;
+        if (parts[i]!.op && linked[i]) {
+          opAt[i] = {
+            x: (lefts[i - 1]! + parts[i - 1]!.extent + lefts[i]!) / 2,
+            y: rowTop + opLine.ascent,
+          };
+        }
+      }
+      labelsBottom.push(bottomY);
+      rowTop = bottomY + U_ROW_GAP + opLine.ascent;
+    });
+    height = labelsBottom.at(-1)! + theme.margin;
+
+    // Elbows between rows: down the left side and into the bottom, up the right side.
+    const rowOf = (i: number) => rows.findIndex((indices) => indices.includes(i));
+    const centerX = (i: number) => lefts[i]! + parts[i]!.extent / 2;
+    const firsts = [...plan.left.slice(1), plan.bottom, ...[...plan.right].reverse()].map(
+      (l) => l[0]!,
+    );
+    for (const to of firsts) {
+      const from = to - 1;
+      const a = rowOf(from);
+      const b = rowOf(to);
+      const down = b > a;
+      const upper = down ? a : b;
+      const mid = labelsBottom[upper]! + U_ROW_GAP / 2 + 2;
+      const points: [number, number][] = down
+        ? [
+            [centerX(from), labelsBottom[a]! + 6],
+            [centerX(from), mid],
+            [centerX(to), mid],
+            [centerX(to), cys[to]! - parts[to]!.up - 4],
+          ]
+        : [
+            [centerX(from), cys[from]! - parts[from]!.up - 4],
+            [centerX(from), mid],
+            [centerX(to), mid],
+            [centerX(to), labelsBottom[b]! + 5],
+          ];
+      elbows.push({ from, to, points });
+      // The step's label sits beside the elbow's last stretch, clear of the lines and labels.
+      const op = parts[to]!.op;
+      if (op) {
+        const [, y0] = points.at(-2)!;
+        const [, y1] = points.at(-1)!;
+        opAt[to] = {
+          x: centerX(to) - op.width / 2 - 7,
+          y: (y0 + y1) / 2 + (opLine.ascent - opLine.descent) / 2,
+        };
+      }
+    }
+    plan.skips.forEach((skip) =>
+      bridges.push({ source: skip.source, target: skip.target, y: cys[skip.source]! }),
+    );
+  }
 
   // Right to left flow mirrors every x coordinate.
   const rtl = theme.direction === 'rtl';
@@ -361,13 +525,14 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
     `M${points.map(([x, y]) => pt(x, y)).join('L')}Z`;
 
   // Geometry helpers (forward coordinates).
-  const sheetTop = (p: MapPart) => centerY - p.h / 2 + p.sy / 2;
+  const sheetTop = (p: MapPart) => cys[p.index]! - p.h / 2 + p.sy / 2;
   /** A point on sheet s of a map: u runs along the slanted width, v down the height (0 to 1). */
   const onSheet = (p: MapPart, s: number, u: number, v: number): [number, number] => [
     lefts[p.index]! + s * p.gap + u * p.sx,
     sheetTop(p) - u * p.sy + v * p.h,
   ];
-  const nodeY = (p: ColumnPart, j: number) => centerY + (j - (p.slots.length - 1) / 2) * pitch;
+  const nodeY = (p: ColumnPart, j: number) =>
+    cys[p.index]! + (j - (p.slots.length - 1) / 2) * pitch;
   const columnEnds = (p: ColumnPart): EdgeEnd[] =>
     p.slots.flatMap((slot, j) => (slot === 'ellipsis' ? [] : [{ neuron: slot, y: nodeY(p, j) }]));
 
@@ -378,7 +543,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
   // Connectors under the layers: edges, fans and arrows.
   parts.forEach((part, i) => {
     const previous = parts[i - 1];
-    if (!previous) return;
+    if (!previous || !linked[i]) return;
     const from = i - 1;
     const connector = connectorKind(previous, part);
     if (connector === 'edges' && previous.draw === 'column' && part.draw === 'column') {
@@ -426,6 +591,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
     const back = tip - HEAD_LENGTH;
     const arrow = theme.box.arrow;
     const sign = rtl ? -1 : 1;
+    const centerY = cys[i]!;
     items.push({ kind: 'group', id: group, classes: ['edges'] });
     items.push({
       kind: 'line',
@@ -540,7 +706,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
         parent: group,
         classes: ['box', `box-${part.role}`],
         x: rtl ? width - x - part.extent : x,
-        y: centerY - part.height / 2,
+        y: cys[part.index]! - part.height / 2,
         width: part.extent,
         height: part.height,
         rx: theme.box.radius / 2,
@@ -595,9 +761,104 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
 
   items.push(...over);
 
+  // U-Net: elbows between rows, and the dashed copy-and-concatenate bridges.
+  const rounded = (points: readonly [number, number][], end: number) => {
+    // Rounded corners; the last segment stops `end` short of its point (room for the head).
+    let d = `M${pt(points[0]![0], points[0]![1])}`;
+    for (let k = 1; k < points.length; k++) {
+      const [x, y] = points[k]!;
+      const [px, py] = points[k - 1]!;
+      const next = points[k + 1];
+      if (!next) {
+        const len = Math.sqrt((x - px) * (x - px) + (y - py) * (y - py)) || 1;
+        d += `L${pt(x - ((x - px) / len) * end, y - ((y - py) / len) * end)}`;
+        continue;
+      }
+      const c = Math.min(
+        6,
+        Math.sqrt((x - px) * (x - px) + (y - py) * (y - py)) / 2,
+        Math.sqrt((next[0] - x) * (next[0] - x) + (next[1] - y) * (next[1] - y)) / 2,
+      );
+      const inLen = Math.sqrt((x - px) * (x - px) + (y - py) * (y - py)) || 1;
+      const outLen = Math.sqrt((next[0] - x) * (next[0] - x) + (next[1] - y) * (next[1] - y)) || 1;
+      d +=
+        `L${pt(x - ((x - px) / inLen) * c, y - ((y - py) / inLen) * c)}` +
+        `Q${pt(x, y)} ${pt(x + ((next[0] - x) / outLen) * c, y + ((next[1] - y) / outLen) * c)}`;
+    }
+    return d;
+  };
+  const headAt = (points: readonly [number, number][]) => {
+    const [x, y] = points.at(-1)!;
+    const [px, py] = points.at(-2)!;
+    const len = Math.sqrt((x - px) * (x - px) + (y - py) * (y - py)) || 1;
+    const ux = (x - px) / len;
+    const uy = (y - py) / len;
+    const bx = x - ux * HEAD_LENGTH;
+    const by = y - uy * HEAD_LENGTH;
+    return `M${pt(x, y)}L${pt(bx - uy * HEAD_HALF, by + ux * HEAD_HALF)}L${pt(bx + uy * HEAD_HALF, by - ux * HEAD_HALF)}Z`;
+  };
+  for (const elbow of elbows) {
+    const group = `edges-${elbow.from}`;
+    const arrow = theme.box.arrow;
+    items.push({ kind: 'group', id: group, classes: ['edges'] });
+    items.push({
+      kind: 'path',
+      id: `arrow-${elbow.from}`,
+      parent: group,
+      classes: ['arrow', 'elbow'],
+      d: rounded(elbow.points, HEAD_LENGTH - 1),
+      paint: { stroke: arrow.color, strokeWidth: arrow.width, fill: 'none' },
+    });
+    items.push({
+      kind: 'path',
+      id: `arrow-${elbow.from}-head`,
+      parent: group,
+      classes: ['arrow-head'],
+      d: headAt(elbow.points),
+      paint: { fill: arrow.color },
+    });
+  }
+  if (bridges.length > 0) {
+    items.push({ kind: 'group', id: 'bridges', classes: ['bridges'] });
+    const color = theme.parts.attention.stroke;
+    bridges.forEach((bridge, k) => {
+      const points: [number, number][] = [
+        [lefts[bridge.source]! + parts[bridge.source]!.extent + ARROW_GAP, bridge.y],
+        [lefts[bridge.target]! - ARROW_GAP, bridge.y],
+      ];
+      items.push({
+        kind: 'path',
+        id: `bridge-${k}`,
+        parent: 'bridges',
+        classes: ['bridge'],
+        d: rounded(points, HEAD_LENGTH - 1),
+        paint: { stroke: color, strokeWidth: 1.3, dash: [5, 4], fill: 'none' },
+      });
+      items.push({
+        kind: 'path',
+        id: `bridge-${k}-head`,
+        parent: 'bridges',
+        classes: ['bridge-head'],
+        d: headAt(points),
+        paint: { fill: color },
+      });
+    });
+  }
+
+  const bridgeLabel = (() => {
+    const top = bridges[0];
+    if (!top) return undefined;
+    const style: TextStyle = { ...maps.opText, color: theme.parts.attention.stroke };
+    const label = buildLabel(BRIDGE_TEXT, style, engine, () => {});
+    const x0 = lefts[top.source]! + parts[top.source]!.extent + ARROW_GAP;
+    const x1 = lefts[top.target]! - ARROW_GAP;
+    if (x1 - x0 < label.width + 12) return undefined;
+    return { label, style, x: (x0 + x1) / 2, y: top.y - 6 };
+  })();
+
   // Skip connections: from the gap after the source layer, over the layers, down into a join
   // (+ for add, two bars for concat) in the gap after the target layer.
-  if (skips.length > 0) {
+  if (skips.length > 0 && !plan) {
     items.push({ kind: 'group', id: 'skips', classes: ['skips'] });
     const color = theme.box.arrow.color;
     const lineWidth = theme.box.arrow.width;
@@ -674,20 +935,34 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
   }
 
   // Labels.
-  if (parts.some((p) => p.name || p.size || p.op)) {
+  if (parts.some((p) => p.name || p.size || p.op) || bridgeLabel) {
     items.push({ kind: 'group', id: 'labels', classes: ['labels'] });
+    if (bridgeLabel) {
+      const { label, style, x, y } = bridgeLabel;
+      items.push(
+        ...labelItems(
+          'bridge-label',
+          ['label', 'label-bridge'],
+          label,
+          X(x),
+          y,
+          style,
+          engine,
+          'labels',
+        ),
+      );
+    }
     for (const part of parts) {
       const center = X(lefts[part.index]! + part.extent / 2);
-      if (part.op) {
-        const previous = parts[part.index - 1]!;
-        const mid = X((lefts[part.index - 1]! + previous.extent + lefts[part.index]!) / 2);
+      const op = opAt[part.index];
+      if (part.op && op) {
         items.push(
           ...labelItems(
             `op-${part.index}`,
             ['label', 'label-op'],
             part.op,
-            mid,
-            opBaseline,
+            X(op.x),
+            op.y,
             maps.opText,
             engine,
             'labels',
@@ -701,7 +976,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
             ['label', 'label-name'],
             part.name,
             center,
-            nameBaseline,
+            nameYs[part.index]!,
             theme.nameText,
             engine,
             'labels',
@@ -715,7 +990,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
             ['label', 'label-size'],
             part.size,
             center,
-            sizeBaseline,
+            sizeYs[part.index]!,
             theme.sizeText,
             engine,
             'labels',
@@ -736,6 +1011,40 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
       items,
     },
     diagnostics,
+  };
+}
+
+/**
+ * A U-Net: every skip stacks (concat) and they nest, outermost first (each source after the
+ * last, each target before the last). Rows: the encoder level k on the left, its decoder level on
+ * the right; the layers between the innermost source and target at the bottom.
+ */
+function uPlan(
+  skips: readonly { source: number; target: number; op: string }[],
+  count: number,
+):
+  | {
+      skips: { source: number; target: number }[];
+      left: number[][];
+      right: number[][];
+      bottom: number[];
+    }
+  | undefined {
+  if (skips.length === 0 || skips.some((sk) => sk.op !== 'concat')) return undefined;
+  const sorted = [...skips].sort((a, b) => b.target - b.source - (a.target - a.source));
+  for (let k = 1; k < sorted.length; k++) {
+    const outer = sorted[k - 1]!;
+    const inner = sorted[k]!;
+    if (!(inner.source > outer.source && inner.target < outer.target)) return undefined;
+  }
+  const innermost = sorted.at(-1)!;
+  if (innermost.target - innermost.source < 2) return undefined;
+  const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+  return {
+    skips: sorted,
+    left: sorted.map((sk, k) => range(k === 0 ? 0 : sorted[k - 1]!.source + 1, sk.source)),
+    right: sorted.map((sk, k) => range(sk.target, k === 0 ? count - 1 : sorted[k - 1]!.target - 1)),
+    bottom: range(innermost.source + 1, innermost.target - 1),
   };
 }
 

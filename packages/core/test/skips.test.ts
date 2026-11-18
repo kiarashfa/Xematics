@@ -143,4 +143,53 @@ describe('drawing', () => {
     expect(scene.items.some((i) => i.id === 'join-2')).toBe(true);
     expect(scene.items.some((i) => i.id === 'node-1-0')).toBe(true);
   });
+
+  test('nested stacking skips draw a U: rows, elbows and copy bridges', async () => {
+    const engine = await getEngine();
+    const yaml = [
+      'layers:',
+      '  - { type: input, shape: [64, 64, 1] }',
+      '  - { type: conv, filters: 8, kernel: 3 }',
+      '  - { type: pool, size: 2 }',
+      '  - { type: conv, filters: 16, kernel: 3 }',
+      '  - { type: up, size: 2 }',
+      '  - { type: conv, filters: 8, kernel: 3, skip: { from: 2, op: concat } }',
+      '  - { type: conv, filters: 1, kernel: 1 }',
+    ].join('\n');
+    const m = model(yaml);
+    await prepareModel(m, engine);
+    const scene = layoutModel(m, engine).scene;
+    const ids = scene.items.map((i) => i.id);
+    expect(ids).toEqual(expect.arrayContaining(['bridges', 'bridge-0', 'bridge-0-head']));
+    expect(ids).not.toContain('skips');
+    // The pool starts the bottom row: an elbow (a path) leads down to it.
+    const elbow = scene.items.find((i) => i.id === 'arrow-1');
+    expect(elbow?.kind).toBe('path');
+    const sheet = (k: number) => scene.items.find((i) => i.id === `sheet-${k}-0`);
+    const top = (k: number) => {
+      const s = sheet(k);
+      return s && s.kind === 'path'
+        ? Math.min(...(s.d.match(/-?\d*\.?\d+/g) ?? []).map(Number).filter((_, j) => j % 2 === 1))
+        : 0;
+    };
+    expect(top(2)).toBeGreaterThan(top(1));
+    expect(renderTikz(scene)).toContain('xm bridge');
+  });
+
+  test('add skips, or skips that do not nest, keep the one-row layout', async () => {
+    const engine = await getEngine();
+    const yaml = [
+      'layers:',
+      '  - { type: input, shape: [16, 16, 1] }',
+      '  - { type: conv, filters: 4, kernel: 3 }',
+      '  - { type: conv, filters: 4, kernel: 3 }',
+      '  - { type: conv, filters: 4, kernel: 3, skip: { from: 2, op: concat } }',
+      '  - { type: conv, filters: 4, kernel: 3, skip: { from: 3 } }',
+    ].join('\n');
+    const m = model(yaml);
+    await prepareModel(m, engine);
+    const ids = layoutModel(m, engine).scene.items.map((i) => i.id);
+    expect(ids).toContain('skips');
+    expect(ids).not.toContain('bridges');
+  });
 });

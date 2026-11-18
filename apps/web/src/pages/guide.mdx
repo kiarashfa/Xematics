@@ -201,6 +201,29 @@ join, and the editor warns when they do not match. In the editor, select the lay
 **From** and **Join** in the Layer tab's Skip group. Adding, moving and removing layers keeps
 every skip on the right layer.
 
+When every skip stacks and they nest, each one reaching further out than the last, the network is
+drawn as a U, like U-Net: the encoder goes down the left, the decoder comes back up the right, and
+dashed bridges carry each skip across its row.
+
+<Figure
+  id="g-unet"
+  source={`title: U-Net
+layers:
+  - { type: input, shape: [128, 128, 1], name: Image }
+  - { type: conv, filters: 64, kernel: 3, activation: relu }
+  - { type: pool, size: 2 }
+  - { type: conv, filters: 128, kernel: 3, activation: relu }
+  - { type: pool, size: 2 }
+  - { type: conv, filters: 256, kernel: 3, activation: relu, name: Bottleneck }
+  - { type: up, size: 2 }
+  - { type: conv, filters: 128, kernel: 3, activation: relu, skip: { from: 4, op: concat } }
+  - { type: up, size: 2 }
+  - { type: conv, filters: 64, kernel: 3, activation: relu, skip: { from: 2, op: concat } }
+  - { type: conv, filters: 2, kernel: 1, activation: softmax, name: Mask }
+`}
+  caption="A small U-Net: each bridge stacks an encoder level onto its decoder level"
+/>
+
 ### Parameter counts
 
 The **Parameters** switch (Home tab, Labels group) writes how many weights and biases each layer

@@ -2,144 +2,135 @@
 % Made with Xematics. Positions are in px (1 px = 0.75 pt), as in the SVG export.
 \documentclass[tikz, border=4pt]{standalone}
 \definecolor{xm1}{HTML}{FFFFFF}
-\definecolor{xm2}{HTML}{D4E8F5}
-\definecolor{xm3}{HTML}{0072B2}
-\definecolor{xm4}{HTML}{F1F2F4}
-\definecolor{xm5}{HTML}{4B5563}
-\definecolor{xm6}{HTML}{DFE3E8}
-\definecolor{xm7}{HTML}{FBE8C4}
-\definecolor{xm8}{HTML}{B97800}
-\definecolor{xm9}{HTML}{AEB3B9}
-\definecolor{xm10}{HTML}{6B7280}
-\definecolor{xm11}{HTML}{1F2937}
+\definecolor{xm2}{HTML}{6B7280}
+\definecolor{xm3}{HTML}{D4E8F5}
+\definecolor{xm4}{HTML}{0072B2}
+\definecolor{xm5}{HTML}{F1F2F4}
+\definecolor{xm6}{HTML}{4B5563}
+\definecolor{xm7}{HTML}{DFE3E8}
+\definecolor{xm8}{HTML}{FBE8C4}
+\definecolor{xm9}{HTML}{B97800}
+\definecolor{xm10}{HTML}{AEB3B9}
+\definecolor{xm11}{HTML}{2F7FB5}
+\definecolor{xm12}{HTML}{1F2937}
 \begin{document}
 \begin{tikzpicture}[x=0.75pt, y=-0.75pt]
   \tikzset{
-    xm map input back/.style={fill=xm2, draw=xm3, line width=0.68pt, line join=round},
-    xm map input/.style={fill=xm2, draw=xm3, line width=0.9pt, line join=round},
-    xm map hidden back/.style={fill=xm4, draw=xm5, line width=0.68pt, line join=round},
-    xm map hidden/.style={fill=xm4, draw=xm5, line width=0.9pt, line join=round},
-    xm map pool back/.style={fill=xm6, draw=xm5, line width=0.68pt, line join=round},
-    xm map pool/.style={fill=xm6, draw=xm5, line width=0.9pt, line join=round},
-    xm map output back/.style={fill=xm7, draw=xm8, line width=0.68pt, line join=round},
-    xm map output/.style={fill=xm7, draw=xm8, line width=0.9pt, line join=round},
-    xm window/.style={fill=xm9, draw=xm3, line width=0.75pt, line join=round},
-    xm ray/.style={draw=xm10, line width=0.6pt},
-    xm ray end/.style={fill=xm10},
-    xm skip start/.style={fill=xm10},
-    xm skip concat/.style={fill=none, draw=xm10, line width=1.05pt, dash pattern=on 3.75pt off 3pt, line join=round},
-    xm skip head/.style={fill=xm10},
-    xm join/.style={fill=xm1, draw=xm10, line width=1.05pt},
-    xm join sign/.style={fill=none, draw=xm10, line width=1.05pt},
-    xm name xm11/.style={text=xm11, inner sep=0, font=\sffamily\fontsize{9.75}{11.7}\selectfont},
-    xm size xm10/.style={text=xm10, inner sep=0, font=\sffamily\fontsize{9}{10.8}\selectfont},
-    xm op xm10/.style={text=xm10, inner sep=0, font=\sffamily\fontsize{8.25}{9.9}\selectfont},
+    xm elbow/.style={fill=none, draw=xm2, line width=1.05pt, line join=round},
+    xm arrow head/.style={fill=xm2},
+    xm map input back/.style={fill=xm3, draw=xm4, line width=0.68pt, line join=round},
+    xm map input/.style={fill=xm3, draw=xm4, line width=0.9pt, line join=round},
+    xm map hidden back/.style={fill=xm5, draw=xm6, line width=0.68pt, line join=round},
+    xm map hidden/.style={fill=xm5, draw=xm6, line width=0.9pt, line join=round},
+    xm map pool back/.style={fill=xm7, draw=xm6, line width=0.68pt, line join=round},
+    xm map pool/.style={fill=xm7, draw=xm6, line width=0.9pt, line join=round},
+    xm map output back/.style={fill=xm8, draw=xm9, line width=0.68pt, line join=round},
+    xm map output/.style={fill=xm8, draw=xm9, line width=0.9pt, line join=round},
+    xm window/.style={fill=xm10, draw=xm4, line width=0.75pt, line join=round},
+    xm ray/.style={draw=xm2, line width=0.6pt},
+    xm ray end/.style={fill=xm2},
+    xm bridge/.style={fill=none, draw=xm11, line width=0.98pt, dash pattern=on 3.75pt off 3pt, line join=round},
+    xm bridge head/.style={fill=xm11},
+    xm name xm12/.style={text=xm12, inner sep=0, font=\sffamily\fontsize{9.75}{11.7}\selectfont},
+    xm size xm2/.style={text=xm2, inner sep=0, font=\sffamily\fontsize{9}{10.8}\selectfont},
+    xm op xm2/.style={text=xm2, inner sep=0, font=\sffamily\fontsize{8.25}{9.9}\selectfont},
   }
-  \fill[xm1] (0,0) rectangle (820.39,270.6);
+  \fill[xm1] (0,0) rectangle (513.07,455.47);
+  % Connections 1
+  \draw[xm elbow] (155.89,230.6) -- (155.89,240.66) .. controls (155.89,242.62) and (154.91,243.6) .. (152.95,243.6) -- (152.95,243.6) .. controls (150.99,243.6) and (150.01,244.58) .. (150.01,246.54) -- (150.01,298.13);
+  \fill[xm arrow head] (150.01,305.13) -- (145.51,297.13) -- (154.51,297.13) -- cycle;
+  % Connections 4
+  \draw[xm elbow] (360.62,291.56) -- (360.62,249.6) .. controls (360.62,245.6) and (358.62,243.6) .. (354.62,243.6) -- (291.68,243.6) .. controls (287.68,243.6) and (285.68,241.6) .. (285.68,237.6) -- (285.68,236.6);
+  \fill[xm arrow head] (285.68,229.6) -- (290.18,237.6) -- (281.18,237.6) -- cycle;
   % Layers
-  \draw[xm map input back] (30.29,110.62) -- (61.18,91.5) -- (61.18,165.04) -- (30.29,184.16) -- cycle;
-  \draw[xm map input back] (33.4,110.62) -- (64.28,91.5) -- (64.28,165.04) -- (33.4,184.16) -- cycle;
-  \draw[xm map input] (36.5,110.62) -- (67.39,91.5) -- (67.39,165.04) -- (36.5,184.16) -- cycle;
-  \draw[xm map hidden back] (128.75,110.62) -- (159.64,91.5) -- (159.64,165.04) -- (128.75,184.16) -- cycle;
-  \draw[xm map hidden back] (132.65,110.62) -- (163.54,91.5) -- (163.54,165.04) -- (132.65,184.16) -- cycle;
-  \draw[xm map hidden back] (136.55,110.62) -- (167.44,91.5) -- (167.44,165.04) -- (136.55,184.16) -- cycle;
-  \draw[xm map hidden back] (140.45,110.62) -- (171.34,91.5) -- (171.34,165.04) -- (140.45,184.16) -- cycle;
-  \draw[xm map hidden back] (144.35,110.62) -- (175.24,91.5) -- (175.24,165.04) -- (144.35,184.16) -- cycle;
-  \draw[xm map hidden back] (148.25,110.62) -- (179.14,91.5) -- (179.14,165.04) -- (148.25,184.16) -- cycle;
-  \draw[xm map hidden] (152.15,110.62) -- (183.04,91.5) -- (183.04,165.04) -- (152.15,184.16) -- cycle;
-  \draw[xm map pool back] (240.64,118.59) -- (262.48,105.07) -- (262.48,157.07) -- (240.64,170.59) -- cycle;
-  \draw[xm map pool back] (244.54,118.59) -- (266.38,105.07) -- (266.38,157.07) -- (244.54,170.59) -- cycle;
-  \draw[xm map pool back] (248.44,118.59) -- (270.28,105.07) -- (270.28,157.07) -- (248.44,170.59) -- cycle;
-  \draw[xm map pool back] (252.34,118.59) -- (274.18,105.07) -- (274.18,157.07) -- (252.34,170.59) -- cycle;
-  \draw[xm map pool back] (256.24,118.59) -- (278.08,105.07) -- (278.08,157.07) -- (256.24,170.59) -- cycle;
-  \draw[xm map pool back] (260.14,118.59) -- (281.98,105.07) -- (281.98,157.07) -- (260.14,170.59) -- cycle;
-  \draw[xm map pool] (264.04,118.59) -- (285.88,105.07) -- (285.88,157.07) -- (264.04,170.59) -- cycle;
-  \draw[xm map hidden back] (347.24,118.59) -- (369.08,105.07) -- (369.08,157.07) -- (347.24,170.59) -- cycle;
-  \draw[xm map hidden back] (351.72,118.59) -- (373.56,105.07) -- (373.56,157.07) -- (351.72,170.59) -- cycle;
-  \draw[xm map hidden back] (356.2,118.59) -- (378.04,105.07) -- (378.04,157.07) -- (356.2,170.59) -- cycle;
-  \draw[xm map hidden back] (360.68,118.59) -- (382.52,105.07) -- (382.52,157.07) -- (360.68,170.59) -- cycle;
-  \draw[xm map hidden back] (365.16,118.59) -- (387,105.07) -- (387,157.07) -- (365.16,170.59) -- cycle;
-  \draw[xm map hidden back] (369.64,118.59) -- (391.48,105.07) -- (391.48,157.07) -- (369.64,170.59) -- cycle;
-  \draw[xm map hidden] (374.12,118.59) -- (395.96,105.07) -- (395.96,157.07) -- (374.12,170.59) -- cycle;
-  \draw[xm map pool back] (444.99,110.62) -- (475.88,91.5) -- (475.88,165.04) -- (444.99,184.16) -- cycle;
-  \draw[xm map pool back] (449.47,110.62) -- (480.36,91.5) -- (480.36,165.04) -- (449.47,184.16) -- cycle;
-  \draw[xm map pool back] (453.95,110.62) -- (484.84,91.5) -- (484.84,165.04) -- (453.95,184.16) -- cycle;
-  \draw[xm map pool back] (458.43,110.62) -- (489.32,91.5) -- (489.32,165.04) -- (458.43,184.16) -- cycle;
-  \draw[xm map pool back] (462.91,110.62) -- (493.8,91.5) -- (493.8,165.04) -- (462.91,184.16) -- cycle;
-  \draw[xm map pool back] (467.39,110.62) -- (498.28,91.5) -- (498.28,165.04) -- (467.39,184.16) -- cycle;
-  \draw[xm map pool] (471.87,110.62) -- (502.75,91.5) -- (502.75,165.04) -- (471.87,184.16) -- cycle;
-  \draw[xm map hidden back] (564.12,110.62) -- (595,91.5) -- (595,165.04) -- (564.12,184.16) -- cycle;
-  \draw[xm map hidden back] (568.6,110.62) -- (599.48,91.5) -- (599.48,165.04) -- (568.6,184.16) -- cycle;
-  \draw[xm map hidden back] (573.08,110.62) -- (603.96,91.5) -- (603.96,165.04) -- (573.08,184.16) -- cycle;
-  \draw[xm map hidden back] (577.55,110.62) -- (608.44,91.5) -- (608.44,165.04) -- (577.55,184.16) -- cycle;
-  \draw[xm map hidden back] (582.03,110.62) -- (612.92,91.5) -- (612.92,165.04) -- (582.03,184.16) -- cycle;
-  \draw[xm map hidden back] (586.51,110.62) -- (617.4,91.5) -- (617.4,165.04) -- (586.51,184.16) -- cycle;
-  \draw[xm map hidden] (590.99,110.62) -- (621.88,91.5) -- (621.88,165.04) -- (590.99,184.16) -- cycle;
-  \draw[xm map output back] (742.17,99.35) -- (785.85,72.31) -- (785.85,176.31) -- (742.17,203.35) -- cycle;
-  \draw[xm map output back] (745.28,99.35) -- (788.96,72.31) -- (788.96,176.31) -- (745.28,203.35) -- cycle;
-  \draw[xm map output] (748.39,99.35) -- (792.07,72.31) -- (792.07,176.31) -- (748.39,203.35) -- cycle;
-  \draw[xm window] (49.47,133.48) -- (54.42,130.42) -- (54.42,142.18) -- (49.47,145.24) -- cycle;
-  \draw[xm ray] (49.47,133.48) -- (144.19,137.83);
-  \draw[xm ray] (54.42,130.42) -- (144.19,137.83);
-  \draw[xm ray] (54.42,142.18) -- (144.19,137.83);
-  \draw[xm ray] (49.47,145.24) -- (144.19,137.83);
-  \fill[xm ray end] (144.19,137.83) circle[radius=1.8];
-  \draw[xm window] (165.12,133.48) -- (170.06,130.42) -- (170.06,142.18) -- (165.12,145.24) -- cycle;
-  \draw[xm ray] (165.12,133.48) -- (251.56,137.83);
-  \draw[xm ray] (170.06,130.42) -- (251.56,137.83);
-  \draw[xm ray] (170.06,142.18) -- (251.56,137.83);
-  \draw[xm ray] (165.12,145.24) -- (251.56,137.83);
-  \fill[xm ray end] (251.56,137.83) circle[radius=1.8];
-  \draw[xm window] (273.21,134.75) -- (276.71,132.59) -- (276.71,140.91) -- (273.21,143.07) -- cycle;
-  \draw[xm ray] (273.21,134.75) -- (358.16,137.83);
-  \draw[xm ray] (276.71,132.59) -- (358.16,137.83);
-  \draw[xm ray] (276.71,140.91) -- (358.16,137.83);
-  \draw[xm ray] (273.21,143.07) -- (358.16,137.83);
-  \fill[xm ray end] (358.16,137.83) circle[radius=1.8];
-  \draw[xm window] (383.29,134.75) -- (386.79,132.59) -- (386.79,140.91) -- (383.29,143.07) -- cycle;
-  \draw[xm ray] (383.29,134.75) -- (460.43,137.83);
-  \draw[xm ray] (386.79,132.59) -- (460.43,137.83);
-  \draw[xm ray] (386.79,140.91) -- (460.43,137.83);
-  \draw[xm ray] (383.29,143.07) -- (460.43,137.83);
-  \fill[xm ray end] (460.43,137.83) circle[radius=1.8];
-  \draw[xm window] (484.84,133.48) -- (489.78,130.42) -- (489.78,142.18) -- (484.84,145.24) -- cycle;
-  \draw[xm ray] (484.84,133.48) -- (579.56,137.83);
-  \draw[xm ray] (489.78,130.42) -- (579.56,137.83);
-  \draw[xm ray] (489.78,142.18) -- (579.56,137.83);
-  \draw[xm ray] (484.84,145.24) -- (579.56,137.83);
-  \fill[xm ray end] (579.56,137.83) circle[radius=1.8];
-  \draw[xm window] (603.97,133.48) -- (608.91,130.42) -- (608.91,142.18) -- (603.97,145.24) -- cycle;
-  \draw[xm ray] (603.97,133.48) -- (764.01,137.83);
-  \draw[xm ray] (608.91,130.42) -- (764.01,137.83);
-  \draw[xm ray] (608.91,142.18) -- (764.01,137.83);
-  \draw[xm ray] (603.97,145.24) -- (764.01,137.83);
-  \fill[xm ray end] (764.01,137.83) circle[radius=1.8];
+  \draw[xm map input back] (30.29,86.62) -- (61.18,67.5) -- (61.18,141.04) -- (30.29,160.16) -- cycle;
+  \draw[xm map input back] (33.4,86.62) -- (64.28,67.5) -- (64.28,141.04) -- (33.4,160.16) -- cycle;
+  \draw[xm map input] (36.5,86.62) -- (67.39,67.5) -- (67.39,141.04) -- (36.5,160.16) -- cycle;
+  \draw[xm map hidden back] (128.75,86.62) -- (159.64,67.5) -- (159.64,141.04) -- (128.75,160.16) -- cycle;
+  \draw[xm map hidden back] (132.65,86.62) -- (163.54,67.5) -- (163.54,141.04) -- (132.65,160.16) -- cycle;
+  \draw[xm map hidden back] (136.55,86.62) -- (167.44,67.5) -- (167.44,141.04) -- (136.55,160.16) -- cycle;
+  \draw[xm map hidden back] (140.45,86.62) -- (171.34,67.5) -- (171.34,141.04) -- (140.45,160.16) -- cycle;
+  \draw[xm map hidden back] (144.35,86.62) -- (175.24,67.5) -- (175.24,141.04) -- (144.35,160.16) -- cycle;
+  \draw[xm map hidden back] (148.25,86.62) -- (179.14,67.5) -- (179.14,141.04) -- (148.25,160.16) -- cycle;
+  \draw[xm map hidden] (152.15,86.62) -- (183.04,67.5) -- (183.04,141.04) -- (152.15,160.16) -- cycle;
+  \draw[xm map pool back] (127.39,322.65) -- (149.23,309.13) -- (149.23,361.13) -- (127.39,374.65) -- cycle;
+  \draw[xm map pool back] (131.29,322.65) -- (153.13,309.13) -- (153.13,361.13) -- (131.29,374.65) -- cycle;
+  \draw[xm map pool back] (135.19,322.65) -- (157.03,309.13) -- (157.03,361.13) -- (135.19,374.65) -- cycle;
+  \draw[xm map pool back] (139.09,322.65) -- (160.93,309.13) -- (160.93,361.13) -- (139.09,374.65) -- cycle;
+  \draw[xm map pool back] (142.99,322.65) -- (164.83,309.13) -- (164.83,361.13) -- (142.99,374.65) -- cycle;
+  \draw[xm map pool back] (146.89,322.65) -- (168.73,309.13) -- (168.73,361.13) -- (146.89,374.65) -- cycle;
+  \draw[xm map pool] (150.79,322.65) -- (172.63,309.13) -- (172.63,361.13) -- (150.79,374.65) -- cycle;
+  \draw[xm map hidden back] (233.99,322.65) -- (255.83,309.13) -- (255.83,361.13) -- (233.99,374.65) -- cycle;
+  \draw[xm map hidden back] (238.47,322.65) -- (260.31,309.13) -- (260.31,361.13) -- (238.47,374.65) -- cycle;
+  \draw[xm map hidden back] (242.95,322.65) -- (264.79,309.13) -- (264.79,361.13) -- (242.95,374.65) -- cycle;
+  \draw[xm map hidden back] (247.43,322.65) -- (269.27,309.13) -- (269.27,361.13) -- (247.43,374.65) -- cycle;
+  \draw[xm map hidden back] (251.91,322.65) -- (273.75,309.13) -- (273.75,361.13) -- (251.91,374.65) -- cycle;
+  \draw[xm map hidden back] (256.39,322.65) -- (278.23,309.13) -- (278.23,361.13) -- (256.39,374.65) -- cycle;
+  \draw[xm map hidden] (260.87,322.65) -- (282.71,309.13) -- (282.71,361.13) -- (260.87,374.65) -- cycle;
+  \draw[xm map pool back] (331.74,314.68) -- (362.63,295.56) -- (362.63,369.1) -- (331.74,388.22) -- cycle;
+  \draw[xm map pool back] (336.22,314.68) -- (367.11,295.56) -- (367.11,369.1) -- (336.22,388.22) -- cycle;
+  \draw[xm map pool back] (340.7,314.68) -- (371.59,295.56) -- (371.59,369.1) -- (340.7,388.22) -- cycle;
+  \draw[xm map pool back] (345.18,314.68) -- (376.07,295.56) -- (376.07,369.1) -- (345.18,388.22) -- cycle;
+  \draw[xm map pool back] (349.66,314.68) -- (380.55,295.56) -- (380.55,369.1) -- (349.66,388.22) -- cycle;
+  \draw[xm map pool back] (354.14,314.68) -- (385.03,295.56) -- (385.03,369.1) -- (354.14,388.22) -- cycle;
+  \draw[xm map pool] (358.62,314.68) -- (389.51,295.56) -- (389.51,369.1) -- (358.62,388.22) -- cycle;
+  \draw[xm map hidden back] (256.8,86.62) -- (287.69,67.5) -- (287.69,141.04) -- (256.8,160.16) -- cycle;
+  \draw[xm map hidden back] (261.28,86.62) -- (292.17,67.5) -- (292.17,141.04) -- (261.28,160.16) -- cycle;
+  \draw[xm map hidden back] (265.76,86.62) -- (296.65,67.5) -- (296.65,141.04) -- (265.76,160.16) -- cycle;
+  \draw[xm map hidden back] (270.24,86.62) -- (301.13,67.5) -- (301.13,141.04) -- (270.24,160.16) -- cycle;
+  \draw[xm map hidden back] (274.72,86.62) -- (305.61,67.5) -- (305.61,141.04) -- (274.72,160.16) -- cycle;
+  \draw[xm map hidden back] (279.2,86.62) -- (310.09,67.5) -- (310.09,141.04) -- (279.2,160.16) -- cycle;
+  \draw[xm map hidden] (283.68,86.62) -- (314.57,67.5) -- (314.57,141.04) -- (283.68,160.16) -- cycle;
+  \draw[xm map output back] (434.86,75.35) -- (478.54,48.31) -- (478.54,152.31) -- (434.86,179.35) -- cycle;
+  \draw[xm map output back] (437.96,75.35) -- (481.64,48.31) -- (481.64,152.31) -- (437.96,179.35) -- cycle;
+  \draw[xm map output] (441.07,75.35) -- (484.75,48.31) -- (484.75,152.31) -- (441.07,179.35) -- cycle;
+  \draw[xm window] (49.47,109.48) -- (54.42,106.42) -- (54.42,118.18) -- (49.47,121.24) -- cycle;
+  \draw[xm ray] (49.47,109.48) -- (144.19,113.83);
+  \draw[xm ray] (54.42,106.42) -- (144.19,113.83);
+  \draw[xm ray] (54.42,118.18) -- (144.19,113.83);
+  \draw[xm ray] (49.47,121.24) -- (144.19,113.83);
+  \fill[xm ray end] (144.19,113.83) circle[radius=1.8];
+  \draw[xm window] (159.97,338.82) -- (163.46,336.65) -- (163.46,344.97) -- (159.97,347.14) -- cycle;
+  \draw[xm ray] (159.97,338.82) -- (244.91,341.89);
+  \draw[xm ray] (163.46,336.65) -- (244.91,341.89);
+  \draw[xm ray] (163.46,344.97) -- (244.91,341.89);
+  \draw[xm ray] (159.97,347.14) -- (244.91,341.89);
+  \fill[xm ray end] (244.91,341.89) circle[radius=1.8];
+  \draw[xm window] (270.05,338.82) -- (273.54,336.65) -- (273.54,344.97) -- (270.05,347.14) -- cycle;
+  \draw[xm ray] (270.05,338.82) -- (347.18,341.89);
+  \draw[xm ray] (273.54,336.65) -- (347.18,341.89);
+  \draw[xm ray] (273.54,344.97) -- (347.18,341.89);
+  \draw[xm ray] (270.05,347.14) -- (347.18,341.89);
+  \fill[xm ray end] (347.18,341.89) circle[radius=1.8];
+  \draw[xm window] (296.65,109.48) -- (301.59,106.42) -- (301.59,118.18) -- (296.65,121.24) -- cycle;
+  \draw[xm ray] (296.65,109.48) -- (456.7,113.83);
+  \draw[xm ray] (301.59,106.42) -- (456.7,113.83);
+  \draw[xm ray] (301.59,118.18) -- (456.7,113.83);
+  \draw[xm ray] (296.65,121.24) -- (456.7,113.83);
+  \fill[xm ray end] (456.7,113.83) circle[radius=1.8];
   % Skip connections
-  \path[xm skip start] (211.84,137.83) circle[radius=2.4];
-  \draw[xm skip concat] (211.84,137.83) -- (211.84,66.31) .. controls (211.84,62.31) and (213.84,60.31) .. (217.84,60.31) -- (676.03,60.31) .. controls (680.03,60.31) and (682.03,62.31) .. (682.03,66.31) -- (682.03,123.83);
-  \fill[xm skip head] (682.03,129.83) -- (677.53,121.83) -- (686.53,121.83) -- cycle;
-  \path[xm join] (682.03,137.83) circle[radius=7];
-  \draw[xm join sign] (680.43,134.33) -- (680.43,141.33) (683.63,134.33) -- (683.63,141.33);
+  \draw[xm bridge] (191.04,113.83) -- (241.8,113.83);
+  \fill[xm bridge head] (248.8,113.83) -- (240.8,118.33) -- (240.8,109.33) -- cycle;
   % Labels
-  \node[xm name xm11, anchor=base] at (48.84,228.94) {Image};
-  \node[xm size xm10, anchor=base] at (48.84,245.7) {64\ensuremath{\times}64\ensuremath{\times}3};
-  \node[xm op xm10, anchor=base] at (98.07,32.66) {conv 3\ensuremath{\times}3};
-  \node[xm name xm11, anchor=base] at (155.89,228.94) {Conv 1};
-  \node[xm size xm10, anchor=base] at (155.89,245.7) {64\ensuremath{\times}64\ensuremath{\times}16};
-  \node[xm op xm10, anchor=base] at (211.84,32.66) {max 2\ensuremath{\times}2};
-  \node[xm name xm11, anchor=base] at (263.26,228.94) {Pool};
-  \node[xm size xm10, anchor=base] at (263.26,245.7) {32\ensuremath{\times}32\ensuremath{\times}16};
-  \node[xm op xm10, anchor=base] at (316.56,32.66) {conv 3\ensuremath{\times}3};
-  \node[xm name xm11, anchor=base] at (371.6,228.94) {Conv 2};
-  \node[xm size xm10, anchor=base] at (371.6,245.7) {32\ensuremath{\times}32\ensuremath{\times}32};
-  \node[xm op xm10, anchor=base] at (420.47,32.66) {up 2\ensuremath{\times}2};
-  \node[xm name xm11, anchor=base] at (473.87,228.94) {Upsample};
-  \node[xm size xm10, anchor=base] at (473.87,245.7) {64\ensuremath{\times}64\ensuremath{\times}32};
-  \node[xm op xm10, anchor=base] at (533.44,32.66) {conv 3\ensuremath{\times}3};
-  \node[xm name xm11, anchor=base] at (593,228.94) {Conv 3};
-  \node[xm size xm10, anchor=base] at (593,245.7) {64\ensuremath{\times}64\ensuremath{\times}32};
-  \node[xm op xm10, anchor=base] at (682.03,32.66) {deconv 4\ensuremath{\times}4, stride 2};
-  \node[xm name xm11, anchor=base] at (767.12,228.94) {Output};
-  \node[xm size xm10, anchor=base] at (767.12,245.7) {128\ensuremath{\times}128\ensuremath{\times}3};
+  \node[xm name xm12, anchor=base] at (48.84,204.94) {Image};
+  \node[xm size xm2, anchor=base] at (48.84,221.7) {64\ensuremath{\times}64\ensuremath{\times}3};
+  \node[xm op xm2, anchor=base] at (98.07,32.66) {conv 3\ensuremath{\times}3};
+  \node[xm name xm12, anchor=base] at (155.89,204.94) {Conv 1};
+  \node[xm size xm2, anchor=base] at (155.89,221.7) {64\ensuremath{\times}64\ensuremath{\times}16};
+  \node[xm op xm2, anchor=base] at (120.21,278.37) {max 2\ensuremath{\times}2};
+  \node[xm name xm12, anchor=base] at (150.01,413.82) {Pool};
+  \node[xm size xm2, anchor=base] at (150.01,430.58) {32\ensuremath{\times}32\ensuremath{\times}16};
+  \node[xm op xm2, anchor=base] at (203.31,279.91) {conv 3\ensuremath{\times}3};
+  \node[xm name xm12, anchor=base] at (258.35,413.82) {Conv 2};
+  \node[xm size xm2, anchor=base] at (258.35,430.58) {32\ensuremath{\times}32\ensuremath{\times}32};
+  \node[xm op xm2, anchor=base] at (307.23,279.91) {up 2\ensuremath{\times}2};
+  \node[xm name xm12, anchor=base] at (360.62,413.82) {Upsample};
+  \node[xm size xm2, anchor=base] at (360.62,430.58) {64\ensuremath{\times}64\ensuremath{\times}32};
+  \node[xm op xm2, anchor=base] at (254,240.6) {conv 3\ensuremath{\times}3};
+  \node[xm name xm12, anchor=base] at (285.68,204.94) {Conv 3};
+  \node[xm size xm2, anchor=base] at (285.68,221.7) {64\ensuremath{\times}64\ensuremath{\times}32};
+  \node[xm op xm2, anchor=base] at (374.71,32.66) {deconv 4\ensuremath{\times}4, stride 2};
+  \node[xm name xm12, anchor=base] at (459.8,204.94) {Output};
+  \node[xm size xm2, anchor=base] at (459.8,221.7) {128\ensuremath{\times}128\ensuremath{\times}3};
 \end{tikzpicture}
 \end{document}

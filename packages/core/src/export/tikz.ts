@@ -135,6 +135,20 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
             `${paintStyle(kid.paint)}, -{Triangle[length=${n(8 * PT_PER_PX)}pt, width=${n(9 * PT_PER_PX)}pt]}`,
           );
           body.push(`  \\draw[${s}] (${n(kid.x1)},${n(kid.y1)}) -- (${n(tip[0]!)},${n(tip[1]!)});`);
+        } else if (
+          kid.kind === 'path' &&
+          kid.id.startsWith('arrow-') &&
+          kids.some((k) => k.kind === 'path' && k.classes?.includes('elbow'))
+        ) {
+          // An elbow between rows (U-Net): the line with rounded corners, then its head.
+          if (kid.id.endsWith('-head')) {
+            body.push(
+              `  \\fill[${style('xm arrow head', paintStyle(kid.paint))}] ${tikzPath(kid.d)};`,
+            );
+          } else {
+            const s = style('xm elbow', `${paintStyle(kid.paint)}, line join=round`);
+            body.push(`  \\draw[${s}] ${tikzCurve(kid.d, n)};`);
+          }
         }
       }
     }
@@ -184,6 +198,14 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   // Skip connections: the line, its head, the start dot and the join with its sign.
   const skipLines: string[] = [];
   for (const item of legacy) {
+    if (item.parent === 'bridges' && item.kind === 'path') {
+      skipLines.push(
+        item.id.endsWith('-head')
+          ? `  \\fill[${style('xm bridge head', paintStyle(item.paint))}] ${tikzPath(item.d)};`
+          : `  \\draw[${style('xm bridge', `${paintStyle(item.paint)}, line join=round`)}] ${tikzCurve(item.d, n)};`,
+      );
+      continue;
+    }
     if (item.parent !== 'skips') continue;
     if (item.kind === 'path' && item.id.endsWith('-head')) {
       skipLines.push(
@@ -212,7 +234,7 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   // Labels: one TikZ node per label, at the label's baseline center (or the neuron's center).
   const labels: string[] = [];
   for (const item of legacy) {
-    const isLabel = /^(name|size|op|params)-\d+$/.test(item.id);
+    const isLabel = /^(name|size|op|params)-\d+$/.test(item.id) || item.id === 'bridge-label';
     const isNodeLabel = /^nodelabel-\d+-\d+$/.test(item.id);
     if (!isLabel && !isNodeLabel) continue;
     const parts = labelParts(item, children.get(item.id) ?? []);

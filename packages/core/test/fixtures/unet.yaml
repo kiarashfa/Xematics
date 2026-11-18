@@ -1,0 +1,13 @@
+title: U-Net
+layers:
+  - { type: input, shape: [128, 128, 1], name: Image }
+  - { type: conv, filters: 64, kernel: 3, activation: relu }
+  - { type: pool, size: 2 }
+  - { type: conv, filters: 128, kernel: 3, activation: relu }
+  - { type: pool, size: 2 }
+  - { type: conv, filters: 256, kernel: 3, activation: relu, name: Bottleneck }
+  - { type: up, size: 2 }
+  - { type: conv, filters: 128, kernel: 3, activation: relu, skip: { from: 4, op: concat } }
+  - { type: up, size: 2 }
+  - { type: conv, filters: 64, kernel: 3, activation: relu, skip: { from: 2, op: concat } }
+  - { type: conv, filters: 2, kernel: 1, activation: softmax, name: Mask }
