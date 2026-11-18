@@ -58,7 +58,12 @@ export interface Theme {
   readonly labelPadding: number;
   /** Background color, or null for transparent. */
   readonly background: string | null;
-  readonly labels: { readonly names: boolean; readonly sizes: boolean; readonly ops: boolean };
+  readonly labels: {
+    readonly names: boolean;
+    readonly sizes: boolean;
+    readonly ops: boolean;
+    readonly params: boolean;
+  };
   readonly collapse: CollapseRule;
   /** Above this many connections between two layers, they are drawn as one band. */
   readonly edgeLimit: number;
@@ -157,7 +162,7 @@ const CLASSIC: Theme = {
   lineGap: 2,
   labelPadding: 12,
   background: '#ffffff',
-  labels: { names: true, sizes: true, ops: true },
+  labels: { names: true, sizes: true, ops: true, params: false },
   collapse: { above: 10, first: 3, last: 3 },
   edgeLimit: 2500,
   mode: 'nodes',
@@ -429,6 +434,7 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
     labels: {
       names: style.labels?.names ?? base.labels.names,
       sizes: style.labels?.sizes ?? base.labels.sizes,
+      params: style.labels?.params ?? base.labels.params,
       ops: style.labels?.ops ?? base.labels.ops,
     },
     weights: style.weights ?? base.weights,

@@ -7,6 +7,8 @@ import {
   animatedScene,
   applyStructure,
   isTikzFont,
+  layerParamCounts,
+  totalParams,
   buildTimeline,
   patchAnimation,
   resolveAnimation,
@@ -372,7 +374,11 @@ export class ToolState {
     names: this.model?.style?.labels?.names ?? DEFAULTS.labels.names,
     sizes: this.model?.style?.labels?.sizes ?? DEFAULTS.labels.sizes,
     ops: this.model?.style?.labels?.ops ?? DEFAULTS.labels.ops,
+    params: this.model?.style?.labels?.params ?? DEFAULTS.labels.params,
   });
+  /** Weights and biases of every layer, and of the whole model (status bar, Layer tab). */
+  layerParams = $derived(this.model ? layerParamCounts(this.model) : []);
+  paramTotal = $derived(this.model ? totalParams(this.model) : undefined);
   collapse = $derived({
     above: this.model?.style?.collapse?.above ?? DEFAULTS.collapse.above,
     first: this.model?.style?.collapse?.first ?? DEFAULTS.collapse.first,
@@ -467,7 +473,7 @@ export class ToolState {
   }
 
   // Settings equal to the preset default are removed, so the source stays short.
-  setLabel(key: 'names' | 'sizes' | 'ops', on: boolean): void {
+  setLabel(key: 'names' | 'sizes' | 'ops' | 'params', on: boolean): void {
     this.edit((model) =>
       patchStyle(model, { labels: { [key]: on === DEFAULTS.labels[key] ? undefined : on } }),
     );

@@ -17,6 +17,8 @@ export {
 } from './layout/mlp.ts';
 export { autoNames, cnnAutoNames, describeCnn, opText } from './layout/cnn.ts';
 export { cellWord, sequenceAutoNames } from './layout/names.ts';
+export { paramsText } from './layout/params.ts';
+export { groupDigits, layerParamCounts, totalParams, type LayerParams } from './model/params.ts';
 export {
   canLayout,
   familyLayoutsLoaded,
@@ -52,6 +54,7 @@ export {
   type TokensLayer,
   LAYER_TYPES,
   LIMITS,
+  parseDrawnShape,
   MODEL_VERSION,
   ModelSchema,
   PADDINGS,

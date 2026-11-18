@@ -826,6 +826,8 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
   const parts: string[] = [];
   for (const layer of model.layers) {
     if (layer.name !== undefined) return undefined;
+    if ((layer.type === 'conv' || layer.type === 'pool') && layer.shape !== undefined)
+      return undefined;
     if (layer.type === 'dense' && (layer.collapse !== undefined || layer.nodeLabel !== undefined)) {
       return undefined;
     }

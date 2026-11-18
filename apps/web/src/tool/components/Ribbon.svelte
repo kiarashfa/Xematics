@@ -584,8 +584,9 @@
         {@render toggle('Layer names', tool.labels.names, (on) => tool.setLabel('names', on))}
         {@render toggle('Neuron counts', tool.labels.sizes, (on) => tool.setLabel('sizes', on))}
         {@render toggle('Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
+        {@render toggle('Parameters', tool.labels.params, (on) => tool.setLabel('params', on))}
       {/snippet}
-      {@render group(2, 'Labels', 'tag', 'Labels', 'Labels', 'stack three', gHome3)}
+      {@render group(2, 'Labels', 'tag', 'Labels', 'Labels', 'pairs', gHome3)}
       {#snippet gHome4()}
         <label
           >Collapse above <input
@@ -1316,6 +1317,15 @@
 
   .switch {
     position: relative;
+  }
+
+  /* Four switches in two columns of two. */
+  .pairs {
+    display: grid;
+    grid-template-columns: auto auto;
+    align-content: center;
+    column-gap: 6px;
+    row-gap: 4px;
   }
 
   /* Three switches fit the height of the other groups (targets stay 24 px tall). */

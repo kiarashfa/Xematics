@@ -160,6 +160,7 @@ layers:
 | `stride`  | conv, pool | Step between windows. 1 for convolutions, the window size for pooling. |
 | `padding` | conv, pool | `same` keeps the size (convolutions), `valid` adds none (pooling).     |
 | `mode`    | pool       | `max` (the default) or `avg`.                                          |
+| `shape`   | conv, pool | Draw the map at this size instead, like `26x26x8` (see below).         |
 
 Every feature map is a stack of sheets, one per channel up to seven, with its size underneath
 (28×28×8). Rays show the window each convolution or pooling step reads. The step itself is
@@ -169,6 +170,19 @@ connections, or bars with Layer boxes.
 
 When a window does not fit its input, or a convolution follows a flat layer, the editor warns
 you and still draws the figure.
+
+To draw a map at another size than the one worked out, for example to match a paper, give the
+layer a `shape` like `26x26x8` (or `26x26` to keep the channels), or type it in **Draw as** in the
+Layer tab. The layers after it read that size, and the editor notes the difference.
+
+### Parameter counts
+
+The **Parameters** switch (Home tab, Labels group) writes how many weights and biases each layer
+learns under its size, like 100,480 params; pooling and flatten layers show a dash. In YAML:
+`style: { labels: { params: true } }`. The status bar always shows the total, and the Layer tab
+shows the selected layer's count. Counts follow the usual conventions: one bias per output, and
+per gate for recurrent layers. Embeddings are not counted, because their size depends on the
+vocabulary. Recurrent, Transformer, GAN and autoencoder figures do not draw the counts.
 
 ## Recurrent networks
 

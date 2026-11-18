@@ -18,6 +18,7 @@ import { layoutBoxes } from './boxes.ts';
 import { applyWeights } from '../animate/weights.ts';
 import { layoutCnn } from './cnn.ts';
 import { familyLayouts } from './families.ts';
+import { applyParams } from './params.ts';
 import { buildLabel, labelItems, nodeLabelText, type Label, type LabelIssue } from './label.ts';
 
 /** Layers with more neurons than this are always collapsed, even when collapse is turned off. */
@@ -125,7 +126,10 @@ export function layerLabel(
 
 export function layoutModel(input: Model, engine: TextEngine): LayoutResult {
   const theme = resolveTheme(input.style);
-  const result = layoutPlain(input, theme, engine);
+  const plain = layoutPlain(input, theme, engine);
+  const result = theme.labels.params
+    ? { ...plain, scene: applyParams(plain.scene, input, theme, engine) }
+    : plain;
   return theme.weights ? { ...result, scene: applyWeights(result.scene, theme) } : result;
 }
 

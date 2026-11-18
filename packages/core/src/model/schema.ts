@@ -179,6 +179,30 @@ export const InputLayerSchema = v.strictObject(
   'must be an object like { type: input, shape: [28, 28, 1] }.',
 );
 
+const DRAWN_SHAPE = /^\s*(\d{1,5})\s*[x×]\s*(\d{1,5})(?:\s*[x×]\s*(\d{1,5}))?\s*$/;
+const DRAWN_SHAPE_MESSAGE = 'must be a size like 26x26x8 (height x width x channels) or 26x26.';
+
+/** Reads a drawn-size override like '26x26x8' or '26x26'; undefined when it is not one. */
+export function parseDrawnShape(
+  text: string,
+): { readonly h: number; readonly w: number; readonly c?: number } | undefined {
+  const m = DRAWN_SHAPE.exec(text);
+  if (!m) return undefined;
+  const [h, w, c] = [Number(m[1]), Number(m[2]), m[3] === undefined ? undefined : Number(m[3])];
+  if (h < 1 || w < 1 || h > LIMITS.side || w > LIMITS.side) return undefined;
+  if (c !== undefined && (c < 1 || c > LIMITS.channels)) return undefined;
+  return c === undefined ? { h, w } : { h, w, c };
+}
+
+/** The size a map layer is drawn at, when its computed size is not what the figure should show. */
+const drawnShape = () =>
+  v.optional(
+    v.pipe(
+      v.string(DRAWN_SHAPE_MESSAGE),
+      v.check((value) => parseDrawnShape(value) !== undefined, DRAWN_SHAPE_MESSAGE),
+    ),
+  );
+
 export const ConvLayerSchema = v.strictObject(
   {
     type: v.literal('conv'),
@@ -186,6 +210,7 @@ export const ConvLayerSchema = v.strictObject(
     kernel: windowSize(),
     stride: v.optional(windowSize()),
     padding: v.optional(v.picklist(PADDINGS, `must be one of: ${PADDINGS.join(', ')}.`)),
+    shape: drawnShape(),
     name: name(),
     activation: activation(),
   },
@@ -199,6 +224,7 @@ export const PoolLayerSchema = v.strictObject(
     stride: v.optional(windowSize()),
     padding: v.optional(v.picklist(PADDINGS, `must be one of: ${PADDINGS.join(', ')}.`)),
     mode: v.optional(v.picklist(POOL_MODES, `must be one of: ${POOL_MODES.join(', ')}.`)),
+    shape: drawnShape(),
     name: name(),
   },
   'must be an object like { type: pool, size: 2 }.',
@@ -350,7 +376,13 @@ export const LayerSchema = v.variant(
 );
 
 export const LabelsSchema = v.strictObject(
-  { names: v.optional(flag()), sizes: v.optional(flag()), ops: v.optional(flag()) },
+  {
+    names: v.optional(flag()),
+    sizes: v.optional(flag()),
+    ops: v.optional(flag()),
+    /** Trainable parameters (weights and biases) under each layer's labels. */
+    params: v.optional(flag()),
+  },
   'must be an object like { names: true, sizes: false }.',
 );
 

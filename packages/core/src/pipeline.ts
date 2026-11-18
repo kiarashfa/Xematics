@@ -2,6 +2,7 @@ import type { Diagnostic } from './diagnostics.ts';
 import { splitMath, nodeLabelText } from './layout/label.ts';
 import { cnnLabels } from './layout/cnn.ts';
 import { cleanLabel, layoutModel, nameText, slotsOf } from './layout/mlp.ts';
+import { paramsStyle, paramsTexts } from './layout/params.ts';
 import { loadFamilyLayouts, needsFamilyLayouts } from './layout/families.ts';
 import { familyOf, isMlp, type MlpModel, type Model } from './model/schema.ts';
 import { parseModelAsync, type InputFormat } from './parse/parse.ts';
@@ -37,6 +38,9 @@ export function labelContent(model: Model): { text: TextRequest[]; math: string[
   }
   const text: TextRequest[] = [];
   const math: string[] = [];
+  if (theme.labels.params) {
+    for (const value of paramsTexts(model)) text.push({ text: value, font: paramsStyle(theme) });
+  }
   const add = (label: string, style: TextStyle) => {
     for (const segment of splitMath(label)) {
       if (segment.kind === 'text') text.push({ text: segment.text, font: style });

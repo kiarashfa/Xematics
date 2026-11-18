@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { LIMITS, pair, shapeText, type Layer } from '@xematics/core';
+  import { groupDigits, LIMITS, pair, shapeText, type Layer } from '@xematics/core';
   import type { Snippet } from 'svelte';
   import {
     ACTIVATIONS,
@@ -8,6 +8,7 @@
     setActivation,
     setCollapseMode,
     setCollapseValue,
+    setDrawnShape,
     setFilters,
     setFlag,
     setName,
@@ -33,6 +34,7 @@
   const index = $derived(tool.selection.kind === 'layer' ? tool.selection.index : -1);
   const layer = $derived<Layer | undefined>(tool.model?.layers[index]);
   const output = $derived(tool.shapes[index] ? shapeText(tool.shapes[index]) : '');
+  const params = $derived(tool.layerParams[index]);
   const error = $derived(tool.layerError);
   const bad = (key: string) => error.key === key;
 
@@ -517,7 +519,43 @@
 {/snippet}
 
 {#snippet gOutput()}
-  <p class="readout">Output <b>{output}</b></p>
+  {#if layer?.type === 'conv' || layer?.type === 'pool'}
+    <div class="fields">
+      <span class="line">Output <b>{output}</b></span>
+      {#if params}
+        <span
+          class="line"
+          title={`${groupDigits(params.weights)} weights + ${groupDigits(params.biases)} biases`}
+          >Parameters <b>{groupDigits(params.weights + params.biases)}</b></span
+        >
+      {/if}
+      <label
+        >Draw as <input
+          type="text"
+          class:bad={bad('shape')}
+          aria-invalid={bad('shape')}
+          title={bad('shape') ? error.message : 'Leave empty to draw the computed size'}
+          placeholder="Automatic"
+          spellcheck="false"
+          size="9"
+          value={layer.shape ?? ''}
+          onchange={(e) => setDrawnShape(e.currentTarget.value)}
+        /></label
+      >
+    </div>
+  {:else}
+    <div class="readouts">
+      <p class="readout">Output <b>{output}</b></p>
+      {#if params}
+        <p
+          class="readout"
+          title={`${groupDigits(params.weights)} weights + ${groupDigits(params.biases)} biases`}
+        >
+          Parameters <b>{groupDigits(params.weights + params.biases)}</b>
+        </p>
+      {/if}
+    </div>
+  {/if}
 {/snippet}
 
 {#each parts as part, i (part.name)}
@@ -589,6 +627,27 @@
     color: var(--muted);
     font-size: 0.7rem;
     white-space: nowrap;
+  }
+
+  .readouts {
+    display: flex;
+    gap: 14px;
+    height: 100%;
+  }
+
+  .line {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-height: 24px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .line b {
+    color: var(--ink);
+    font: 600 0.85rem var(--font-mono);
   }
 
   .readout {

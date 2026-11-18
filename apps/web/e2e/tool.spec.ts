@@ -123,6 +123,29 @@ test.describe('desktop editor', () => {
     await expect(page.locator('#pv-op-1')).not.toBeAttached();
   });
 
+  test('parameter counts and the drawn size of a map layer', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('in(28x28x1)-conv(8,3x3)-flatten-10');
+    await expect(page.locator('footer.status')).toContainText(
+      `${(8 * 9 + 8 + 28 * 28 * 8 * 10 + 10).toLocaleString('en-US')} parameters`,
+    );
+    await page.getByRole('tab', { name: 'Home' }).click();
+    await page.getByRole('switch', { name: 'Parameters' }).check();
+    await expect(source(page)).toHaveValue(/labels: \{ params: true \}/);
+    await expect(page.locator('#pv-params-1')).toBeAttached();
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await nav.getByRole('button', { name: /Conv/ }).dblclick();
+    await expect(page.getByText('Parameters 80')).toBeVisible();
+    const drawn = page.getByRole('textbox', { name: 'Draw as' });
+    await drawn.fill('big');
+    await drawn.press('Enter');
+    await expect(drawn).toHaveAttribute('aria-invalid', 'true');
+    await drawn.fill('26x26x8');
+    await drawn.press('Enter');
+    await expect(source(page)).toHaveValue(/shape: 26x26x8/);
+    await expect(page.getByText('Output 26×26×8')).toBeVisible();
+  });
+
   test('recurrent, GAN, Transformer and autoencoder figures match the Node goldens', async ({
     page,
   }) => {

@@ -1,0 +1,9 @@
+title: Parameter counts
+style: { labels: { params: true } }
+layers:
+  - { type: input, shape: [28, 28, 1], name: Image }
+  - { type: conv, filters: 8, kernel: 3, padding: valid, shape: 24x24x8 }
+  - { type: pool, size: 2 }
+  - { type: flatten }
+  - { units: 64, activation: relu }
+  - { units: 10, activation: softmax }

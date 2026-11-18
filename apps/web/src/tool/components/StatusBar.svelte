@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PRESET_NAMES } from '@xematics/core';
+  import { groupDigits, PRESET_NAMES } from '@xematics/core';
   import { tool } from '../state.svelte.ts';
   import Icon from './Icon.svelte';
 
@@ -20,7 +20,9 @@
   <span
     >{tool.stats.layers} layers · {tool.stats.neurons} neurons{tool.preset === 'boxes'
       ? ''
-      : ` · ${tool.stats.edges} lines drawn`}</span
+      : ` · ${tool.stats.edges} lines drawn`}{tool.paramTotal
+      ? ` · ${groupDigits(tool.paramTotal.count)} parameters${tool.paramTotal.partial ? ' without embeddings' : ''}`
+      : ''}</span
   >
   {#if tool.layerError.message}
     <span class="field-error" role="alert"

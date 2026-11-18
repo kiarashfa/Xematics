@@ -271,6 +271,7 @@
         tool.setLabel('sizes', on),
       )}
       {@render toggle('tag', 'Operations', tool.labels.ops, (on) => tool.setLabel('ops', on))}
+      {@render toggle('tag', 'Parameters', tool.labels.params, (on) => tool.setLabel('params', on))}
       {#if tool.family === 'rnn'}
         {@render toggle('layers', 'Neurons per step', tool.network.neurons, (on) =>
           tool.setNetwork({ recurrent: on ? 'neurons' : undefined }),

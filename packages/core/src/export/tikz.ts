@@ -184,7 +184,7 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   // Labels: one TikZ node per label, at the label's baseline center (or the neuron's center).
   const labels: string[] = [];
   for (const item of legacy) {
-    const isLabel = /^(name|size|op)-\d+$/.test(item.id);
+    const isLabel = /^(name|size|op|params)-\d+$/.test(item.id);
     const isNodeLabel = /^nodelabel-\d+-\d+$/.test(item.id);
     if (!isLabel && !isNodeLabel) continue;
     const parts = labelParts(item, children.get(item.id) ?? []);

@@ -3,7 +3,14 @@
 // engine gets the same numbers. Problems are warnings: the diagram still draws.
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
-import { isRecurrent, type ConvLayer, type Layer, type Model, type PoolLayer } from './schema.ts';
+import {
+  isRecurrent,
+  parseDrawnShape,
+  type ConvLayer,
+  type Layer,
+  type Model,
+  type PoolLayer,
+} from './schema.ts';
 
 export type Shape =
   | { readonly kind: 'map'; readonly h: number; readonly w: number; readonly c: number }
@@ -100,8 +107,33 @@ function shapeOf(
       return previous ?? { kind: 'vector', n: 1 };
     case 'conv':
     case 'pool':
-      return windowed(layer, mapBefore(layer, previous, index, warn), index, warn);
+      return drawnAs(
+        layer,
+        windowed(layer, mapBefore(layer, previous, index, warn), index, warn),
+        index,
+        warn,
+      );
   }
+}
+
+/** A map layer with a shape override is drawn (and read by the next layer) at that size. */
+function drawnAs(
+  layer: ConvLayer | PoolLayer,
+  computed: Shape,
+  index: number,
+  warn: (index: number, code: string, message: string) => void,
+): Shape {
+  const drawn = layer.shape === undefined ? undefined : parseDrawnShape(layer.shape);
+  if (!drawn || computed.kind !== 'map') return computed;
+  const shape: Shape = { kind: 'map', h: drawn.h, w: drawn.w, c: drawn.c ?? computed.c };
+  if (shape.h !== computed.h || shape.w !== computed.w || shape.c !== computed.c) {
+    warn(
+      index,
+      'shape.override',
+      `Layer ${index + 1} is drawn as ${shapeText(shape)}; from its settings it would be ${shapeText(computed)}.`,
+    );
+  }
+  return shape;
 }
 
 /** Steps of the sequence a layer reads; a flat vector counts as one step (with a warning). */

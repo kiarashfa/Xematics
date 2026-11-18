@@ -1,0 +1,2 @@
+style: { labels: { params: true }, preset: boxes }
+layers: [784, 128, 64, 10]

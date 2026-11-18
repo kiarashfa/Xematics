@@ -7,6 +7,7 @@ import {
   layerToken,
   LIMITS,
   pair,
+  parseDrawnShape,
   parseShorthand,
   patchLayer,
   type DenseLayer,
@@ -184,6 +185,23 @@ export function setName(text: string) {
 
 export function setNodeLabel(text: string) {
   patch({ nodeLabel: text || undefined }, true);
+}
+
+/** The drawn size of a map layer ('26x26x8'); empty goes back to the computed size. */
+export function setDrawnShape(text: string) {
+  const raw = text.trim();
+  if (raw === '') {
+    ok();
+    patch({ shape: undefined } as LayerPatch);
+    return;
+  }
+  const shape = parseDrawnShape(raw);
+  if (!shape) {
+    fail('shape', 'Type a size like 26x26x8 or 26x26, or leave it empty.');
+    return;
+  }
+  ok();
+  patch({ shape: [shape.h, shape.w, ...(shape.c ? [shape.c] : [])].join('x') } as LayerPatch);
 }
 
 export function setPadding(padding: 'same' | 'valid' | undefined) {

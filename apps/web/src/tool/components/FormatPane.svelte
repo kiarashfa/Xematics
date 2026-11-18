@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { LIMITS, pair, patchLayer, patchModel, shapeText, type Layer } from '@xematics/core';
+  import {
+    groupDigits,
+    LIMITS,
+    pair,
+    patchLayer,
+    patchModel,
+    shapeText,
+    type Layer,
+  } from '@xematics/core';
   import {
     ACTIVATIONS,
     collapseModeOf,
@@ -7,6 +15,7 @@
     setActivation,
     setCollapseMode,
     setCollapseValue,
+    setDrawnShape,
     setFilters,
     setFlag,
     setNetwork,
@@ -469,7 +478,24 @@
         <span>Variational (mean, spread and a sampled latent)</span>
       </label>
     {/if}
-    {#if output}<p class="output">Output <b>{output}</b></p>{/if}
+    {#if layer.type === 'conv' || layer.type === 'pool'}
+      <label class="field">
+        <span>Draw as (empty: the computed size)</span>
+        <input
+          type="text"
+          placeholder={output || 'Automatic'}
+          spellcheck="false"
+          value={layer.shape ?? ''}
+          onchange={(e) => setDrawnShape(e.currentTarget.value)}
+        />
+      </label>
+    {/if}
+    {#if output}<p class="output">
+        Output <b>{output}</b>{#if tool.layerParams[index]}
+          · Parameters <b
+            >{groupDigits(tool.layerParams[index].weights + tool.layerParams[index].biases)}</b
+          >{/if}
+      </p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   {:else}
     <h2>Diagram</h2>
