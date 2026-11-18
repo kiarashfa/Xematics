@@ -313,6 +313,19 @@ test.describe('desktop editor', () => {
     await expect(page.getByRole('group', { name: 'Animation player' })).toHaveCount(0);
   });
 
+  test('animation exports a Lottie file', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('layers: [3, 4, 2]\nanimation: { look: pulse }\n');
+    await page.getByRole('tab', { name: 'Animate' }).click();
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Lottie', exact: true }).click();
+    const file = await download;
+    expect(file.suggestedFilename()).toMatch(/-animated\.json$/);
+    const json = JSON.parse(await readFile(await file.path(), 'utf8'));
+    expect(json).toMatchObject({ v: '5.7.0', fr: 30 });
+    expect(json.layers[0].shapes.length).toBeGreaterThan(10);
+  });
+
   test('animation exports a looping GIF', async ({ page }) => {
     await openEditor(page);
     await source(page).fill('layers: [3, 4, 2]\nanimation: { look: pulse, speed: 4 }\n');

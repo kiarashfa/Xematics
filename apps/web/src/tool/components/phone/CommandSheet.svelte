@@ -404,6 +404,7 @@
       {@render row('download', 'Save animated SVG', () => exportAnimation('svg'), !tool.layout)}
       {@render row('film', 'Save GIF', () => exportAnimation('gif'), !tool.layout)}
       {@render row('film', 'Save video', () => exportAnimation('video'), !tool.layout)}
+      {@render row('code', 'Save Lottie', () => exportAnimation('lottie'), !tool.layout)}
     {:else if tab === 'Export'}
       {@render row('download', 'Save SVG', () => exportAs('svg'), !tool.layout)}
       {@render row('download', 'Save PNG', () => exportAs('png'), !tool.layout)}

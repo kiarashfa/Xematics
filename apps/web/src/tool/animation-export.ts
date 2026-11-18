@@ -5,6 +5,7 @@ import {
   buildTimeline,
   GifWriter,
   renderAnimatedSvg,
+  renderLottie,
   renderSvg,
   resolveTheme,
   sampleScene,
@@ -41,6 +42,10 @@ export async function exportAnimationNow(kind: AnimationExport): Promise<void> {
   try {
     if (kind === 'svg') {
       downloadText(animatedName('svg'), renderAnimatedSvg(scene, timeline), 'image/svg+xml');
+    } else if (kind === 'lottie') {
+      // Lottie files are JSON; apps and sites play them with a Lottie player.
+      downloadText(animatedName('json'), renderLottie(scene, timeline), 'application/json');
+      tool.flash('Lottie file saved.');
     } else if (kind === 'gif') {
       const fps = 12;
       const size = frameSize(animatedScene(scene, timeline), 720, 1.5);

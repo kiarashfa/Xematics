@@ -156,7 +156,7 @@ export function deleteDocument(): void {
     tool.deleteCurrent();
 }
 
-export type AnimationExport = 'svg' | 'gif' | 'video';
+export type AnimationExport = 'svg' | 'gif' | 'video' | 'lottie';
 
 /** Animation exports load on first use (the GIF writer and the video recorder are large). */
 export async function exportAnimation(kind: AnimationExport): Promise<void> {

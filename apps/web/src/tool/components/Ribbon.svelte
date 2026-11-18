@@ -868,6 +868,7 @@
         <div class="stack">
           {@render small('film', 'GIF', () => exportAnimation('gif'), !tool.layout)}
           {@render small('film', 'Video', () => exportAnimation('video'), !tool.layout)}
+          {@render small('code', 'Lottie', () => exportAnimation('lottie'), !tool.layout)}
         </div>
       {/snippet}
       {@render group(5, 'Save animation', 'download', 'Save', 'Save', '', gAnimate4)}
