@@ -10,7 +10,7 @@ import {
   toJsonText,
 } from '@xematics/core';
 import { copyText, downloadBytes, downloadText, rasterize } from './browser.ts';
-import { MAX_PNG_PIXELS, type ExportFormat } from './formats.ts';
+import { MAX_PNG_PIXELS, tikzOptions, type ExportFormat } from './formats.ts';
 import { tool } from './state.svelte.ts';
 import { browserStore } from '../user/store.ts';
 
@@ -40,7 +40,7 @@ export async function exportAs(format: ExportFormat): Promise<void> {
   if (format === 'pdf') {
     downloadBytes(tool.fileName('pdf'), renderPdf(scene), 'application/pdf');
   } else if (format === 'tex') {
-    const tex = renderTikz(scene, { standalone: tool.tikzStandalone });
+    const tex = renderTikz(scene, tikzOptions(tool));
     downloadText(tool.fileName('tex'), tex, 'application/x-tex');
   } else {
     const size = pngSize(scene, tool.pngDpi);
@@ -64,7 +64,7 @@ export async function exportAs(format: ExportFormat): Promise<void> {
 export async function copyTikz(): Promise<void> {
   const ready = await tool.exportScene();
   if (!ready) return;
-  const tex = renderTikz(ready.scene, { standalone: tool.tikzStandalone });
+  const tex = renderTikz(ready.scene, tikzOptions(tool));
   tool.flash((await copyText(tex)) ? 'TikZ code copied.' : 'Copying is blocked in this browser.');
 }
 

@@ -9,6 +9,7 @@ import { parseArgs } from 'node:util';
 import {
   formatDiagnostic,
   hasErrors,
+  isTikzFont,
   layoutModel,
   parseModel,
   prepareModel,
@@ -34,9 +35,12 @@ Options:
                          (.svg, .png, .pdf, .tex, .json) picks the format
   -f, --format <name>    svg (default), png, pdf, tex (TikZ) or json (model)
       --text <mode>      SVG text: outline (default) or live (fonts embedded)
+      --no-embed         With --text live, name the fonts instead of embedding them
       --prefix <text>    SVG prefix for element ids and classes (default: xm-)
       --dpi <number>     PNG resolution (default: 300)
       --tikz <form>      standalone (default) or picture (tikzpicture only)
+      --tikz-font <name> TikZ font for Persian, Hebrew or CJK labels
+                         (default: the bundled font for each script)
   -h, --help             Show this help
 `;
 
@@ -82,9 +86,11 @@ export async function main(argv: readonly string[]): Promise<number> {
         out: { type: 'string', short: 'o' },
         format: { type: 'string', short: 'f' },
         text: { type: 'string' },
+        'no-embed': { type: 'boolean' },
         prefix: { type: 'string' },
         dpi: { type: 'string' },
         tikz: { type: 'string' },
+        'tikz-font': { type: 'string' },
         help: { type: 'boolean', short: 'h' },
       },
     });
@@ -125,6 +131,11 @@ export async function main(argv: readonly string[]): Promise<number> {
     process.stderr.write('--tikz must be standalone or picture.\n');
     return 2;
   }
+  const tikzFont = values['tikz-font'];
+  if (tikzFont !== undefined && !isTikzFont(tikzFont)) {
+    process.stderr.write("--tikz-font takes letters, digits, spaces, '.', '_' or '-'.\n");
+    return 2;
+  }
   if (format === 'png' && !values.out && process.stdout.isTTY) {
     process.stderr.write('PNG output is binary: use --out file.png or redirect standard output.\n');
     return 2;
@@ -148,11 +159,15 @@ export async function main(argv: readonly string[]): Promise<number> {
       if (format === 'svg') {
         output = await renderScene(layout.scene, engine, {
           text,
+          ...(values['no-embed'] ? { embedFonts: false } : {}),
           ...(values.prefix === undefined ? {} : { prefix: values.prefix }),
         });
       } else if (format === 'pdf') output = renderPdf(layout.scene);
       else if (format === 'tex')
-        output = renderTikz(layout.scene, { standalone: tikz === 'standalone' });
+        output = renderTikz(layout.scene, {
+          standalone: tikz === 'standalone',
+          ...(tikzFont === undefined ? {} : { font: tikzFont }),
+        });
       else output = await png(layout.scene, dpi, engine);
     }
     if (values.out) await writeFile(values.out, output);

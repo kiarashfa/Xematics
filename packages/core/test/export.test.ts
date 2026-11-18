@@ -111,10 +111,22 @@ describe('TikZ export', () => {
     expect(tex).toContain('\\$\\textbackslash{}input\\{/etc/passwd\\}\\$');
   });
 
-  test('non-ASCII labels note XeLaTeX or LuaLaTeX', async () => {
+  test('non-ASCII labels note LuaLaTeX and pick a font per script', async () => {
     const tex = renderTikz(await scene('persian.yaml'));
-    expect(tex).toContain('compile with XeLaTeX or LuaLaTeX');
+    expect(tex).toContain('compile with LuaLaTeX or XeLaTeX');
     expect(tex).toContain('\\usepackage{fontspec}');
+    expect(tex).toContain('\\newfontfamily\\xmarabic{Vazirmatn}[Script=Arabic]');
+    expect(tex).toContain('\\xmrtl{{\\xmarabic ');
+  });
+
+  test('a chosen TikZ font replaces the bundled ones', async () => {
+    const s = await scene('persian.yaml');
+    const tex = renderTikz(s, { font: 'B Nazanin' });
+    expect(tex).toContain('% Label font: B Nazanin.');
+    expect(tex).toContain('\\newfontfamily\\xmarabic{B Nazanin}[Script=Arabic]');
+    expect(tex).not.toContain('Vazirmatn');
+    expect(() => renderTikz(s, { font: 'x}\\input{y' })).toThrow(/Invalid TikZ font/);
+    expect(renderTikz(s, { standalone: false })).toContain('%   \\usepackage{fontspec}');
   });
 });
 

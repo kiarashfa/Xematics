@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { pngSize } from '@xematics/core';
+  import { isTikzFont, pngSize } from '@xematics/core';
   import { MAX_PNG_PIXELS, PNG_SIZES } from '../formats.ts';
   import { tool } from '../state.svelte.ts';
   import Dialog from './Dialog.svelte';
@@ -7,6 +7,7 @@
   const close = () => (tool.dialog = undefined);
   const figure = $derived(tool.layout?.scene);
   const pixels = (dpi: number) => (figure ? pngSize(figure, dpi) : undefined);
+  let fontBad = $state(false);
 </script>
 
 <Dialog title="Export options" onclose={close}>
@@ -70,8 +71,26 @@
         onchange={() => (tool.tikzStandalone = false)}
       />Only the tikzpicture, to paste into a paper</label
     >
+    <label class="font"
+      >Font for Persian, Hebrew or CJK labels <input
+        type="text"
+        class="text"
+        placeholder="Automatic"
+        spellcheck="false"
+        maxlength="64"
+        value={tool.tikzFont}
+        aria-invalid={fontBad}
+        oninput={(e) => {
+          const name = e.currentTarget.value.trim();
+          fontBad = name !== '' && !isTikzFont(name);
+          if (!fontBad) tool.tikzFont = name;
+        }}
+      /></label
+    >
     <p class="note">
-      Math labels stay LaTeX. Persian, Hebrew or CJK labels need XeLaTeX or LuaLaTeX.
+      {fontBad
+        ? 'Use letters, digits, spaces, dots, dashes or underscores.'
+        : 'Math labels stay LaTeX. Persian, Hebrew or CJK labels need LuaLaTeX or XeLaTeX; Automatic uses Vazirmatn, Noto Sans Hebrew or Noto Sans SC, JP or KR.'}
     </p>
   </fieldset>
 
@@ -118,6 +137,27 @@
 
   .size small {
     color: var(--muted);
+  }
+
+  .font {
+    flex-wrap: wrap;
+    cursor: default;
+  }
+
+  .text {
+    flex: 1 1 160px;
+    width: auto;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--field, transparent);
+    color: inherit;
+    font: inherit;
+  }
+
+  .text[aria-invalid='true'] {
+    border-color: var(--danger, #c0392b);
   }
 
   .note {

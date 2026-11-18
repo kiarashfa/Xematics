@@ -199,4 +199,5 @@ export { renderPdf } from './export/pdf.ts';
 export { encodeGif, GifWriter, type GifOptions } from './export/gif.ts';
 export * from './animate/index.ts';
 export { renderTikz, type TikzOptions } from './export/tikz.ts';
+export { isTikzFont } from './export/tikz-font.ts';
 export { embedSnippets, pngSize, setPngDpi, type EmbedSnippets } from './export/embed.ts';

@@ -754,6 +754,22 @@ test.describe('exports', () => {
     expect(tex.bytes.toString('utf8')).not.toContain('\\documentclass');
   });
 
+  test('the TikZ font option names the font for Persian labels', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('layers:\n  - { units: 3, name: "ورودی" }\n  - 2\n');
+    await page.getByRole('tab', { name: 'Export' }).click();
+    const field = page.getByRole('textbox', { name: 'TikZ font' });
+    await field.fill('a{b}');
+    await field.press('Enter');
+    await expect(field).toHaveAttribute('aria-invalid', 'true');
+    await field.fill('B Nazanin');
+    await field.press('Enter');
+    await expect(field).toHaveAttribute('aria-invalid', 'false');
+    const tex = (await download(page, 'Export TikZ')).bytes.toString('utf8');
+    expect(tex).toContain('\\newfontfamily\\xmarabic{B Nazanin}[Script=Arabic]');
+    expect(tex).toContain('\\xmrtl{{\\xmarabic ورودی}}');
+  });
+
   test('embed code offers Markdown, HTML and a data URL', async ({ page }) => {
     await openEditor(page);
     await exportButton(page, 'Embed code');

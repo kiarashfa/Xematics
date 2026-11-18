@@ -6,6 +6,7 @@
 import {
   animatedScene,
   applyStructure,
+  isTikzFont,
   buildTimeline,
   patchAnimation,
   resolveAnimation,
@@ -98,6 +99,8 @@ export class ToolState {
   exportFormat = $state<ExportFormat>('svg');
   pngDpi = $state(DEFAULT_PNG_DPI);
   tikzStandalone = $state(true);
+  /** Font for Persian, Hebrew or CJK TikZ labels; empty picks the bundled font per script. */
+  tikzFont = $state('');
   /** Style preset for new diagrams (set on the profile page). */
   defaultPreset = $state<string | undefined>(undefined);
   /** The open editor dialog, if any. */
@@ -543,6 +546,7 @@ export class ToolState {
       pngDpi: this.pngDpi,
       tikzStandalone: this.tikzStandalone,
     };
+    if (this.tikzFont) values.tikzFont = this.tikzFont;
     if (this.defaultPreset) values.defaultPreset = this.defaultPreset;
     return values;
   }
@@ -554,6 +558,7 @@ export class ToolState {
       ? settings!.pngDpi!
       : DEFAULT_PNG_DPI;
     this.tikzStandalone = settings?.tikzStandalone ?? true;
+    this.tikzFont = isTikzFont(settings?.tikzFont ?? '') ? settings!.tikzFont! : '';
     this.defaultPreset = isPresetChoice(settings?.defaultPreset)
       ? settings.defaultPreset
       : undefined;

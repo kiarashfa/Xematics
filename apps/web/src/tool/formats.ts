@@ -1,5 +1,18 @@
 // Export formats and their options, shared by the ribbon, the phone sheet and the dialogs.
 
+import type { TikzOptions } from '@xematics/core';
+
+/** TikZ export options from the saved settings. */
+export function tikzOptions(settings: {
+  readonly tikzStandalone: boolean;
+  readonly tikzFont: string;
+}): TikzOptions {
+  return {
+    standalone: settings.tikzStandalone,
+    ...(settings.tikzFont ? { font: settings.tikzFont } : {}),
+  };
+}
+
 export const EXPORT_FORMATS = [
   { id: 'svg', label: 'SVG', menu: 'SVG image', note: 'Vector, for the web and Inkscape' },
   { id: 'png', label: 'PNG', menu: 'PNG image', note: 'Image for slides and documents' },

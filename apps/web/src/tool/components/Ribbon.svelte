@@ -12,6 +12,7 @@
     openWorkspaceFile,
     saveWorkspace,
   } from '../actions.ts';
+  import { isTikzFont } from '@xematics/core';
   import { tick, untrack, type Snippet } from 'svelte';
   import { currentTheme, setTheme } from '../browser.ts';
   import { player, prefersReducedMotion } from '../player.ts';
@@ -53,6 +54,7 @@
   });
   let theme = $state(currentTheme());
   let sourceInput: HTMLInputElement | undefined = $state();
+  let tikzFontBad = $state(false);
   let workspaceInput: HTMLInputElement | undefined = $state();
 
   // Collapsed: only the tabs show. Clicking a tab then opens its commands as a temporary layer
@@ -898,8 +900,26 @@
             <option value="picture">tikzpicture only</option>
           </select></label
         >
+        <label class="option" title="Font for Persian, Hebrew or CJK labels in TikZ"
+          >TikZ font <input
+            class="documents"
+            type="text"
+            placeholder="Automatic"
+            spellcheck="false"
+            maxlength="64"
+            value={tool.tikzFont}
+            aria-invalid={tikzFontBad}
+            onchange={(e) => {
+              const name = e.currentTarget.value.trim();
+              tikzFontBad = name !== '' && !isTikzFont(name);
+              if (tikzFontBad)
+                tool.flash('Use letters, digits, spaces, dots, dashes or underscores.');
+              else tool.tikzFont = name;
+            }}
+          /></label
+        >
       {/snippet}
-      {@render group(3, 'Export options', 'edit', 'Options', 'Options', 'stack', gExport3)}
+      {@render group(3, 'Export options', 'edit', 'Options', 'Options', 'stack tight', gExport3)}
     {:else}
       {#snippet gHelp0()}
         {@render manualButton('shorthand', 'shorthand', 'Shorthand')}
@@ -1139,6 +1159,20 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+  }
+
+  /* Three rows of fields fit the group height. */
+  .tight .documents {
+    min-height: 24px;
+    padding-block: 1px;
+  }
+
+  input.documents {
+    width: 150px;
+  }
+
+  input.documents[aria-invalid='true'] {
+    border-color: var(--danger);
   }
 
   .big {

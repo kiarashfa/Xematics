@@ -4,3 +4,13 @@ packages:
 
 # Supply-chain guard: only install releases that have been public for at least 7 days.
 minimumReleaseAge: 10080
+
+# rolldown brings in a 2.0 beta of the emnapi runtime, which breaks astro check (astro2tsx).
+overrides:
+  '@emnapi/runtime': 1.11.3
+
+# picomatch has no fixed release yet (GHSA-fc5q-39xc-vjpf, slow matching of crafted glob patterns).
+# It only matches the project's own file paths at build time. Remove this once a fix ships.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf

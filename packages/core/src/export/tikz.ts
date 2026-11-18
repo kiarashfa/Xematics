@@ -7,16 +7,28 @@
 // \def or similar); anything else is already plain text in the scene and gets escaped.
 
 import type { MathItem, Paint, Scene, SceneItem, TextItem } from '../scene.ts';
+import { isTikzFont } from './tikz-font.ts';
 
 export interface TikzOptions {
   /** A complete document for the standalone class (default), or only the tikzpicture. */
   readonly standalone?: boolean;
+  /**
+   * Font for labels in Arabic, Persian, Hebrew, Chinese, Japanese or Korean script. By default each
+   * script gets the font the editor bundles for it (Vazirmatn, Noto Sans Hebrew, Noto Sans SC...).
+   */
+  readonly font?: string;
 }
 
 const PT_PER_PX = 0.75;
 
 export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   const standalone = options.standalone ?? true;
+  if (options.font !== undefined && !isTikzFont(options.font)) {
+    throw new Error(
+      `Invalid TikZ font '${options.font}'. Use letters, digits, spaces, '.', '_' or '-'.`,
+    );
+  }
+  const scripts = new LabelScripts(options.font);
   const byId = new Map(scene.items.map((item) => [item.id, item]));
   const children = new Map<string, SceneItem[]>();
   for (const item of scene.items) {
@@ -78,7 +90,7 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   // Recurrent, GAN, Transformer and autoencoder diagrams are drawn item by item in paint order.
   const legacy = scene.family ? [] : scene.items;
   if (scene.family) {
-    const generic = genericItems(scene, children, { color, style, n, font, paintStyle });
+    const generic = genericItems(scene, children, { color, style, n, font, paintStyle, scripts });
     unicode ||= generic.unicode;
     usesMath ||= generic.math;
     body.push(...generic.lines);
@@ -177,17 +189,15 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
     if (!isLabel && !isNodeLabel) continue;
     const parts = labelParts(item, children.get(item.id) ?? []);
     if (parts.length === 0) continue;
-    const content = parts
-      .map((p) => {
-        if (p.kind === 'math') {
-          usesMath = true;
-          return `$${p.tex}$`;
-        }
-        // The multiplication sign of map sizes (28×28×8) needs no Unicode engine.
-        if (/[^\x20-\x7e×]/.test(p.text)) unicode = true;
-        return escapeLatex(p.text).replaceAll('×', '\\ensuremath{\\times}');
-      })
-      .join('');
+    const content = scripts.label(parts, (p) => {
+      if (p.kind === 'math') {
+        usesMath = true;
+        return `$${p.tex}$`;
+      }
+      // The multiplication sign of map sizes (28×28×8) needs no Unicode engine.
+      if (/[^\x20-\x7e×]/.test(p.text)) unicode = true;
+      return escapeLatex(p.text).replaceAll('×', '\\ensuremath{\\times}');
+    });
     const first = parts[0]!;
     const size = first.kind === 'math' ? first.size / 1.1 : first.font.size;
     const fill = first.paint.fill ?? '#000000';
@@ -214,26 +224,33 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
     '\\end{tikzpicture}',
   ];
 
+  const fonts = scripts.fonts();
   const header = [
     `% ${scene.title.replace(/[\r\n]+/g, ' ')}`,
     '% Made with Xematics. Positions are in px (1 px = 0.75 pt), as in the SVG export.',
-    ...(unicode
+    ...(unicode ? ['% Labels use characters beyond ASCII: compile with LuaLaTeX or XeLaTeX.'] : []),
+    ...(fonts.length > 0
       ? [
-          '% Labels use characters beyond ASCII: compile with XeLaTeX or LuaLaTeX and pick a font that covers them.',
+          fonts.length === 1
+            ? `% Label font: ${fonts[0]}. Install it, or change the name in the font line.`
+            : `% Label fonts: ${fonts.join(', ')}. Install them, or change the names in the font lines.`,
         ]
       : []),
   ];
+  const unicodeSetup = unicode ? ['\\usepackage{fontspec}', ...scripts.preamble()] : [];
   const libraries = usesArrows ? ['\\usetikzlibrary{arrows.meta}'] : [];
   // MathJax accepts AMS macros (\mathbb, \boldsymbol, ...), so math labels need these packages.
   const packages = usesMath ? ['\\usepackage{amsmath, amssymb}'] : [];
   if (!standalone) {
     const needs = ['\\usepackage{tikz}', ...libraries, ...packages].join(' ');
-    return `${[...header, `% Needs in the preamble: ${needs}`, ...definitions, ...picture].join('\n')}\n`;
+    const setup = unicodeSetup.map((line) => `%   ${line}`);
+    const extra = setup.length > 0 ? ['% and:', ...setup] : [];
+    return `${[...header, `% Needs in the preamble: ${needs}`, ...extra, ...definitions, ...picture].join('\n')}\n`;
   }
   return `${[
     ...header,
     '\\documentclass[tikz, border=4pt]{standalone}',
-    ...(unicode ? ['\\usepackage{fontspec}'] : []),
+    ...unicodeSetup,
     ...packages,
     ...libraries,
     ...definitions,
@@ -251,6 +268,7 @@ interface Helpers {
   readonly n: (value: number) => string;
   readonly font: (size: number) => string;
   readonly paintStyle: (p: Paint) => string;
+  readonly scripts: LabelScripts;
 }
 
 /** Symbols the new diagrams use, written so pdfLaTeX needs no Unicode setup. */
@@ -271,7 +289,7 @@ function genericItems(
   children: ReadonlyMap<string, readonly SceneItem[]>,
   h: Helpers,
 ): { lines: string[]; unicode: boolean; math: boolean } {
-  const { color, style, n, font } = h;
+  const { color, style, n, font, scripts } = h;
   const lines: string[] = ['  % Diagram'];
   let unicode = false;
   let math = false;
@@ -314,15 +332,13 @@ function genericItems(
       if (group) skip.add(item.id);
       const parts = labelParts(item, group ?? []);
       if (parts.length === 0) continue;
-      const content = parts
-        .map((p) => {
-          if (p.kind === 'math') {
-            math = true;
-            return `$${p.tex}$`;
-          }
-          return text(p.text);
-        })
-        .join('');
+      const content = scripts.label(parts, (p) => {
+        if (p.kind === 'math') {
+          math = true;
+          return `$${p.tex}$`;
+        }
+        return text(p.text);
+      });
       const first = parts[0]!;
       const size = first.kind === 'math' ? first.size / 1.1 : first.font.size;
       const fill = first.paint.fill ?? '#000000';
@@ -414,6 +430,87 @@ function labelParts(item: SceneItem, kids: readonly SceneItem[]): Part[] {
   // Parts are stored in visual order; right-to-left labels read the other way.
   const rtl = parts.some((p) => p.kind === 'text' && p.direction === 'rtl');
   return rtl ? [...parts].reverse() : parts;
+}
+
+type Script = 'arabic' | 'hebrew' | 'kana' | 'hangul' | 'han';
+
+/** Scripts that need their own font, the font the editor bundles for each, and fontspec options. */
+const SCRIPTS: readonly (readonly [Script, RegExp, string, string])[] = [
+  [
+    'arabic',
+    /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\ufeff]/u,
+    'Vazirmatn',
+    'Script=Arabic',
+  ],
+  ['hebrew', /[\u0590-\u05ff\ufb1d-\ufb4f]/u, 'Noto Sans Hebrew', 'Script=Hebrew'],
+  ['kana', /[\u3040-\u30ff\u31f0-\u31ff]/u, 'Noto Sans JP', ''],
+  ['hangul', /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/u, 'Noto Sans KR', ''],
+  ['han', /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u, 'Noto Sans SC', ''],
+];
+
+/**
+ * Picks a font per script for label runs and writes right-to-left labels so LuaLaTeX (\textdir)
+ * and XeLaTeX (\beginR) both lay them out in reading order.
+ */
+class LabelScripts {
+  private readonly used = new Set<Script>();
+  private rtl = false;
+  private readonly font: string | undefined;
+
+  constructor(font?: string) {
+    this.font = font;
+  }
+
+  /** One label's LaTeX: each text run in its script's font, the whole label in its direction. */
+  label(parts: readonly Part[], render: (part: Part) => string): string {
+    const rtl = parts.some((p) => p.kind === 'text' && p.direction === 'rtl');
+    if (rtl) this.rtl = true;
+    const body = parts
+      .map((p) => {
+        let out = render(p);
+        if (p.kind === 'text') {
+          const script = SCRIPTS.find(([, test]) => test.test(p.text))?.[0];
+          if (script) {
+            this.used.add(script);
+            out = `{\\xm${script} ${out}}`;
+          }
+        }
+        return rtl && (p.kind === 'math' || p.direction === 'ltr') ? `\\xmltr{${out}}` : out;
+      })
+      .join('');
+    return rtl ? `\\xmrtl{${body}}` : body;
+  }
+
+  private fontOf(script: Script): string {
+    if (this.font) return this.font;
+    // Kanji in a diagram that also has kana are Japanese.
+    if (script === 'han' && this.used.has('kana')) return 'Noto Sans JP';
+    return SCRIPTS.find(([s]) => s === script)![2];
+  }
+
+  /** Font names in use, for the header note. */
+  fonts(): string[] {
+    return [...new Set(SCRIPTS.filter(([s]) => this.used.has(s)).map(([s]) => this.fontOf(s)))];
+  }
+
+  /** Preamble lines after fontspec; a missing font falls back to the default one. */
+  preamble(): string[] {
+    const lines = SCRIPTS.filter(([s]) => this.used.has(s)).map(([s, , , features]) => {
+      const name = this.fontOf(s);
+      const options = features ? `[${features}]` : '';
+      return `\\IfFontExistsTF{${name}}{\\newfontfamily\\xm${s}{${name}}${options}}{\\newcommand\\xm${s}{}}`;
+    });
+    if (this.rtl) {
+      lines.push(
+        '\\ifdefined\\directlua',
+        '  \\newcommand\\xmrtl[1]{{\\textdir TRT #1}}\\newcommand\\xmltr[1]{{\\textdir TLT #1}}',
+        '\\else',
+        '  \\TeXXeTstate=1 \\newcommand\\xmrtl[1]{\\beginR #1\\endR}\\newcommand\\xmltr[1]{\\beginL #1\\endL}',
+        '\\fi',
+      );
+    }
+    return lines;
+  }
 }
 
 /** Baseline center of a label. */

@@ -99,6 +99,7 @@
     void tool.exportFormat;
     void tool.pngDpi;
     void tool.tikzStandalone;
+    void tool.tikzFont;
     tool.scheduleSave();
   });
 

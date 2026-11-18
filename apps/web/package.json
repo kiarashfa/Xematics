@@ -12,9 +12,9 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@astrojs/mdx": "8.1.1",
+    "@astrojs/mdx": "8.1.4",
     "@astrojs/sitemap": "3.7.4",
-    "@astrojs/svelte": "9.1.1",
+    "@astrojs/svelte": "9.1.4",
     "@fontsource-variable/archivo": "5.3.0",
     "@fontsource/eb-garamond": "5.3.0",
     "@fontsource/ibm-plex-mono": "5.3.0",
@@ -26,20 +26,20 @@
     "@fontsource/vazirmatn": "5.3.0",
     "@mathjax/mathjax-newcm-font": "4.1.3",
     "@mathjax/src": "4.1.3",
-    "@tailwindcss/vite": "4.3.3",
+    "@tailwindcss/vite": "4.3.5",
     "@xematics/core": "workspace:*",
-    "astro": "7.4.2",
+    "astro": "7.4.10",
     "bidi-js": "1.1.0",
     "harfbuzzjs": "1.6.4",
     "svelte": "5.57.3",
-    "tailwindcss": "4.3.3"
+    "tailwindcss": "4.3.5"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.12",
     "@axe-core/playwright": "4.14.0",
-    "@playwright/test": "1.64.1",
+    "@playwright/test": "1.65.0",
     "@resvg/resvg-wasm": "2.6.2",
-    "svelte-check": "4.7.7",
+    "svelte-check": "4.7.8",
     "typescript": "6.0.3"
   }
 }

@@ -2,7 +2,13 @@
   // /user/: the visitor's profile. With nothing in this browser yet it welcomes them: start a
   // profile, or bring a save (the "login"). Otherwise the left column holds the picture, name and
   // numbers, then cloud save, the save file and signing out; the right side is their gallery.
-  import { loadYaml, PROFILE_NAME_MAX, parseWorkspace, type Workspace } from '@xematics/core';
+  import {
+    isTikzFont,
+    loadYaml,
+    PROFILE_NAME_MAX,
+    parseWorkspace,
+    type Workspace,
+  } from '@xematics/core';
   import { onMount } from 'svelte';
   import { PRESET_CHOICES } from '../tool/documents.ts';
   import { EXPORT_FORMATS, PNG_SIZES } from '../tool/formats.ts';
@@ -373,6 +379,21 @@
             <option value="picture">Picture only</option>
           </select>
         </label>
+        <label>
+          <span>TikZ font for Persian, Hebrew or CJK labels</span>
+          <input
+            type="text"
+            placeholder="Automatic"
+            spellcheck="false"
+            maxlength="64"
+            value={settings?.tikzFont ?? ''}
+            onchange={(e) => {
+              const name = e.currentTarget.value.trim();
+              if (name === '' || isTikzFont(name)) void setDefault({ tikzFont: name });
+              else e.currentTarget.value = settings?.tikzFont ?? '';
+            }}
+          />
+        </label>
         <p class="small">
           Used by the editor, and saved with your diagrams for your other devices.
         </p>
@@ -456,7 +477,8 @@
     color: var(--muted);
   }
 
-  .defaults select {
+  .defaults select,
+  .defaults input {
     height: 34px;
     padding: 0 8px;
     border: 1px solid var(--line);

@@ -27,6 +27,21 @@ describe('xematics CLI', () => {
     expect(stdout).toContain('<text id="fig-name-0"');
   });
 
+  test('live text can name fonts instead of embedding them', () => {
+    const embedded = run(['render', '-', '--text', 'live'], '3-2');
+    const named = run(['render', '-', '--text', 'live', '--no-embed'], '3-2');
+    expect(embedded.stdout).toContain('@font-face');
+    expect(named.code).toBe(0);
+    expect(named.stdout).not.toContain('@font-face');
+    expect(named.stdout).toContain('<text id="xm-name-0"');
+  });
+
+  test('picks the TikZ font for non-Latin labels', () => {
+    const tex = run(['render', '-', '-f', 'tex', '--tikz-font', 'Noto Naskh Arabic'], '2-1');
+    expect(tex.code).toBe(0);
+    expect(run(['render', '-', '-f', 'tex', '--tikz-font', 'a{b}'], '2-1').code).toBe(2);
+  });
+
   test('reports input errors with positions and exit code 1', () => {
     const { code, stderr } = run(['render', '-'], '784-16x');
     expect(code).toBe(1);

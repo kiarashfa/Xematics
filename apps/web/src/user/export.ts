@@ -13,7 +13,7 @@ import {
 } from '@xematics/core';
 import { downloadBytes, rasterize } from '../tool/browser.ts';
 import { loadEngine } from '../tool/engine.ts';
-import { MAX_PNG_PIXELS } from '../tool/formats.ts';
+import { MAX_PNG_PIXELS, tikzOptions } from '../tool/formats.ts';
 import { zip, type ZipEntry } from './zip.ts';
 
 export type BulkFormat = 'svg' | 'png' | 'pdf' | 'tex' | 'source';
@@ -23,6 +23,7 @@ export interface BulkOptions {
   pngDpi: number;
   liveText: boolean;
   tikzStandalone: boolean;
+  tikzFont: string;
 }
 
 export interface BulkResult {
@@ -84,7 +85,7 @@ export async function exportAll(
       } else if (options.format === 'pdf') {
         data = renderPdf(scene);
       } else if (options.format === 'tex') {
-        data = encoder.encode(renderTikz(scene, { standalone: options.tikzStandalone }));
+        data = encoder.encode(renderTikz(scene, tikzOptions(options)));
       } else {
         const size = pngSize(scene, options.pngDpi);
         if (size.width * size.height > MAX_PNG_PIXELS) {

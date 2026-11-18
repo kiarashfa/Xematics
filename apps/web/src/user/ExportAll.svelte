@@ -44,6 +44,7 @@
           pngDpi,
           liveText: settings?.liveText ?? false,
           tikzStandalone: settings?.tikzStandalone ?? true,
+          tikzFont: settings?.tikzFont ?? '',
         },
         (done, total) => (working = { done, total }),
       );

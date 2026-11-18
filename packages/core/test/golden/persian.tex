@@ -1,8 +1,15 @@
 % شبکه عصبی
 % Made with Xematics. Positions are in px (1 px = 0.75 pt), as in the SVG export.
-% Labels use characters beyond ASCII: compile with XeLaTeX or LuaLaTeX and pick a font that covers them.
+% Labels use characters beyond ASCII: compile with LuaLaTeX or XeLaTeX.
+% Label font: Vazirmatn. Install it, or change the name in the font line.
 \documentclass[tikz, border=4pt]{standalone}
 \usepackage{fontspec}
+\IfFontExistsTF{Vazirmatn}{\newfontfamily\xmarabic{Vazirmatn}[Script=Arabic]}{\newcommand\xmarabic{}}
+\ifdefined\directlua
+  \newcommand\xmrtl[1]{{\textdir TRT #1}}\newcommand\xmltr[1]{{\textdir TLT #1}}
+\else
+  \TeXXeTstate=1 \newcommand\xmrtl[1]{\beginR #1\endR}\newcommand\xmltr[1]{\beginL #1\endL}
+\fi
 \definecolor{xm1}{HTML}{FFFFFF}
 \definecolor{xm2}{HTML}{D4E8F5}
 \definecolor{xm3}{HTML}{0072B2}
@@ -200,13 +207,13 @@
   \fill[xm dots] (266.14,182.5) circle[radius=2];
   \fill[xm dots] (266.14,189.5) circle[radius=2];
   % Labels
-  \node[xm name xm9, anchor=base] at (46.14,368.59) {پیکسل‌ها};
+  \node[xm name xm9, anchor=base] at (46.14,368.59) {\xmrtl{{\xmarabic پیکسل‌ها}}};
   \node[xm size xm10, anchor=base] at (46.14,385.35) {784};
-  \node[xm name xm9, anchor=base] at (156.14,368.59) {لایه پنهان ۱};
+  \node[xm name xm9, anchor=base] at (156.14,368.59) {\xmrtl{{\xmarabic لایه پنهان ۱}}};
   \node[xm size xm10, anchor=base] at (156.14,385.35) {16};
-  \node[xm name xm9, anchor=base] at (266.14,368.59) {لایه پنهان ۲};
+  \node[xm name xm9, anchor=base] at (266.14,368.59) {\xmrtl{{\xmarabic لایه پنهان ۲}}};
   \node[xm size xm10, anchor=base] at (266.14,385.35) {16};
-  \node[xm name xm9, anchor=base] at (376.14,368.59) {ارقام};
+  \node[xm name xm9, anchor=base] at (376.14,368.59) {\xmrtl{{\xmarabic ارقام}}};
   \node[xm size xm10, anchor=base] at (376.14,385.35) {10};
 \end{tikzpicture}
 \end{document}

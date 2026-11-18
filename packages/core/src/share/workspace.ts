@@ -104,6 +104,8 @@ const WorkspaceSchema = v.object({
       exportFormat: v.optional(v.string()),
       pngDpi: v.optional(v.number()),
       tikzStandalone: v.optional(v.boolean()),
+      /** Font for non-Latin TikZ labels; empty means the bundled font for each script. */
+      tikzFont: v.optional(v.string()),
       /** Style preset for new diagrams. */
       defaultPreset: v.optional(v.string()),
       /** When any setting last changed, so the newer settings win a merge. */
