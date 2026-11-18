@@ -21,7 +21,10 @@ import {
   familyOf,
   inferShapes,
   insertLayer,
+  canLayout,
+  familyLayoutsLoaded,
   isYamlLoaded,
+  loadFamilyLayouts,
   loadYaml,
   YamlNotLoadedError,
   isShareFragment,
@@ -171,9 +174,19 @@ export class ToolState {
   stylePreview = $state.raw<((model: Model) => Model) | undefined>(undefined);
   /** The model the preview draws: the source's, with any previewed style change on top. */
   shown = $derived(this.model && this.stylePreview ? this.stylePreview(this.model) : this.model);
+  /** Recurrent, Transformer, GAN and autoencoder layouts load on first need, like YAML. */
+  familiesReady = $state(familyLayoutsLoaded());
+  #familiesFailed = false;
   layout = $derived.by(() => {
     void this.textVersion;
-    return this.engine && this.shown ? layoutModel(this.shown, this.engine) : undefined;
+    void this.familiesReady;
+    const shown = this.shown;
+    if (!this.engine || !shown) return undefined;
+    if (!canLayout(shown)) {
+      if (!this.#familiesFailed) void this.loadFamilies();
+      return undefined;
+    }
+    return layoutModel(shown, this.engine);
   });
   warnings = $derived<Diagnostic[]>([
     ...this.parsed.diagnostics.filter((d) => d.severity === 'warning'),
@@ -275,6 +288,20 @@ export class ToolState {
     }
     this.setText(text, typing);
     return true;
+  }
+
+  /** Loads the family layouts once; resolves false (and says so) when they cannot load. */
+  loadFamilies(): Promise<boolean> {
+    return loadFamilyLayouts().then(
+      () => (this.familiesReady = true),
+      () => {
+        if (!this.#familiesFailed) {
+          this.#familiesFailed = true;
+          this.flash('This network could not be drawn. Check the connection and reload the page.');
+        }
+        return false;
+      },
+    );
   }
 
   /** Loads the YAML reader once; resolves false (and shows an error) when it cannot load. */
@@ -699,6 +726,8 @@ export class ToolState {
   async prepareText(): Promise<void> {
     const { engine, model } = this;
     if (!engine || !model) return;
+    // Labels of the family layouts are found by running the layout, so it has to be here first.
+    if (!canLayout(model) && !(await this.loadFamilies())) return;
     // Fonts are quick; the first formula waits for MathJax. Each redraws as soon as it is ready.
     const { text, math } = labelContent(model);
     const redraw = (changed: boolean) => {

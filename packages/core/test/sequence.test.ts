@@ -8,8 +8,10 @@ import {
   familyOf,
   formatShorthand,
   inferShapes,
+  canLayout,
   labelContent,
   layoutModel,
+  needsFamilyLayouts,
   parseModel,
   parseShorthand,
   prepareModel,
@@ -191,6 +193,21 @@ describe('validation and shapes', () => {
     expect(familyOf(model(GAN))).toBe('gan');
     expect(familyOf(model('ae(8-2)'))).toBe('autoencoder');
     expect(familyOf(model('8-4-8'))).toBe('mlp');
+  });
+});
+
+describe('lazy family layouts', () => {
+  test('only recurrent, Transformer, GAN and autoencoder models need them', () => {
+    const needs = (text: string) => needsFamilyLayouts(parseModel(text).model!);
+    expect(needs('784-16-10')).toBe(false);
+    expect(needs('in(28x28x1)-conv(8,3x3)-pool(2)-flatten-fc(10)')).toBe(false);
+    expect(needs('seq(20x32)-lstm(64)-fc(10)')).toBe(true);
+    expect(needs('tokens(512)-embed(512)-encoder(6,8)-fc(10)')).toBe(true);
+    expect(needs('gan(100-256-784 | 784-256-1)')).toBe(true);
+    expect(needs('ae(784-64-16)')).toBe(true);
+    expect(needs('style: { autoencoder: true }\nlayers: [784, 64, 784]')).toBe(true);
+    // Node loads them with the package, so every model can be laid out at once.
+    expect(canLayout(parseModel('seq(20x32)-lstm(64)').model!)).toBe(true);
   });
 });
 

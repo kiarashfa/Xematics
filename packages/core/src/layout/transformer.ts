@@ -20,7 +20,7 @@ import { barHeight } from './boxes.ts';
 import { Painter, type Point } from './draw.ts';
 import type { Label } from './label.ts';
 import { cleanLabel, labelReporter, roleOf, type LayoutResult } from './mlp.ts';
-import { layerNameText, sequenceAutoNames } from './rnn.ts';
+import { layerNameText, sequenceAutoNames } from './names.ts';
 
 const BAR_W = 16;
 const GAP = 22;

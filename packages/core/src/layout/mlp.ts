@@ -17,10 +17,7 @@ import { stripInvalidXml } from '../util/xml.ts';
 import { layoutBoxes } from './boxes.ts';
 import { applyWeights } from '../animate/weights.ts';
 import { layoutCnn } from './cnn.ts';
-import { layoutAutoencoder } from './autoencoder.ts';
-import { layoutGan } from './gan.ts';
-import { layoutRnn } from './rnn.ts';
-import { layoutTransformer } from './transformer.ts';
+import { familyLayouts } from './families.ts';
 import { buildLabel, labelItems, nodeLabelText, type Label, type LabelIssue } from './label.ts';
 
 /** Layers with more neurons than this are always collapsed, even when collapse is turned off. */
@@ -134,11 +131,12 @@ export function layoutModel(input: Model, engine: TextEngine): LayoutResult {
 
 function layoutPlain(input: Model, theme: Theme, engine: TextEngine): LayoutResult {
   const family = familyOf(input);
-  if (family === 'rnn') return layoutRnn(input, theme, engine);
-  if (family === 'transformer') return layoutTransformer(input, theme, engine);
-  if (family === 'gan') return layoutGan(input, theme, engine);
+  // Keep in step with needsFamilyLayouts (families.ts).
+  if (family === 'rnn') return familyLayouts().layoutRnn(input, theme, engine);
+  if (family === 'transformer') return familyLayouts().layoutTransformer(input, theme, engine);
+  if (family === 'gan') return familyLayouts().layoutGan(input, theme, engine);
   if (family === 'autoencoder' || (theme.autoencoder && input.layers.length >= 3)) {
-    return layoutAutoencoder(input, theme, engine);
+    return familyLayouts().layoutAutoencoder(input, theme, engine);
   }
   if (family === 'cnn') return layoutCnn(input, theme, engine);
   const model = input as MlpModel;

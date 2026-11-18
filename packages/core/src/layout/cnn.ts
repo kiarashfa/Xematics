@@ -25,7 +25,7 @@ import {
   type LayoutResult,
   type Slot,
 } from './mlp.ts';
-import { sequenceAutoNames } from './rnn.ts';
+import { sequenceAutoNames } from './names.ts';
 
 /** Space between a layer and the arrow next to it, and the arrow head size. */
 const ARROW_GAP = 8;

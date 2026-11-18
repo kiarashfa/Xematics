@@ -4,13 +4,7 @@
 // output h). The 'neurons' look draws each step as a small network of nodes instead, and the
 // cell switch draws the gates inside one cell. Pure and deterministic: only + - * / and sqrt.
 
-import {
-  isRecurrent,
-  type Layer,
-  type Model,
-  type RecurrentLayer,
-  type RecurrentType,
-} from '../model/schema.ts';
+import { isRecurrent, type Layer, type Model } from '../model/schema.ts';
 import { inferShapes, shapeText, type Shape } from '../model/shapes.ts';
 import type { Paint } from '../scene.ts';
 import {
@@ -24,65 +18,14 @@ import type { TextEngine } from '../text/engine.ts';
 import { Painter, type Point } from './draw.ts';
 import type { Label } from './label.ts';
 import { cleanLabel, labelReporter, roleOf, slotsOf, type LayoutResult, type Slot } from './mlp.ts';
+import { CELL_WORD, layerNameText, sequenceAutoNames } from './names.ts';
 
-const CELL_WORD: Readonly<Record<RecurrentType, string>> = { rnn: 'RNN', lstm: 'LSTM', gru: 'GRU' };
 const CELL_H = 38;
 const BOX_H = 30;
 /** Length of the initial-state stub before the first cell. */
 const STUB = 30;
 /** Padding of the dashed frame around a recurrent row in the neurons look. */
 const FRAME_PAD = 7;
-
-/** The cell's name with a Bi prefix for bidirectional layers: BiLSTM. */
-export function cellWord(layer: RecurrentLayer): string {
-  return `${layer.bidirectional ? 'Bi' : ''}${CELL_WORD[layer.type]}`;
-}
-
-/** The name shown for each layer of a sequence model (recurrent or Transformer) without its own. */
-export function sequenceAutoNames(layers: readonly Layer[]): string[] {
-  const count = layers.length;
-  const words = layers.map((layer, i) => {
-    switch (layer.type) {
-      case 'sequence':
-      case 'input':
-        return 'Input';
-      case 'tokens':
-        return 'Tokens';
-      case 'embed':
-        return 'Embedding';
-      case 'encoder':
-        return 'Encoder';
-      case 'decoder':
-        return 'Decoder';
-      case 'rnn':
-      case 'lstm':
-      case 'gru':
-        return cellWord(layer);
-      case 'flatten':
-        return 'Flatten';
-      case 'gap':
-        return 'Pooling';
-      case 'gan':
-        return 'GAN';
-      case 'autoencoder':
-        return layer.vae ? 'VAE' : 'Autoencoder';
-      default:
-        return i === count - 1 ? 'Output' : 'Dense';
-    }
-  });
-  const totals: Record<string, number> = {};
-  for (const word of words) totals[word] = (totals[word] ?? 0) + 1;
-  const seen: Record<string, number> = {};
-  return words.map((word) => {
-    // Numbered only when there is more than one of a kind, like Hidden in fully connected networks.
-    if ((totals[word] ?? 0) < 2) return word;
-    seen[word] = (seen[word] ?? 0) + 1;
-    return `${word} ${seen[word]}`;
-  });
-}
-
-export const layerNameText = (layer: Layer, auto: string) =>
-  layer.name === undefined ? auto : cleanLabel(layer.name);
 
 /** The word inside a box that stands for a layer at one step. */
 function boxWord(layer: Layer): string {

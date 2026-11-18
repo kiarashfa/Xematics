@@ -1,3 +1,5 @@
+import { loadFamilyLayouts as loadFamilyLayoutsNow } from './layout/families.ts';
+
 export {
   diagnostic,
   formatDiagnostic,
@@ -14,10 +16,14 @@ export {
   type LayoutResult,
 } from './layout/mlp.ts';
 export { autoNames, cnnAutoNames, describeCnn, opText } from './layout/cnn.ts';
-export { cellWord, describeSequence, sequenceAutoNames } from './layout/rnn.ts';
-export { describeGan } from './layout/gan.ts';
-export { describeTransformer } from './layout/transformer.ts';
-export { autoencoderParts, describeAutoencoder } from './layout/autoencoder.ts';
+export { cellWord, sequenceAutoNames } from './layout/names.ts';
+export {
+  canLayout,
+  familyLayoutsLoaded,
+  FamilyLayoutsNotLoadedError,
+  loadFamilyLayouts,
+  needsFamilyLayouts,
+} from './layout/families.ts';
 export { inferShapes, pair, shapeText, type Shape, type ShapeResult } from './model/shapes.ts';
 export {
   ACTIVATION_PATTERN,
@@ -201,3 +207,7 @@ export * from './animate/index.ts';
 export { renderTikz, type TikzOptions } from './export/tikz.ts';
 export { isTikzFont } from './export/tikz-font.ts';
 export { embedSnippets, pngSize, setPngDpi, type EmbedSnippets } from './export/embed.ts';
+
+// Node loads the family layouts up front, so layoutModel works without waiting (CLI, tests, build).
+const node = (globalThis as { process?: { versions?: { node?: string } } }).process?.versions?.node;
+if (node) await loadFamilyLayoutsNow();

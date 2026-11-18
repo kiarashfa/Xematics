@@ -2,6 +2,7 @@ import type { Diagnostic } from './diagnostics.ts';
 import { splitMath, nodeLabelText } from './layout/label.ts';
 import { cnnLabels } from './layout/cnn.ts';
 import { cleanLabel, layoutModel, nameText, slotsOf } from './layout/mlp.ts';
+import { loadFamilyLayouts, needsFamilyLayouts } from './layout/families.ts';
 import { familyOf, isMlp, type MlpModel, type Model } from './model/schema.ts';
 import { parseModelAsync, type InputFormat } from './parse/parse.ts';
 import { renderSvg, type SvgOptions } from './render/svg.ts';
@@ -22,7 +23,10 @@ export interface RenderOptions extends SvgOptions {
   readonly embedFonts?: boolean;
 }
 
-/** Every text run and formula a model's labels contain, so fonts and math can load first. */
+/**
+ * Every text run and formula a model's labels contain, so fonts and math can load first. Models
+ * that need a family layout (needsFamilyLayouts) need it loaded first; prepareModel does that.
+ */
 export function labelContent(model: Model): { text: TextRequest[]; math: string[] } {
   const theme = resolveTheme(model.style);
   const count = model.layers.length;
@@ -112,6 +116,7 @@ function recordLabels(model: Model): { text: TextRequest[]; math: string[] } {
 
 /** Loads the fonts and formulas a model needs. Resolves true when anything new was loaded. */
 export async function prepareModel(model: Model, engine: TextEngine): Promise<boolean> {
+  if (needsFamilyLayouts(model)) await loadFamilyLayouts();
   const { text, math } = labelContent(model);
   const [fonts, formulas] = await Promise.all([
     engine.load(text),

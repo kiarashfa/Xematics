@@ -140,6 +140,20 @@ test.describe('desktop editor', () => {
     }
   });
 
+  test('family layouts load only when a diagram needs them', async ({ page }) => {
+    const chunks: string[] = [];
+    page.on('request', (request) => {
+      if (/family-layouts/.test(request.url())) chunks.push(request.url());
+    });
+    await openEditor(page);
+    await source(page).fill('784-128-10');
+    await expect(page.getByRole('img', { name: 'Neural network diagram' })).toBeVisible();
+    expect(chunks).toEqual([]);
+    await source(page).fill('seq(20x32)-lstm(64)-fc(10):softmax');
+    await expect(page.locator('[id^="pv-box-1"]').first()).toBeAttached();
+    expect(chunks).toHaveLength(1);
+  });
+
   test('network switches and recurrent layer fields write the source', async ({ page }) => {
     await openEditor(page);
     await source(page).fill('seq(3x3)-rnn(4)-fc(2)');
