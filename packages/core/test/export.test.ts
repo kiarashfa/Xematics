@@ -39,6 +39,7 @@ describe('PDF export', () => {
     'rnn-neurons.yaml',
     'tf-gpt.txt',
     'colors.yaml',
+    'resnet.txt',
   ])('%s', async (file) => {
     const pdf = ascii(renderPdf(await scene(file)));
     await expect(pdf).toMatchFileSnapshot(`./golden/${file.replace(/\.\w+$/, '')}.pdf`);
@@ -73,6 +74,9 @@ describe('TikZ export', () => {
     'cnn-lenet.yaml',
     'cnn-boxes.yaml',
     'cnn-math.yaml',
+    'resnet.txt',
+    'upsample.yaml',
+    'params.yaml',
     'weights.yaml',
     'rnn-lstm.txt',
     'rnn-bigru.yaml',

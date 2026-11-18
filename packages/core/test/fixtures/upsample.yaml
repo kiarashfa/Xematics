@@ -1,0 +1,9 @@
+title: Decoder with skips
+layers:
+  - { type: input, shape: [64, 64, 3], name: Image }
+  - { type: conv, filters: 16, kernel: 3, activation: relu }
+  - { type: pool, size: 2 }
+  - { type: conv, filters: 32, kernel: 3, activation: relu }
+  - { type: up, size: 2 }
+  - { type: conv, filters: 16, kernel: 3, skip: { from: 2, op: concat } }
+  - { type: deconv, filters: 3, kernel: 4, stride: 2, name: Output }

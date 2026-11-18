@@ -1,0 +1,1 @@
+in(32x32x3)-conv(16,3x3)-res(conv(16,3x3):relu*2)*2-gap-fc(10):softmax

@@ -5,7 +5,7 @@
 // Pure and deterministic: only + - * / and sqrt.
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
-import { familyOf, type DenseLayer, type Layer, type Model } from '../model/schema.ts';
+import { familyOf, skipOf, type DenseLayer, type Layer, type Model } from '../model/schema.ts';
 import { inferShapes, pair, shapeText, type Shape } from '../model/shapes.ts';
 import { SCENE_VERSION, type Paint, type SceneItem } from '../scene.ts';
 import { roleStroke, type Role, type TextStyle, type Theme } from '../style/theme.ts';
@@ -41,6 +41,15 @@ const GAP_NODES = 66;
 const GAP_ARROW = 34;
 /** Points on a map's front sheet that fan out to the first neuron column. */
 const FAN = [0.1, 0.3, 0.5, 0.7, 0.9];
+/** Skip connections: the join circle, the gap above the layers and the step between levels. */
+const JOIN_R = 7;
+const SKIP_GAP = 12;
+const SKIP_PITCH = 12;
+/** Room a join needs in the gap after its layer. */
+const JOIN_ROOM = 2 * JOIN_R + 18;
+
+/** Layers drawn with the pooling tint: they resample a map and learn nothing. */
+const resamples = (layer: Layer) => layer.type === 'pool' || layer.type === 'up';
 
 /** The name shown under a layer when it has none of its own. */
 export function cnnAutoNames(layers: readonly Layer[]): string[] {
@@ -54,9 +63,17 @@ export function cnnAutoNames(layers: readonly Layer[]): string[] {
     switch (layer.type) {
       case 'conv':
       case 'pool':
+      case 'deconv':
+      case 'up':
       case 'dense': {
         const n = (seen[layer.type] = (seen[layer.type] ?? 0) + 1);
-        const word = layer.type === 'conv' ? 'Conv' : layer.type === 'pool' ? 'Pool' : 'Dense';
+        const word = {
+          conv: 'Conv',
+          pool: 'Pool',
+          deconv: 'Deconv',
+          up: 'Upsample',
+          dense: 'Dense',
+        }[layer.type];
         // Numbered only when there is more than one of a kind, like Hidden in fully connected networks.
         return total(layer.type) > 1 ? `${word} ${n}` : word;
       }
@@ -64,6 +81,8 @@ export function cnnAutoNames(layers: readonly Layer[]): string[] {
         return 'Flatten';
       case 'gap':
         return 'Global pool';
+      case 'reshape':
+        return 'Reshape';
       case 'input':
         return 'Input';
       default:
@@ -91,6 +110,15 @@ export function opText(layer: Layer): string {
       const strided = stride[0] !== size[0] || stride[1] !== size[1];
       return `${layer.mode === 'avg' ? 'avg' : 'max'} ${times(layer.size)}${strided ? `, stride ${stride[0] === stride[1] ? stride[0] : times(layer.stride!)}` : ''}`;
     }
+    case 'deconv': {
+      const stride = layer.stride === undefined ? '' : pair(layer.stride);
+      const strided = stride && (stride[0] !== 1 || stride[1] !== 1);
+      return `deconv ${times(layer.kernel)}${strided ? `, stride ${stride[0] === stride[1] ? stride[0] : times(layer.stride!)}` : ''}`;
+    }
+    case 'up':
+      return `up ${times(layer.size)}`;
+    case 'reshape':
+      return 'reshape';
     case 'flatten':
       return 'flatten';
     case 'gap':
@@ -176,7 +204,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
   const parts: Part[] = model.layers.map((layer, index) => {
     const shape = shapes[index]!;
     const role = roleOf(index, count);
-    const rolePaint = role === 'hidden' && layer.type === 'pool' ? maps.pool : theme.roles[role];
+    const rolePaint = role === 'hidden' && resamples(layer) ? maps.pool : theme.roles[role];
     const width = shape.kind === 'map' ? maps.strokeWidth : theme.nodeStrokeWidth;
     const paint: Paint = {
       fill: rolePaint.fill,
@@ -239,6 +267,27 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
     return { ...base, draw: 'column', dense, slots, extent: 2 * r, up: half, down: half };
   });
 
+  const skips = model.layers.flatMap((layer, target) => {
+    const skip = skipOf(layer);
+    return skip && skip.from <= target ? [{ source: skip.from - 1, target, op: skip.op }] : [];
+  });
+  const levels = skips.map(() => 1);
+  [...skips.keys()]
+    .sort((a, b) => skips[a]!.target - skips[a]!.source - (skips[b]!.target - skips[b]!.source))
+    .forEach((k) => {
+      const outer = skips[k]!;
+      for (const [j, inner] of skips.entries()) {
+        const inside =
+          j !== k &&
+          inner.source >= outer.source &&
+          inner.target <= outer.target &&
+          inner.target - inner.source < outer.target - outer.source;
+        if (inside) levels[k] = Math.max(levels[k]!, levels[j]! + 1);
+      }
+    });
+  const joins = new Set(skips.map((sk) => sk.target));
+  const skipBand = skips.length > 0 ? SKIP_GAP + Math.max(...levels) * SKIP_PITCH : 0;
+
   // Horizontal placement, in the forward (left to right) direction.
   const labelHalf = (p: Part) => Math.max(p.name?.width ?? 0, p.size?.width ?? 0) / 2;
   const lefts: number[] = [];
@@ -263,11 +312,18 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
       labelHalf(part) +
       theme.labelPadding -
       (previous.extent + part.extent) / 2;
-    lefts.push(lefts[i - 1]! + previous.extent + Math.max(base * scale, opRoom, centers));
+    const starts = skips.some((sk) => sk.source === i - 1);
+    const joinRoom = joins.has(i - 1) ? JOIN_ROOM + (starts ? JOIN_R + 6 : 0) : 0;
+    lefts.push(lefts[i - 1]! + previous.extent + Math.max(base * scale, opRoom, centers, joinRoom));
   });
   const last = parts.at(-1)!;
+  // A join after the last layer needs room on its right.
+  const tail = joins.has(parts.length - 1) ? JOIN_ROOM : 0;
   const width =
-    lefts.at(-1)! + last.extent + Math.max(0, labelHalf(last) - last.extent / 2) + theme.margin;
+    lefts.at(-1)! +
+    last.extent +
+    Math.max(0, labelHalf(last) - last.extent / 2, tail) +
+    theme.margin;
 
   // Vertical metrics: op labels in a band on top, layers on one center line, names and sizes below.
   const nameLine = engine.shape('', theme.nameText, theme.nameText.size);
@@ -275,7 +331,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
   const opLine = engine.shape('', maps.opText, maps.opText.size);
   const anyOp = parts.some((p) => p.op);
   const opBaseline = theme.margin + opLine.ascent;
-  const top = anyOp ? opBaseline + opLine.descent + theme.labelGap : theme.margin;
+  const top = (anyOp ? opBaseline + opLine.descent + theme.labelGap : theme.margin) + skipBand;
   const up = Math.max(...parts.map((p) => p.up));
   const down = Math.max(...parts.map((p) => p.down));
   const centerY = top + up;
@@ -395,9 +451,9 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
   function rayItems(source: MapPart, target: MapPart, i: number): SceneItem[] {
     const layer = target.layer;
     const [kh, kw] =
-      layer.type === 'conv'
+      layer.type === 'conv' || layer.type === 'deconv'
         ? pair(layer.kernel)
-        : layer.type === 'pool'
+        : layer.type === 'pool' || layer.type === 'up'
           ? pair(layer.size)
           : [3, 3];
     const shape = source.shape.kind === 'map' ? source.shape : { h: 1, w: 1 };
@@ -463,7 +519,7 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
           parent: group,
           classes: [
             'sheet',
-            `map-${part.role === 'hidden' && part.layer.type === 'pool' ? 'pool' : part.role}`,
+            `map-${part.role === 'hidden' && resamples(part.layer) ? 'pool' : part.role}`,
           ],
           d: polygon([
             onSheet(part, s, 0, 0),
@@ -539,6 +595,84 @@ export function layoutCnn(model: Model, theme: Theme, engine: TextEngine): Layou
 
   items.push(...over);
 
+  // Skip connections: from the gap after the source layer, over the layers, down into a join
+  // (+ for add, two bars for concat) in the gap after the target layer.
+  if (skips.length > 0) {
+    items.push({ kind: 'group', id: 'skips', classes: ['skips'] });
+    const color = theme.box.arrow.color;
+    const lineWidth = theme.box.arrow.width;
+    const layersTop = centerY - up;
+    const gapAfter = (i: number) =>
+      i + 1 < parts.length
+        ? (lefts[i]! + parts[i]!.extent + lefts[i + 1]!) / 2
+        : lefts[i]! + parts[i]!.extent + JOIN_ROOM / 2;
+    skips.forEach((skip, k) => {
+      // A skip that starts where another one joins leaves just after the join.
+      const x0 = gapAfter(skip.source) + (joins.has(skip.source) ? JOIN_R + 6 : 0);
+      const x1 = gapAfter(skip.target);
+      const y = layersTop - SKIP_GAP - (levels[k]! - 1) * SKIP_PITCH;
+      const end = centerY - JOIN_R - HEAD_LENGTH + 1;
+      const c = Math.min(6, (x1 - x0) / 2);
+      const t = skip.target;
+      const paint: Paint = {
+        stroke: color,
+        strokeWidth: lineWidth,
+        ...(skip.op === 'concat' ? { dash: [5, 4] } : {}),
+      };
+      items.push({
+        kind: 'circle',
+        id: `skipdot-${t}`,
+        parent: 'skips',
+        classes: ['skip-start'],
+        cx: X(x0),
+        cy: centerY,
+        r: 2.4,
+        paint: { fill: color },
+      });
+      items.push({
+        kind: 'path',
+        id: `skip-${t}`,
+        parent: 'skips',
+        classes: ['skip', `skip-${skip.op}`],
+        d:
+          `M${pt(x0, centerY)}L${pt(x0, y + c)}Q${pt(x0, y)} ${pt(x0 + c, y)}` +
+          `L${pt(x1 - c, y)}Q${pt(x1, y)} ${pt(x1, y + c)}L${pt(x1, end)}`,
+        paint: { ...paint, fill: 'none' },
+      });
+      const tip = centerY - JOIN_R - 1;
+      items.push({
+        kind: 'path',
+        id: `skip-${t}-head`,
+        parent: 'skips',
+        classes: ['skip-head'],
+        d: `M${pt(x1, tip)}L${pt(x1 - HEAD_HALF, tip - HEAD_LENGTH)}L${pt(x1 + HEAD_HALF, tip - HEAD_LENGTH)}Z`,
+        paint: { fill: color },
+      });
+      items.push({
+        kind: 'circle',
+        id: `join-${t}`,
+        parent: 'skips',
+        classes: ['join', `join-${skip.op}`],
+        cx: X(x1),
+        cy: centerY,
+        r: JOIN_R,
+        paint: { fill: theme.background ?? '#ffffff', stroke: color, strokeWidth: lineWidth },
+      });
+      const a = JOIN_R * 0.5;
+      items.push({
+        kind: 'path',
+        id: `join-${t}-sign`,
+        parent: 'skips',
+        classes: ['join-sign'],
+        d:
+          skip.op === 'add'
+            ? `M${pt(x1 - a, centerY)}L${pt(x1 + a, centerY)}M${pt(x1, centerY - a)}L${pt(x1, centerY + a)}`
+            : `M${pt(x1 - 1.6, centerY - a)}L${pt(x1 - 1.6, centerY + a)}M${pt(x1 + 1.6, centerY - a)}L${pt(x1 + 1.6, centerY + a)}`,
+        paint: { stroke: color, strokeWidth: lineWidth, fill: 'none' },
+      });
+    });
+  }
+
   // Labels.
   if (parts.some((p) => p.name || p.size || p.op)) {
     items.push({ kind: 'group', id: 'labels', classes: ['labels'] });
@@ -609,7 +743,8 @@ type Connector = 'rays' | 'fan' | 'edges' | 'arrow';
 
 function connectorKind(from: Part, to: Part): Connector {
   if (from.draw === 'map' && to.draw === 'map') {
-    return to.layer.type === 'conv' || to.layer.type === 'pool' ? 'rays' : 'arrow';
+    const windowed = ['conv', 'pool', 'deconv', 'up'].includes(to.layer.type);
+    return windowed ? 'rays' : 'arrow';
   }
   if (from.draw === 'map' && to.draw === 'column') return 'fan';
   if (from.draw === 'column' && to.draw === 'column') return 'edges';

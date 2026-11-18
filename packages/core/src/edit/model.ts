@@ -14,6 +14,7 @@ import type { Role } from '../style/theme.ts';
 import {
   joinTokens,
   layerToken,
+  layerTokens,
   type ShorthandFormat,
   type ShorthandLayer,
 } from '../parse/shorthand.ts';
@@ -76,6 +77,12 @@ export function defaultLayer(type: LayerType): Layer {
       return { type, filters: 16, kernel: 3 };
     case 'pool':
       return { type, size: 2 };
+    case 'deconv':
+      return { type, filters: 16, kernel: 4, stride: 2 };
+    case 'up':
+      return { type, size: 2 };
+    case 'reshape':
+      return { type, shape: [4, 4, 64] };
     case 'gap':
     case 'flatten':
       return { type };
@@ -125,7 +132,12 @@ export function changeLayerType(model: Model, index: number, type: LayerType): M
   const next: Record<string, unknown> = { ...defaultLayer(type) };
   if (old.name !== undefined) next['name'] = old.name;
   if (
-    (type === 'dense' || type === 'conv' || type === 'rnn' || type === 'lstm' || type === 'gru') &&
+    (type === 'dense' ||
+      type === 'conv' ||
+      type === 'deconv' ||
+      type === 'rnn' ||
+      type === 'lstm' ||
+      type === 'gru') &&
     'activation' in old &&
     old.activation !== undefined
   ) {
@@ -137,6 +149,21 @@ export function changeLayerType(model: Model, index: number, type: LayerType): M
   };
 }
 
+/**
+ * Renumbers skip connections after layers moved: `place` gives each old layer index its new one
+ * (undefined when the layer is gone). A skip whose source is gone or no longer comes first is
+ * dropped, so edits never leave a skip that cannot be drawn.
+ */
+function remapSkips(layers: readonly Layer[], place: (old: number) => number | undefined): Layer[] {
+  return layers.map((layer, i) => {
+    if (!('skip' in layer) || layer.skip === undefined) return layer;
+    const source = place(layer.skip.from - 1);
+    const { skip, ...rest } = layer;
+    if (source === undefined || source >= i) return rest as Layer;
+    return { ...rest, skip: { ...skip, from: source + 1 } } as Layer;
+  });
+}
+
 /** Inserts a layer at `index` (clamped). The new layer copies nothing from its neighbours. */
 export function insertLayer(
   model: Model,
@@ -144,13 +171,18 @@ export function insertLayer(
   layer: Layer = { type: 'dense', units: 4 },
 ): Model {
   const at = Math.max(0, Math.min(index, model.layers.length));
-  return { ...model, layers: [...model.layers.slice(0, at), layer, ...model.layers.slice(at)] };
+  const layers = [...model.layers.slice(0, at), layer, ...model.layers.slice(at)];
+  return { ...model, layers: remapSkips(layers, (old) => (old >= at ? old + 1 : old)) };
 }
 
 /** Removes a layer; the last remaining layer cannot be removed. */
 export function removeLayer(model: Model, index: number): Model {
   if (model.layers.length <= 1 || !model.layers[index]) return model;
-  return { ...model, layers: model.layers.filter((_, i) => i !== index) };
+  const layers = model.layers.filter((_, i) => i !== index);
+  return {
+    ...model,
+    layers: remapSkips(layers, (old) => (old === index ? undefined : old > index ? old - 1 : old)),
+  };
 }
 
 export function moveLayer(model: Model, index: number, delta: -1 | 1): Model {
@@ -161,7 +193,8 @@ export function moveLayer(model: Model, index: number, delta: -1 | 1): Model {
   const layers = [...model.layers];
   layers[index] = other;
   layers[target] = layer;
-  return { ...model, layers };
+  const place = (old: number) => (old === index ? target : old === target ? index : old);
+  return { ...model, layers: remapSkips(layers, place) };
 }
 
 export function patchStyle(model: Model, patch: StylePatch): Model {
@@ -208,7 +241,8 @@ export function applyStructure(model: Model, structure: readonly ShorthandLayer[
 
 /** Sizes and activations as shorthand, whether or not the whole model fits the shorthand. */
 export function structureOf(model: Model, format: ShorthandFormat = {}): string {
-  return joinTokens(model.layers.map(layerToken), format);
+  const tokens = layerTokens(model.layers, format) ?? model.layers.map(layerToken);
+  return joinTokens(tokens, format);
 }
 
 /**
@@ -227,6 +261,7 @@ export function layerCount(layer: Layer):
     case 'dense':
       return { key: 'units', value: layer.units, noun: 'neurons', max: LIMITS.units };
     case 'conv':
+    case 'deconv':
       return { key: 'filters', value: layer.filters, noun: 'filters', max: LIMITS.channels };
     case 'rnn':
     case 'lstm':

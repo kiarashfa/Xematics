@@ -181,6 +181,34 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   }
   if (extras.length > 0) body.push('  % Layers', ...extras);
 
+  // Skip connections: the line, its head, the start dot and the join with its sign.
+  const skipLines: string[] = [];
+  for (const item of legacy) {
+    if (item.parent !== 'skips') continue;
+    if (item.kind === 'path' && item.id.endsWith('-head')) {
+      skipLines.push(
+        `  \\fill[${style('xm skip head', paintStyle(item.paint))}] ${tikzPath(item.d)};`,
+      );
+    } else if (item.kind === 'path' && item.id.startsWith('skip-')) {
+      const s = style(
+        `xm skip ${roleOf(item, 'skip')}`,
+        `${paintStyle(item.paint)}, line join=round`,
+      );
+      skipLines.push(`  \\draw[${s}] ${tikzCurve(item.d, n)};`);
+    } else if (item.kind === 'path') {
+      skipLines.push(
+        `  \\draw[${style('xm join sign', paintStyle(item.paint))}] ${tikzCurve(item.d, n)};`,
+      );
+    } else if (item.kind === 'circle') {
+      const s = style(
+        item.id.startsWith('join-') ? 'xm join' : 'xm skip start',
+        paintStyle(item.paint),
+      );
+      skipLines.push(`  \\path[${s}] (${n(item.cx)},${n(item.cy)}) circle[radius=${n(item.r)}];`);
+    }
+  }
+  if (skipLines.length > 0) body.push('  % Skip connections', ...skipLines);
+
   // Labels: one TikZ node per label, at the label's baseline center (or the neuron's center).
   const labels: string[] = [];
   for (const item of legacy) {

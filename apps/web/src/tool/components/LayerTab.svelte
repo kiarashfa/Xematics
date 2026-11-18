@@ -19,6 +19,8 @@
     setPair,
     setPoolMode,
     setShape,
+    setSkip,
+    SKIP_TYPES,
     setType,
     setUnits,
     TYPES,
@@ -60,16 +62,21 @@
       case 'input':
         add('Image size', 'size', gImage, 'Size');
         break;
+      case 'reshape':
+        add('Map size', 'size', gImage, 'Size');
+        break;
       case 'conv':
+      case 'deconv':
         add('Filters', 'size', gFilters);
         add('Kernel', 'kernel', gKernel);
         add('Stride', 'stride', gStride);
-        add('Padding', 'fit', gPadding);
         break;
       case 'pool':
         add('Window', 'kernel', gWindow);
         add('Stride', 'stride', gStride);
-        add('Padding', 'fit', gPadding);
+        break;
+      case 'up':
+        add('Size', 'kernel', gWindow);
         break;
       case 'sequence':
         add('Sequence', 'size', gSequence);
@@ -95,6 +102,7 @@
         add('Networks', 'layers', gNetworks);
         break;
     }
+    if (SKIP_TYPES.has(l.type) && index > 0) add('Skip', 'link', gSkip);
     if (output) add('Output', 'info', gOutput);
     return out;
   });
@@ -257,7 +265,7 @@
 {/snippet}
 
 {#snippet gImage()}
-  {#if layer?.type === 'input'}
+  {#if layer?.type === 'input' || layer?.type === 'reshape'}
     <div class="fields">
       {@render number('Height', 'shape0', layer.shape[0], 1, LIMITS.side, (e) => setShape(0, e))}
       {@render number('Width', 'shape1', layer.shape[1], 1, LIMITS.side, (e) => setShape(1, e))}
@@ -269,7 +277,7 @@
 {/snippet}
 
 {#snippet gFilters()}
-  {#if layer?.type === 'conv'}
+  {#if layer?.type === 'conv' || layer?.type === 'deconv'}
     <div class="fields">
       {@render number('Filters', 'filters', layer.filters, 1, LIMITS.channels, setFilters)}
       {@render activation(layer.activation)}
@@ -278,7 +286,7 @@
 {/snippet}
 
 {#snippet gKernel()}
-  {#if layer?.type === 'conv'}
+  {#if layer?.type === 'conv' || layer?.type === 'deconv'}
     {@const k = pair(layer.kernel ?? 3)}
     <div class="fields">
       {@render number(
@@ -304,19 +312,21 @@
 {/snippet}
 
 {#snippet gWindow()}
-  {#if layer?.type === 'pool'}
+  {#if layer?.type === 'pool' || layer?.type === 'up'}
     {@const w = pair(layer.size ?? 2)}
     <div class="fields">
-      <label
-        >Mode<select
-          aria-label="Pooling mode"
-          value={layer.mode ?? 'max'}
-          onchange={(e) => setPoolMode(e.currentTarget.value === 'avg')}
+      {#if layer.type === 'pool'}
+        <label
+          >Mode<select
+            aria-label="Pooling mode"
+            value={layer.mode ?? 'max'}
+            onchange={(e) => setPoolMode(e.currentTarget.value === 'avg')}
+          >
+            <option value="max">Max</option>
+            <option value="avg">Average</option>
+          </select></label
         >
-          <option value="max">Max</option>
-          <option value="avg">Average</option>
-        </select></label
-      >
+      {/if}
       {@render number(
         'Height',
         'size0',
@@ -340,8 +350,9 @@
 {/snippet}
 
 {#snippet gStride()}
-  {#if layer?.type === 'conv' || layer?.type === 'pool'}
-    {@const fallback = layer.type === 'conv' ? 1 : (layer.size ?? 2)}
+  {#if layer?.type === 'conv' || layer?.type === 'pool' || layer?.type === 'deconv'}
+    {@const fallback = layer.type === 'pool' ? (layer.size ?? 2) : 1}
+    {@const conv = layer.type !== 'pool'}
     {@const s = pair(layer.stride ?? fallback)}
     <div class="fields">
       {@render number(
@@ -362,14 +373,6 @@
         (e) => setPair('stride', 1, e, fallback),
         'Stride width',
       )}
-    </div>
-  {/if}
-{/snippet}
-
-{#snippet gPadding()}
-  {#if layer?.type === 'conv' || layer?.type === 'pool'}
-    {@const conv = layer.type === 'conv'}
-    <div class="fields">
       <label
         >Padding<select
           value={layer.padding ?? (conv ? 'same' : 'valid')}
@@ -382,6 +385,41 @@
         >
           <option value="same">Same (keeps the size)</option>
           <option value="valid">Valid (no padding)</option>
+        </select></label
+      >
+    </div>
+  {/if}
+{/snippet}
+
+{#snippet gSkip()}
+  {#if layer}
+    {@const skip = 'skip' in layer ? layer.skip : undefined}
+    <div class="fields">
+      <label
+        >From<select
+          aria-label="Skip from"
+          value={skip ? String(skip.from) : ''}
+          onchange={(e) => {
+            const v = e.currentTarget.value;
+            setSkip(v === '' ? undefined : Number(v), skip?.op ?? 'add');
+          }}
+        >
+          <option value="">No skip</option>
+          {#each Array.from({ length: index }, (_, k) => k) as k (k)}
+            <option value={String(k + 1)}>{k + 1}. {tool.layerName(k)}</option>
+          {/each}
+        </select></label
+      >
+      <label
+        >Join<select
+          aria-label="Skip join"
+          disabled={!skip}
+          value={skip?.op ?? 'add'}
+          onchange={(e) =>
+            skip && setSkip(skip.from, e.currentTarget.value === 'concat' ? 'concat' : 'add')}
+        >
+          <option value="add">Add (ResNet)</option>
+          <option value="concat">Stack (U-Net)</option>
         </select></label
       >
     </div>
@@ -519,7 +557,7 @@
 {/snippet}
 
 {#snippet gOutput()}
-  {#if layer?.type === 'conv' || layer?.type === 'pool'}
+  {#if layer?.type === 'conv' || layer?.type === 'pool' || layer?.type === 'deconv' || layer?.type === 'up'}
     <div class="fields">
       <span class="line">Output <b>{output}</b></span>
       {#if params}

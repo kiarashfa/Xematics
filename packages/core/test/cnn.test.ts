@@ -120,7 +120,7 @@ describe('CNN validation', () => {
     );
     expect(error?.message).toContain("unknown key 'kernal'. Did you mean 'kernel'?");
     expect(error?.message).toContain(
-      'Allowed keys: type, filters, kernel, stride, padding, shape, name, activation.',
+      'Allowed keys: type, filters, kernel, stride, padding, shape, skip, name, activation.',
     );
   });
 

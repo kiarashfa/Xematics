@@ -128,16 +128,20 @@ in(28x28x1)-conv(8,3x3):relu-pool(2)-conv(16,3x3):relu-pool(2)-flatten-fc(64)-fc
   caption="A small image classifier"
 />
 
-| Shorthand        | Layer                                                              |
-| ---------------- | ------------------------------------------------------------------ |
-| `in(28x28x1)`    | An image: height, width and channels. `in(32x32)` has one channel. |
-| `conv(16,3x3)`   | A convolution with 16 filters and a 3×3 kernel.                    |
-| `conv(16,3,s2)`  | The same with a stride of 2. Add `valid` for no padding.           |
-| `pool(2)`        | Max pooling over 2×2 windows. `avgpool(2)` averages instead.       |
-| `pool(3,s2)`     | Pooling with a 3×3 window and a stride of 2. Add `same` to pad.    |
-| `gap`            | Global average pooling: one value per channel.                     |
-| `flatten`        | Turns a feature map into a flat vector.                            |
-| `fc(64)` or `64` | A dense layer, as in fully connected networks.                     |
+| Shorthand             | Layer                                                              |
+| --------------------- | ------------------------------------------------------------------ |
+| `in(28x28x1)`         | An image: height, width and channels. `in(32x32)` has one channel. |
+| `conv(16,3x3)`        | A convolution with 16 filters and a 3×3 kernel.                    |
+| `conv(16,3,s2)`       | The same with a stride of 2. Add `valid` for no padding.           |
+| `pool(2)`             | Max pooling over 2×2 windows. `avgpool(2)` averages instead.       |
+| `pool(3,s2)`          | Pooling with a 3×3 window and a stride of 2. Add `same` to pad.    |
+| `gap`                 | Global average pooling: one value per channel.                     |
+| `flatten`             | Turns a feature map into a flat vector.                            |
+| `fc(64)` or `64`      | A dense layer, as in fully connected networks.                     |
+| `deconv(64,4x4,s2)`   | A transposed convolution: the map grows by the stride.             |
+| `up(2)`               | Upsampling: every value repeats over a 2×2 block.                  |
+| `reshape(4x4x512)`    | Turns a flat vector into a feature map.                            |
+| `res(conv(16,3x3)*2)` | A residual block: its input is added to its output.                |
 
 In YAML, give each layer a `type`:
 
@@ -150,17 +154,18 @@ layers:
   - { units: 10, activation: softmax, name: Digits }
 ```
 
-| Key       | Layers     | Meaning                                                                |
-| --------- | ---------- | ---------------------------------------------------------------------- |
-| `type`    | all        | `dense` (the default), `input`, `conv`, `pool`, `gap` or `flatten`.    |
-| `shape`   | input      | `[height, width]` or `[height, width, channels]`.                      |
-| `filters` | conv       | Number of filters, which is the number of output channels.             |
-| `kernel`  | conv       | Window size: `3`, or `[3, 5]` for height and width.                    |
-| `size`    | pool       | Window size, written the same way.                                     |
-| `stride`  | conv, pool | Step between windows. 1 for convolutions, the window size for pooling. |
-| `padding` | conv, pool | `same` keeps the size (convolutions), `valid` adds none (pooling).     |
-| `mode`    | pool       | `max` (the default) or `avg`.                                          |
-| `shape`   | conv, pool | Draw the map at this size instead, like `26x26x8` (see below).         |
+| Key       | Layers                        | Meaning                                                                                        |
+| --------- | ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `type`    | all                           | `dense` (the default), `input`, `conv`, `pool`, `deconv`, `up`, `reshape`, `gap` or `flatten`. |
+| `shape`   | input, reshape                | `[height, width]` or `[height, width, channels]`.                                              |
+| `filters` | conv                          | Number of filters, which is the number of output channels.                                     |
+| `kernel`  | conv                          | Window size: `3`, or `[3, 5]` for height and width.                                            |
+| `size`    | pool                          | Window size, written the same way.                                                             |
+| `stride`  | conv, pool                    | Step between windows. 1 for convolutions, the window size for pooling.                         |
+| `padding` | conv, pool                    | `same` keeps the size (convolutions), `valid` adds none (pooling).                             |
+| `mode`    | pool                          | `max` (the default) or `avg`.                                                                  |
+| `shape`   | conv, pool                    | Draw the map at this size instead, like `26x26x8` (see below).                                 |
+| `skip`    | dense, conv, pool, deconv, up | A skip connection, like `{ from: 2 }` (see below).                                             |
 
 Every feature map is a stack of sheets, one per channel up to seven, with its size underneath
 (28×28×8). Rays show the window each convolution or pooling step reads. The step itself is
@@ -174,6 +179,27 @@ you and still draws the figure.
 To draw a map at another size than the one worked out, for example to match a paper, give the
 layer a `shape` like `26x26x8` (or `26x26` to keep the channels), or type it in **Draw as** in the
 Layer tab. The layers after it read that size, and the editor notes the difference.
+
+### Skip connections
+
+A residual block adds its input to its output, as in ResNet. Write the block's layers inside
+`res( )`; repeats work as usual:
+
+```text
+in(32x32x3)-conv(16,3x3)-res(conv(16,3x3):relu*2)*2-gap-fc(10)
+```
+
+<Figure
+  id="g-resnet"
+  source="in(32x32x3)-conv(16,3x3)-res(conv(16,3x3):relu*2)*2-gap-fc(10)"
+  caption="Residual blocks: each arc adds the block's input at the +"
+/>
+
+In YAML, a layer takes `skip: { from: 2 }`: the output of layer 2 joins this layer's output.
+`op: concat` stacks the channels instead of adding them, as in U-Net. Shapes are checked at the
+join, and the editor warns when they do not match. In the editor, select the layer and pick
+**From** and **Join** in the Layer tab's Skip group. Adding, moving and removing layers keeps
+every skip on the right layer.
 
 ### Parameter counts
 

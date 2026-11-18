@@ -36,6 +36,9 @@ export const TYPES: [LayerType, string][] = [
   ['input', 'Image input'],
   ['conv', 'Convolution'],
   ['pool', 'Pooling'],
+  ['deconv', 'Transposed convolution'],
+  ['up', 'Upsampling'],
+  ['reshape', 'Reshape (vector to map)'],
   ['gap', 'Global average pooling'],
   ['flatten', 'Flatten'],
   ['sequence', 'Sequence input'],
@@ -142,7 +145,7 @@ export function setPair(
 
 export function setShape(part: 0 | 1 | 2, event: Event) {
   const layer = selected();
-  if (layer?.type !== 'input') return;
+  if (layer?.type !== 'input' && layer?.type !== 'reshape') return;
   const max = part === 2 ? LIMITS.channels : LIMITS.side;
   const n = whole(value(event), 1, max, ['Height', 'Width', 'Channels'][part]!, `shape${part}`);
   if (n === undefined) return;
@@ -203,6 +206,16 @@ export function setDrawnShape(text: string) {
   ok();
   patch({ shape: [shape.h, shape.w, ...(shape.c ? [shape.c] : [])].join('x') } as LayerPatch);
 }
+
+/** The skip connection of the selected layer: from an earlier layer (1-based), added or stacked. */
+export function setSkip(from: number | undefined, op: 'add' | 'concat') {
+  patch({
+    skip: from === undefined ? undefined : { from, ...(op === 'concat' ? { op } : {}) },
+  } as LayerPatch);
+}
+
+/** Layer types that can take a skip connection. */
+export const SKIP_TYPES = new Set(['dense', 'conv', 'pool', 'deconv', 'up']);
 
 export function setPadding(padding: 'same' | 'valid' | undefined) {
   patch({ padding });

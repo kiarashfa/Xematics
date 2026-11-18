@@ -61,7 +61,11 @@ function layerParams(
     case 'gap':
     case 'flatten':
       return NONE;
-    case 'conv': {
+    case 'up':
+    case 'reshape':
+      return NONE;
+    case 'conv':
+    case 'deconv': {
       const [kh, kw] = pair(layer.kernel);
       return { weights: kh * kw * width(before) * layer.filters, biases: layer.filters };
     }

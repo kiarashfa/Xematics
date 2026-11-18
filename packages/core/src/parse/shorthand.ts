@@ -49,6 +49,9 @@ type Kind =
   | 'conv'
   | 'maxpool'
   | 'avgpool'
+  | 'deconv'
+  | 'up'
+  | 'reshape'
   | 'gap'
   | 'flatten'
   | 'sequence'
@@ -72,6 +75,12 @@ const TYPE_ALIASES: Readonly<Record<string, Kind>> = {
   conv2d: 'conv',
   pool: 'maxpool',
   maxpool: 'maxpool',
+  deconv: 'deconv',
+  convtranspose: 'deconv',
+  conv2dtranspose: 'deconv',
+  up: 'up',
+  upsample: 'up',
+  reshape: 'reshape',
   avgpool: 'avgpool',
   gap: 'gap',
   flatten: 'flatten',
@@ -94,7 +103,18 @@ const TYPE_ALIASES: Readonly<Record<string, Kind>> = {
   vae: 'autoencoder',
 };
 
-const TAKES_ACTIVATION = new Set<Kind>(['dense', 'conv', 'rnn', 'lstm', 'gru']);
+const TAKES_ACTIVATION = new Set<Kind>(['dense', 'conv', 'deconv', 'rnn', 'lstm', 'gru']);
+
+/**
+ * A parsed layer; `back` marks the last layer of a res( ) block: its skip comes from the layer
+ * `back` places before it. Relative while parsing, so repeated blocks each point at their own
+ * start; made absolute (skip.from) once the whole list is known.
+ */
+interface Entry {
+  readonly layer: ShorthandLayer;
+  readonly back?: number;
+  readonly at?: number;
+}
 
 const isDigit = (c: string) => c >= '0' && c <= '9';
 const isIdentStart = (c: string) => /^[A-Za-z_]$/.test(c);
@@ -380,6 +400,67 @@ function parseLayers(source: string): ShorthandLayer[] {
           ...(padding ? { padding: padding.value } : {}),
         };
       }
+      case 'deconv': {
+        const [filters, kernel, extra] = dims;
+        if (!filters || !kernel || filters.values.length > 1) {
+          return fail(
+            'shorthand.expected-kernel',
+            `Expected filters and a kernel size inside ${word}( ), like ${word}(64,4x4,s2).`,
+            filters?.at ?? close,
+          );
+        }
+        if (extra)
+          return fail(
+            'shorthand.unexpected',
+            `${word}( ) takes filters and one kernel size.`,
+            extra.at,
+          );
+        if (filters.values[0]! > LIMITS.channels) {
+          fail(
+            'shorthand.size-range',
+            `Filter count ${filters.values[0]} is too large. The maximum is ${LIMITS.channels}.`,
+            filters.at,
+          );
+        }
+        return {
+          type: 'deconv',
+          filters: filters.values[0]!,
+          kernel: window(kernel.values, kernel.at),
+          ...(stride ? { stride: window(stride.values, stride.at) } : {}),
+          ...(padding ? { padding: padding.value } : {}),
+        };
+      }
+      case 'up': {
+        reject(stride, 'a stride');
+        reject(padding, 'padding');
+        const [size, extra] = dims;
+        if (!size) {
+          return fail(
+            'shorthand.expected-size',
+            `Expected a size inside ${word}( ), like ${word}(2).`,
+            close,
+          );
+        }
+        if (extra) return fail('shorthand.unexpected', `${word}( ) takes one size.`, extra.at);
+        return { type: 'up', size: window(size.values, size.at) };
+      }
+      case 'reshape': {
+        reject(stride, 'a stride');
+        reject(padding, 'padding');
+        const [shape] = dims;
+        if (!shape || shape.values.length < 2 || dims.length > 1) {
+          return fail(
+            'shorthand.expected-shape',
+            `Expected a map size inside ${word}( ), like ${word}(4x4x512).`,
+            shape?.at ?? close,
+          );
+        }
+        const [h, w, c] = shape.values as [number, number, number?];
+        if (h > LIMITS.side || w > LIMITS.side || (c !== undefined && c > LIMITS.channels)) {
+          fail('shorthand.size-range', `${word}( ) size is too large.`, shape.at);
+        }
+        return { type: 'reshape', shape: c === undefined ? [h, w] : [h, w, c] };
+      }
       case 'maxpool':
       case 'avgpool': {
         const [size, extra] = dims;
@@ -514,7 +595,7 @@ function parseLayers(source: string): ShorthandLayer[] {
           ],
         });
       }
-      const typedLayer = result.layers.find((l) => l.type !== 'dense');
+      const typedLayer = result.layers.find((l) => l.type !== 'dense' || 'skip' in l);
       if (typedLayer) {
         fail(
           'shorthand.gan-dense',
@@ -544,8 +625,8 @@ function parseLayers(source: string): ShorthandLayer[] {
   };
 
   /** Layers up to the end, or up to the ')' that closes a group opened at `open`. */
-  const sequence = (depth: number, open: number): ShorthandLayer[] => {
-    const layers: ShorthandLayer[] = [];
+  const sequence = (depth: number, open: number): Entry[] => {
+    const layers: Entry[] = [];
     skipSpace();
     if (depth > 0 && peek() === ')') {
       fail(
@@ -555,9 +636,35 @@ function parseLayers(source: string): ShorthandLayer[] {
     }
     for (;;) {
       const start = pos;
-      let items: readonly ShorthandLayer[];
+      let items: readonly Entry[];
 
-      if (peek() === '(') {
+      const resWord = /^res\s*\(/i.exec(source.slice(pos));
+      if (resWord) {
+        // A residual block: the input of the block is added to its output (ResNet).
+        if (depth >= MAX_GROUP_DEPTH) {
+          fail('shorthand.group-depth', `Groups can be nested at most ${MAX_GROUP_DEPTH} deep.`);
+        }
+        pos += resWord[0].length;
+        const inner = sequence(depth + 1, start);
+        pos++;
+        const last = inner.at(-1)!;
+        if (last.back !== undefined || last.layer.type === 'reshape') {
+          fail(
+            'shorthand.res-end',
+            last.back !== undefined
+              ? 'Two res( ) blocks cannot end at the same layer. Add a layer after the inner one.'
+              : 'A res( ) block cannot end with reshape.',
+            start,
+          );
+        }
+        items = [...inner.slice(0, -1), { layer: last.layer, back: inner.length, at: start }];
+        if (peek() === ':') {
+          fail(
+            'shorthand.no-activation',
+            'res( ) does not take an activation. Put it on the layers inside, like res(16:relu-16).',
+          );
+        }
+      } else if (peek() === '(') {
         // A group of layers, usually repeated: (conv(8,3x3)-pool(2))*2.
         if (depth >= MAX_GROUP_DEPTH) {
           fail('shorthand.group-depth', `Groups can be nested at most ${MAX_GROUP_DEPTH} deep.`);
@@ -658,7 +765,7 @@ function parseLayers(source: string): ShorthandLayer[] {
           }
           layer = { ...layer, activation } as Layer;
         }
-        items = [layer];
+        items = [{ layer }];
       }
 
       let count = 1;
@@ -719,7 +826,18 @@ function parseLayers(source: string): ShorthandLayer[] {
   if (pos >= source.length) {
     fail('shorthand.empty', 'Type layer sizes separated by hyphens, for example 784-16-16-10.');
   }
-  return sequence(0, 0);
+  return sequence(0, 0).map((entry, i) => {
+    if (entry.back === undefined) return entry.layer;
+    const source = i - entry.back;
+    if (source < 0) {
+      return fail(
+        'shorthand.res-first',
+        'res( ) adds the layer before it, so it needs one, like 784-res(64-64).',
+        entry.at,
+      );
+    }
+    return { ...entry.layer, skip: { from: source + 1 } } as ShorthandLayer;
+  });
 }
 
 function example(kind: Kind, word: string): string {
@@ -773,6 +891,16 @@ export function layerToken(layer: Layer): string {
       if (layer.padding !== undefined) args.push(layer.padding);
       return `${layer.mode === 'avg' ? 'avgpool' : 'pool'}(${args.join(',')})`;
     }
+    case 'deconv': {
+      const args = [String(layer.filters), dims(layer.kernel)];
+      if (layer.stride !== undefined) args.push(stride(layer.stride));
+      if (layer.padding !== undefined) args.push(layer.padding);
+      return `deconv(${args.join(',')})${act}`;
+    }
+    case 'up':
+      return `up(${typeof layer.size === 'number' ? layer.size : dims(layer.size)})`;
+    case 'reshape':
+      return `reshape(${layer.shape.join('x')})`;
     case 'gap':
     case 'flatten':
       return layer.type;
@@ -823,7 +951,7 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
   ) {
     return undefined;
   }
-  const parts: string[] = [];
+
   for (const layer of model.layers) {
     if (layer.name !== undefined) return undefined;
     if ((layer.type === 'conv' || layer.type === 'pool') && layer.shape !== undefined)
@@ -844,9 +972,48 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
     ) {
       return undefined;
     }
-    parts.push(layerToken(layer));
   }
-  return joinTokens(parts, format);
+  const tokens = layerTokens(model.layers, format);
+  return tokens ? joinTokens(tokens, format) : undefined;
+}
+
+/**
+ * Tokens for a list of layers, writing a skip that adds the layer just before a run as res( ).
+ * Undefined when a skip has no such form (concatenation, or blocks that overlap).
+ */
+export function layerTokens(
+  layers: readonly Layer[],
+  format: ShorthandFormat = {},
+): string[] | undefined {
+  const used = new Set<number>();
+  const write = (lo: number, hi: number): string[] | undefined => {
+    const out: string[] = [];
+    for (let i = lo; i < hi;) {
+      // The outermost block that starts here: a later layer whose skip adds layer i - 1.
+      let end = -1;
+      for (let j = hi - 1; j >= i; j--) {
+        const skip = (layers[j] as { skip?: { from: number; op?: string } }).skip;
+        if (skip && !used.has(j) && (skip.op ?? 'add') === 'add' && skip.from === i) {
+          end = j;
+          break;
+        }
+      }
+      if (end < 0) {
+        const skip = (layers[i] as { skip?: unknown }).skip;
+        if (skip !== undefined && !used.has(i)) return undefined;
+        out.push(layerToken(layers[i]!));
+        i++;
+        continue;
+      }
+      used.add(end);
+      const inner = write(i, end + 1);
+      if (!inner) return undefined;
+      out.push(`res(${joinTokens(inner, format)})`);
+      i = end + 1;
+    }
+    return out;
+  };
+  return write(0, layers.length);
 }
 
 /** Joins layer tokens with hyphens, folding repeats into 128*3 (and groups) when asked. */

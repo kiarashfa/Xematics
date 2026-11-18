@@ -6,10 +6,13 @@ import { diagnostic, type Diagnostic } from '../diagnostics.ts';
 import {
   isRecurrent,
   parseDrawnShape,
+  skipOf,
   type ConvLayer,
+  type DeconvLayer,
   type Layer,
   type Model,
   type PoolLayer,
+  type UpLayer,
 } from './schema.ts';
 
 export type Shape =
@@ -41,7 +44,7 @@ export function inferShapes(model: Pick<Model, 'layers'>): ShapeResult {
 
   model.layers.forEach((layer, index) => {
     const previous = shapes[index - 1];
-    shapes.push(shapeOf(layer, previous, index, warn));
+    shapes.push(joined(layer, shapeOf(layer, previous, index, warn), shapes, index, warn));
   });
   return { shapes, diagnostics };
 }
@@ -105,6 +108,28 @@ function shapeOf(
       if (previous?.kind === 'map') return { kind: 'vector', n: previous.c };
       if (previous?.kind === 'seq') return { kind: 'vector', n: previous.n };
       return previous ?? { kind: 'vector', n: 1 };
+    case 'deconv':
+    case 'up':
+      return drawnAs(layer, grown(layer, mapBefore(layer, previous, index, warn)), index, warn);
+    case 'reshape': {
+      const [h, w, c = 1] = layer.shape;
+      const before =
+        previous === undefined
+          ? undefined
+          : previous.kind === 'map'
+            ? previous.h * previous.w * previous.c
+            : previous.kind === 'seq'
+              ? previous.steps * previous.n
+              : previous.n;
+      if (before !== undefined && before !== h * w * c) {
+        warn(
+          index,
+          'shape.reshape-size',
+          `Layer ${index + 1} reshapes ${before} values into ${h}×${w}×${c}, which holds ${h * w * c}.`,
+        );
+      }
+      return { kind: 'map', h, w, c };
+    }
     case 'conv':
     case 'pool':
       return drawnAs(
@@ -116,9 +141,68 @@ function shapeOf(
   }
 }
 
+/** Transposed convolution and upsampling: the map grows by the stride or the size. */
+function grown(layer: DeconvLayer | UpLayer, input: { h: number; w: number; c: number }): Shape {
+  if (layer.type === 'up') {
+    const [sh, sw] = pair(layer.size);
+    return { kind: 'map', h: input.h * sh, w: input.w * sw, c: input.c };
+  }
+  const [kh, kw] = pair(layer.kernel);
+  const [sh, sw] = pair(layer.stride ?? 1);
+  const valid = layer.padding === 'valid';
+  const h = valid ? (input.h - 1) * sh + kh : input.h * sh;
+  const w = valid ? (input.w - 1) * sw + kw : input.w * sw;
+  return { kind: 'map', h, w, c: layer.filters };
+}
+
+/**
+ * A skip connection joins an earlier layer's output: 'add' needs the same shape (a warning when it
+ * differs, the shape stays), 'concat' stacks the channels (maps of the same height and width) or
+ * appends the values (vectors).
+ */
+function joined(
+  layer: Layer,
+  shape: Shape,
+  shapes: readonly Shape[],
+  index: number,
+  warn: (index: number, code: string, message: string) => void,
+): Shape {
+  const skip = skipOf(layer);
+  if (!skip || skip.from > index) return shape;
+  const source = shapes[skip.from - 1]!;
+  if (skip.op === 'add') {
+    if (shapeText(source) !== shapeText(shape) || source.kind !== shape.kind) {
+      warn(
+        index,
+        'shape.skip-mismatch',
+        `Layer ${index + 1} adds layer ${skip.from}, but their shapes differ (${shapeText(shape)} and ${shapeText(source)}).`,
+      );
+    }
+    return shape;
+  }
+  if (shape.kind === 'map' && source.kind === 'map') {
+    if (shape.h !== source.h || shape.w !== source.w) {
+      warn(
+        index,
+        'shape.skip-mismatch',
+        `Layer ${index + 1} stacks layer ${skip.from} onto it, but their sizes differ (${shape.h}×${shape.w} and ${source.h}×${source.w}).`,
+      );
+    }
+    return { ...shape, c: shape.c + source.c };
+  }
+  if (shape.kind === 'vector' && source.kind === 'vector')
+    return { kind: 'vector', n: shape.n + source.n };
+  warn(
+    index,
+    'shape.skip-mismatch',
+    `Layer ${index + 1} stacks layer ${skip.from} onto it, but one is a feature map and the other is not.`,
+  );
+  return shape;
+}
+
 /** A map layer with a shape override is drawn (and read by the next layer) at that size. */
 function drawnAs(
-  layer: ConvLayer | PoolLayer,
+  layer: ConvLayer | PoolLayer | DeconvLayer | UpLayer,
   computed: Shape,
   index: number,
   warn: (index: number, code: string, message: string) => void,
@@ -154,7 +238,7 @@ function stepsBefore(
 }
 
 function mapBefore(
-  layer: ConvLayer | PoolLayer,
+  layer: ConvLayer | PoolLayer | DeconvLayer | UpLayer,
   previous: Shape | undefined,
   index: number,
   warn: (index: number, code: string, message: string) => void,
@@ -202,7 +286,7 @@ function windowed(
 
 const FIRST = new Set(['dense', 'input', 'sequence', 'tokens', 'gan', 'autoencoder']);
 const ONLY_FIRST = new Set(['input', 'sequence', 'tokens']);
-const IMAGE = new Set(['input', 'conv', 'pool']);
+const IMAGE = new Set(['input', 'conv', 'pool', 'deconv', 'up', 'reshape']);
 const SEQUENCE = new Set([
   'sequence',
   'tokens',
@@ -286,6 +370,18 @@ export function orderDiagnostics(model: Pick<Model, 'layers'>): Diagnostic[] {
       `Layer ${at + 1} mixes recurrent layers with transformer blocks. One diagram draws one kind of network.`,
     );
   }
+  layers.forEach((layer, index) => {
+    const skip = skipOf(layer);
+    if (skip && skip.from > index) {
+      error(
+        index,
+        'model.skip-from',
+        index === 0
+          ? 'Layer 1 has a skip connection, but no layer comes before it.'
+          : `Layer ${index + 1} takes a skip from layer ${skip.from}, which does not come before it. Use a layer from 1 to ${index}.`,
+      );
+    }
+  });
   const decoder = types.indexOf('decoder');
   const lateEncoder = types.lastIndexOf('encoder');
   if (decoder >= 0 && lateEncoder > decoder) {

@@ -146,6 +146,32 @@ test.describe('desktop editor', () => {
     await expect(page.getByText('Output 26×26×8')).toBeVisible();
   });
 
+  test('residual skips draw arcs and the Layer tab edits a skip', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('in(16x16x3)-conv(8,3x3)-res(conv(8,3x3)*2)-gap-10');
+    await expect(page.locator('#pv-join-3')).toBeAttached();
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await nav.getByRole('button', { name: /Conv 3/ }).dblclick();
+    await expect(page.getByRole('combobox', { name: 'Skip from' })).toHaveValue('2');
+    await page.getByRole('combobox', { name: 'Skip join' }).selectOption('concat');
+    await expect(source(page)).toHaveValue(/skip: \{ from: 2, op: concat \}/);
+    await expect(page.getByText('Output 16×16×16')).toBeVisible();
+    await page.getByRole('combobox', { name: 'Skip from' }).selectOption('');
+    await expect(page.locator('#pv-join-3')).not.toBeAttached();
+  });
+
+  test('transposed convolution and upsampling grow the map', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('in(8x8x3)-deconv(4,4x4,s2)-up(2)');
+    const nav = page.getByRole('navigation', { name: 'Layers' });
+    await expect(nav).toContainText('16×16×4');
+    await expect(nav).toContainText('32×32×4');
+    await nav.getByRole('button', { name: /Output/ }).dblclick();
+    await page.getByRole('spinbutton', { name: 'Window height' }).fill('3');
+    await page.getByRole('spinbutton', { name: 'Window height' }).press('Enter');
+    await expect(source(page)).toHaveValue('in(8x8x3)-deconv(4,4x4,s2)-up(3x2)');
+  });
+
   test('recurrent, GAN, Transformer and autoencoder figures match the Node goldens', async ({
     page,
   }) => {

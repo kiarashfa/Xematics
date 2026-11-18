@@ -35,6 +35,9 @@ export const LAYER_TYPES = [
   'input',
   'conv',
   'pool',
+  'deconv',
+  'up',
+  'reshape',
   'gap',
   'flatten',
   'sequence',
@@ -56,6 +59,8 @@ export const RECURRENT_LOOKS = ['unrolled', 'neurons'] as const;
 export const FUNNEL_LOOKS = ['neurons', 'plain'] as const;
 export const PADDINGS = ['same', 'valid'] as const;
 export const POOL_MODES = ['max', 'avg'] as const;
+/** How a skip connection joins: added to the layer's output (ResNet) or stacked onto it (U-Net). */
+export const SKIP_OPS = ['add', 'concat'] as const;
 export const DIRECTIONS = ['ltr', 'rtl'] as const;
 /** Animation looks: a signal (pulse, flow, dots), the network learning, or a whole training loop. */
 export const ANIMATION_LOOKS = ['pulse', 'flow', 'dots', 'learning', 'training'] as const;
@@ -141,11 +146,24 @@ const windowSize = () =>
     `must be a whole number from 1 to ${LIMITS.window}, or [height, width].`,
   );
 
+/** A skip connection: an earlier layer's output (by its number, from 1) joins this layer's output. */
+const skip = () =>
+  v.optional(
+    v.strictObject(
+      {
+        from: wholeNumber(1, LIMITS.layers),
+        op: v.optional(v.picklist(SKIP_OPS, `must be one of: ${SKIP_OPS.join(', ')}.`)),
+      },
+      'must be an object like { from: 2 } or { from: 2, op: concat }.',
+    ),
+  );
+
 export const DenseLayerSchema = v.strictObject(
   {
     type: v.literal('dense'),
     units: wholeNumber(1, LIMITS.units),
     name: name(),
+    skip: skip(),
     /** Label drawn inside every node; `{i}` is the neuron number, e.g. '$x_{i}$'. */
     nodeLabel: v.optional(text(LIMITS.label)),
     activation: activation(),
@@ -211,10 +229,59 @@ export const ConvLayerSchema = v.strictObject(
     stride: v.optional(windowSize()),
     padding: v.optional(v.picklist(PADDINGS, `must be one of: ${PADDINGS.join(', ')}.`)),
     shape: drawnShape(),
+    skip: skip(),
     name: name(),
     activation: activation(),
   },
   'must be an object like { type: conv, filters: 16, kernel: 3 }.',
+);
+
+/** Transposed convolution: the map grows by the stride (U-Net decoders, DCGAN generators). */
+export const DeconvLayerSchema = v.strictObject(
+  {
+    type: v.literal('deconv'),
+    filters: wholeNumber(1, LIMITS.channels),
+    kernel: windowSize(),
+    stride: v.optional(windowSize()),
+    padding: v.optional(v.picklist(PADDINGS, `must be one of: ${PADDINGS.join(', ')}.`)),
+    shape: drawnShape(),
+    skip: skip(),
+    name: name(),
+    activation: activation(),
+  },
+  'must be an object like { type: deconv, filters: 64, kernel: 4, stride: 2 }.',
+);
+
+/** Upsampling: every value repeats over a size × size block, so the map grows; nothing to learn. */
+export const UpLayerSchema = v.strictObject(
+  {
+    type: v.literal('up'),
+    size: windowSize(),
+    shape: drawnShape(),
+    skip: skip(),
+    name: name(),
+  },
+  'must be an object like { type: up, size: 2 }.',
+);
+
+/** Reshape: a flat vector becomes a feature map of the given size (a DCGAN generator's start). */
+export const ReshapeLayerSchema = v.strictObject(
+  {
+    type: v.literal('reshape'),
+    shape: v.union(
+      [
+        v.strictTuple([wholeNumber(1, LIMITS.side), wholeNumber(1, LIMITS.side)]),
+        v.strictTuple([
+          wholeNumber(1, LIMITS.side),
+          wholeNumber(1, LIMITS.side),
+          wholeNumber(1, LIMITS.channels),
+        ]),
+      ],
+      'must be [height, width] or [height, width, channels], like [4, 4, 512].',
+    ),
+    name: name(),
+  },
+  'must be an object like { type: reshape, shape: [4, 4, 512] }.',
 );
 
 export const PoolLayerSchema = v.strictObject(
@@ -225,6 +292,7 @@ export const PoolLayerSchema = v.strictObject(
     padding: v.optional(v.picklist(PADDINGS, `must be one of: ${PADDINGS.join(', ')}.`)),
     mode: v.optional(v.picklist(POOL_MODES, `must be one of: ${POOL_MODES.join(', ')}.`)),
     shape: drawnShape(),
+    skip: skip(),
     name: name(),
   },
   'must be an object like { type: pool, size: 2 }.',
@@ -335,6 +403,9 @@ export const LAYER_SCHEMAS = {
   input: InputLayerSchema,
   conv: ConvLayerSchema,
   pool: PoolLayerSchema,
+  deconv: DeconvLayerSchema,
+  up: UpLayerSchema,
+  reshape: ReshapeLayerSchema,
   gap: GapLayerSchema,
   flatten: FlattenLayerSchema,
   sequence: SequenceLayerSchema,
@@ -356,6 +427,9 @@ export const LayerSchema = v.variant(
     InputLayerSchema,
     ConvLayerSchema,
     PoolLayerSchema,
+    DeconvLayerSchema,
+    UpLayerSchema,
+    ReshapeLayerSchema,
     GapLayerSchema,
     FlattenLayerSchema,
     SequenceLayerSchema,
@@ -466,6 +540,12 @@ export type DenseLayer = Extract<Layer, { type: 'dense' }>;
 export type InputLayer = Extract<Layer, { type: 'input' }>;
 export type ConvLayer = Extract<Layer, { type: 'conv' }>;
 export type PoolLayer = Extract<Layer, { type: 'pool' }>;
+export type DeconvLayer = Extract<Layer, { type: 'deconv' }>;
+export type UpLayer = Extract<Layer, { type: 'up' }>;
+export type ReshapeLayer = Extract<Layer, { type: 'reshape' }>;
+/** Layers that can take a skip connection. */
+export type SkipLayer = Extract<Layer, { skip?: unknown }>;
+export type SkipOp = (typeof SKIP_OPS)[number];
 export type SequenceLayer = Extract<Layer, { type: 'sequence' }>;
 export type RecurrentType = (typeof RECURRENT_TYPES)[number];
 export type RecurrentLayer = Extract<Layer, { type: RecurrentType }>;
@@ -485,7 +565,15 @@ export const isDense = (layer: Layer): layer is DenseLayer => layer.type === 'de
 /** A model whose layers are all dense (a plain fully connected network). */
 export type MlpModel = Omit<Model, 'layers'> & { readonly layers: readonly DenseLayer[] };
 /** True when every layer is dense: the model is drawn as a plain fully connected network. */
-export const isMlp = (model: Model): model is Model & MlpModel => model.layers.every(isDense);
+/** A plain fully connected network: dense layers only, without skip connections. */
+export const isMlp = (model: Model): model is Model & MlpModel =>
+  model.layers.every((l) => isDense(l) && l.skip === undefined);
+
+/** The skip of a layer, if it has one (with the default operation filled in). */
+export function skipOf(layer: Layer): { from: number; op: SkipOp } | undefined {
+  if (!('skip' in layer) || layer.skip === undefined) return undefined;
+  return { from: layer.skip.from, op: layer.skip.op ?? 'add' };
+}
 export const isRecurrent = (layer: Layer): layer is RecurrentLayer =>
   (RECURRENT_TYPES as readonly string[]).includes(layer.type);
 
@@ -499,7 +587,7 @@ export function familyOf(model: Pick<Model, 'layers'>): Family {
   if (types.has('encoder') || types.has('decoder')) return 'transformer';
   if (model.layers.some(isRecurrent) || types.has('sequence')) return 'rnn';
   if (types.has('tokens') || types.has('embed')) return 'transformer';
-  return model.layers.every(isDense) ? 'mlp' : 'cnn';
+  return model.layers.every((l) => isDense(l) && l.skip === undefined) ? 'mlp' : 'cnn';
 }
 export type StyleOptions = v.InferOutput<typeof StyleSchema>;
 export type AnimationOptions = v.InferOutput<typeof AnimationSchema>;

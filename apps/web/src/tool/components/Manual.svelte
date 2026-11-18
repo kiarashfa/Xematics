@@ -97,14 +97,26 @@
       <dd>Turns a feature map into a flat vector, ready for dense layers.</dd>
       <dt><code>fc(64)</code></dt>
       <dd>A dense layer, as in fully connected networks.</dd>
+      <dt><code>deconv(64,4x4,s2)</code></dt>
+      <dd>A transposed convolution: the map grows by the stride.</dd>
+      <dt><code>up(2)</code></dt>
+      <dd>Upsampling: every value repeats over a 2×2 block.</dd>
+      <dt><code>reshape(4x4x512)</code></dt>
+      <dd>Turns a flat vector into a feature map.</dd>
+      <dt><code>res( )</code></dt>
+      <dd>
+        A residual block: <code>res(conv(16,3x3)*2)</code> adds its input to its output. In YAML,
+        <code>skip: &#123; from: 2 &#125;</code> on a layer, with <code>op: concat</code> to stack instead.
+      </dd>
     </dl>
     <h3>Example</h3>
     <p><code>in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(10)</code></p>
+    <p><code>in(32x32x3)-conv(16,3x3)-res(conv(16,3x3)*2)*2-gap-fc(10)</code></p>
     <h3>Rules</h3>
     <p>
       The image comes first and only first. Sizes that do not fit, such as a kernel larger than its
-      map, are reported as warnings under the diagram. Select a layer to see its output size in the
-      format pane.
+      map, are reported as warnings under the diagram. Select a layer to see its output size and
+      parameters in the Layer tab.
     </p>
   {:else if tool.manual === 'networks'}
     <p>Recurrent networks, Transformers, GANs and autoencoders are written the same way.</p>

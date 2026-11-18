@@ -17,6 +17,8 @@
     setCollapseValue,
     setDrawnShape,
     setFilters,
+    setSkip,
+    SKIP_TYPES,
     setFlag,
     setNetwork,
     setNumber,
@@ -138,7 +140,7 @@
           /></label
         >
       {/if}
-    {:else if layer.type === 'input'}
+    {:else if layer.type === 'input' || layer.type === 'reshape'}
       <div class="row">
         <label class="field"
           ><span>Height</span><input
@@ -168,7 +170,7 @@
           /></label
         >
       </div>
-    {:else if layer.type === 'conv'}
+    {:else if layer.type === 'conv' || layer.type === 'deconv'}
       <label class="field">
         <span>Filters</span>
         <input
@@ -315,6 +317,27 @@
           <option value="same">Same (keeps the size)</option>
         </select>
       </label>
+    {:else if layer.type === 'up'}
+      <div class="row">
+        <label class="field"
+          ><span>Size height</span><input
+            type="number"
+            min="1"
+            max={LIMITS.window}
+            value={pair(layer.size)[0]}
+            onchange={(e) => setPair('size', 0, e, 2)}
+          /></label
+        >
+        <label class="field"
+          ><span>Size width</span><input
+            type="number"
+            min="1"
+            max={LIMITS.window}
+            value={pair(layer.size)[1]}
+            onchange={(e) => setPair('size', 1, e, 2)}
+          /></label
+        >
+      </div>
     {:else if layer.type === 'sequence'}
       <div class="row">
         <label class="field"
@@ -478,7 +501,39 @@
         <span>Variational (mean, spread and a sampled latent)</span>
       </label>
     {/if}
-    {#if layer.type === 'conv' || layer.type === 'pool'}
+    {#if SKIP_TYPES.has(layer.type) && index > 0}
+      {@const skip = 'skip' in layer ? layer.skip : undefined}
+      <div class="row">
+        <label class="field">
+          <span>Skip from</span>
+          <select
+            value={skip ? String(skip.from) : ''}
+            onchange={(e) => {
+              const v = e.currentTarget.value;
+              setSkip(v === '' ? undefined : Number(v), skip?.op ?? 'add');
+            }}
+          >
+            <option value="">No skip</option>
+            {#each Array.from({ length: index }, (_, k) => k) as k (k)}
+              <option value={String(k + 1)}>{k + 1}. {tool.layerName(k)}</option>
+            {/each}
+          </select>
+        </label>
+        <label class="field">
+          <span>Join</span>
+          <select
+            disabled={!skip}
+            value={skip?.op ?? 'add'}
+            onchange={(e) =>
+              skip && setSkip(skip.from, e.currentTarget.value === 'concat' ? 'concat' : 'add')}
+          >
+            <option value="add">Add (ResNet)</option>
+            <option value="concat">Stack (U-Net)</option>
+          </select>
+        </label>
+      </div>
+    {/if}
+    {#if layer.type === 'conv' || layer.type === 'pool' || layer.type === 'deconv' || layer.type === 'up'}
       <label class="field">
         <span>Draw as (empty: the computed size)</span>
         <input

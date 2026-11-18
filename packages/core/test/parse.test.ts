@@ -66,7 +66,7 @@ describe('parseModel', () => {
     expect(rest).toEqual([]);
     expect(error).toMatchObject({ code: 'model.unknown-key', line: 2, column: 7 });
     expect(error?.message).toBe(
-      "Layer 1 has an unknown key 'unit'. Did you mean 'units'? Allowed keys: type, units, name, nodeLabel, activation, collapse.",
+      "Layer 1 has an unknown key 'unit'. Did you mean 'units'? Allowed keys: type, units, name, skip, nodeLabel, activation, collapse.",
     );
     expect(errors('layer: [3]')[0]?.message).toContain("Did you mean 'layers'?");
     expect(errors('layers: [3]\nstyle: { colapse: { above: 4 } }')[0]?.message).toContain(
@@ -96,7 +96,7 @@ describe('parseModel', () => {
       "Layer 1: 'units' must be a whole number.",
     );
     expect(errors('layers:\n  - { type: capsule, units: 4 }')[0]?.message).toBe(
-      "Layer 1: 'type' 'capsule' is not a layer type. Layer types: dense, input, conv, pool, gap, flatten, sequence, rnn, lstm, gru, tokens, embed, encoder, decoder, gan, autoencoder.",
+      "Layer 1: 'type' 'capsule' is not a layer type. Layer types: dense, input, conv, pool, deconv, up, reshape, gap, flatten, sequence, rnn, lstm, gru, tokens, embed, encoder, decoder, gan, autoencoder.",
     );
     expect(errors('layers:\n  - { name: x }')[0]?.message).toBe("Layer 1 is missing 'units'.");
     expect(errors('layers: []')[0]?.message).toBe("'layers' must contain at least one layer.");
