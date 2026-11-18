@@ -1,0 +1,6 @@
+title: Latin Modern labels
+style: { font: latin-modern-roman }
+layers:
+  - { units: 784, name: 'Pixels $x$' }
+  - { units: 128, name: 'Hidden $h_1$', activation: relu }
+  - { units: 10, name: Digits, activation: softmax }

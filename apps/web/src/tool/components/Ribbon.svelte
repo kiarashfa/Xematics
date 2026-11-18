@@ -752,6 +752,18 @@
             tool.setTransparent(on),
           )}
           {@render toggle('Right to left', tool.rightToLeft, (on) => tool.setRightToLeft(on))}
+          <label class="option"
+            >Font <select
+              class="documents"
+              aria-label="Label font"
+              value={tool.font}
+              onchange={(e) => tool.setFont(e.currentTarget.value)}
+            >
+              <option value="inter">Inter</option>
+              <option value="latin-modern-roman">Latin Modern Roman</option>
+              <option value="latin-modern-sans">Latin Modern Sans</option>
+            </select></label
+          >
         </div>
       {/snippet}
       {@render group(2, 'Preset', 'canvas', 'Preset', 'Preset', '', gDesign2)}

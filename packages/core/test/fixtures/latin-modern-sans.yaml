@@ -1,0 +1,2 @@
+style: { font: latin-modern-sans }
+layers: 'in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(10)'

@@ -81,6 +81,8 @@ describe('TikZ export', () => {
     'gan-training.yaml',
     'tf-tokens.yaml',
     'tf-heatmap.yaml',
+    'latin-modern.yaml',
+    'latin-modern-sans.yaml',
     'params.yaml',
     'weights.yaml',
     'rnn-lstm.txt',

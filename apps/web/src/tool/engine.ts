@@ -11,6 +11,7 @@ const FONT_URLS = import.meta.glob<string>(
     '/node_modules/@fontsource/vazirmatn/files/vazirmatn-arabic-{400,500}-normal.woff',
     '/node_modules/@fontsource/noto-sans-hebrew/files/noto-sans-hebrew-hebrew-{400,500}-normal.woff',
     '/node_modules/@fontsource/noto-sans-{sc,jp,kr}/files/noto-sans-{sc,jp,kr}-[0-9]*-{400,500}-normal.woff',
+    '/node_modules/@xematics/core/files/lm*.otf',
   ],
   { query: '?url', import: 'default', eager: true },
 );

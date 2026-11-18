@@ -2,4 +2,8 @@
 export const CSS_FONT_STACKS: Readonly<Record<string, string>> = {
   Inter:
     "Inter, Vazirmatn, 'Noto Sans Hebrew', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR', 'Helvetica Neue', Arial, sans-serif",
+  'Latin Modern Roman':
+    "'Latin Modern Roman', 'LM Roman 10', 'Computer Modern Serif', Inter, Vazirmatn, 'Noto Sans SC', serif",
+  'Latin Modern Sans':
+    "'Latin Modern Sans', 'LM Sans 10', 'Computer Modern Sans', Inter, Vazirmatn, 'Noto Sans SC', sans-serif",
 };

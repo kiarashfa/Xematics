@@ -58,6 +58,8 @@ export const LAYER_TYPES = [
 export const RECURRENT_TYPES = ['rnn', 'lstm', 'gru'] as const;
 /** How recurrent networks are drawn: one cell per step, or each step as a small network of neurons. */
 export const RECURRENT_LOOKS = ['unrolled', 'neurons'] as const;
+/** Label fonts: Inter, or Latin Modern (the LaTeX fonts) in its Roman or Sans cut. */
+export const FONT_CHOICES = ['inter', 'latin-modern-roman', 'latin-modern-sans'] as const;
 /** How Transformers are drawn: the block pipeline, attention between tokens, or one block's matrix. */
 export const TRANSFORMER_LOOKS = ['pipeline', 'tokens', 'heatmap'] as const;
 /** How a GAN's networks are drawn inside their funnels. */
@@ -535,6 +537,8 @@ export const StyleSchema = v.strictObject(
     cell: v.optional(flag()),
     /** GANs: draw each network's neurons inside its funnel, or only its name. */
     funnel: v.optional(v.picklist(FUNNEL_LOOKS, `must be one of: ${FUNNEL_LOOKS.join(', ')}.`)),
+    /** The label font: Inter, or Latin Modern Roman or Sans to match LaTeX documents. */
+    font: v.optional(v.picklist(FONT_CHOICES, `must be one of: ${FONT_CHOICES.join(', ')}.`)),
     /** Transformers: the block pipeline, attention between tokens, or one block's attention matrix. */
     transformer: v.optional(
       v.picklist(TRANSFORMER_LOOKS, `must be one of: ${TRANSFORMER_LOOKS.join(', ')}.`),

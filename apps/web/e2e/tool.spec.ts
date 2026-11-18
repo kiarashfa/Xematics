@@ -313,6 +313,18 @@ test.describe('desktop editor', () => {
     await expect(page.getByRole('group', { name: 'Animation player' })).toHaveCount(0);
   });
 
+  test('Design tab sets the label font', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('4-3');
+    await page.getByRole('tab', { name: 'Design' }).click();
+    const font = page.getByRole('combobox', { name: 'Label font' });
+    // A narrow ribbon folds the Preset group into a popup.
+    if (!(await font.isVisible()))
+      await page.getByRole('button', { name: 'Preset', exact: true }).click();
+    await font.selectOption('latin-modern-roman');
+    await expect(source(page)).toHaveValue(/font: latin-modern-roman/);
+  });
+
   test('animation exports a Lottie file', async ({ page }) => {
     await openEditor(page);
     await source(page).fill('layers: [3, 4, 2]\nanimation: { look: pulse }\n');

@@ -43,6 +43,11 @@
   const index = $derived(tool.selection.kind === 'layer' ? tool.selection.index : -1);
   const count = $derived(tool.model?.layers.length ?? 0);
 
+  const FONTS: [string, string][] = [
+    ['inter', 'Inter'],
+    ['latin-modern-roman', 'Latin Modern Roman'],
+    ['latin-modern-sans', 'Latin Modern Sans'],
+  ];
   const LOOKS: [AnimationLook, string][] = [
     ['pulse', 'Pulse'],
     ['flow', 'Flow'],
@@ -348,6 +353,7 @@
       {@render toggle('canvas', 'Transparent background', tool.transparent, (on) =>
         tool.setTransparent(on),
       )}
+      {@render choice('Font', tool.font, FONTS, (v) => tool.setFont(v))}
       {@render toggle('left', 'Flow right to left', tool.rightToLeft, (on) =>
         tool.setRightToLeft(on),
       )}

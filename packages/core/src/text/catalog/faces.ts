@@ -5,11 +5,44 @@
 //   @fontsource/noto-sans-sc 5.3.1
 //   @fontsource/noto-sans-jp 5.3.1
 //   @fontsource/noto-sans-kr 5.3.1
+//   Latin Modern 2.005 (packages/core/files)
 
 import type { CatalogFace } from './types.ts';
 
 /** Faces with their character ranges, in fallback order. */
 export const FACES: readonly CatalogFace[] = [
+  {
+    family: 'Latin Modern Roman',
+    weight: 400,
+    package: '@xematics/core',
+    file: 'lmroman10-regular.otf',
+    ranges:
+      '0020-007e,00a0-017f,0192,02c6-02c7,02d8-02dd,2013-2014,2018-201e,2020-2022,2026,2030,2039-203a,20ac,2122,2212',
+  },
+  {
+    family: 'Latin Modern Roman',
+    weight: 500,
+    package: '@xematics/core',
+    file: 'lmroman10-bold.otf',
+    ranges:
+      '0020-007e,00a0-017f,0192,02c6-02c7,02d8-02dd,2013-2014,2018-201e,2020-2022,2026,2030,2039-203a,20ac,2122,2212',
+  },
+  {
+    family: 'Latin Modern Sans',
+    weight: 400,
+    package: '@xematics/core',
+    file: 'lmsans10-regular.otf',
+    ranges:
+      '0020-007e,00a0-017f,0192,02c6-02c7,02d8-02dd,2013-2014,2018-201e,2020-2022,2026,2030,2039-203a,20ac,2122,2212',
+  },
+  {
+    family: 'Latin Modern Sans',
+    weight: 500,
+    package: '@xematics/core',
+    file: 'lmsans10-bold.otf',
+    ranges:
+      '0020-007e,00a0-017f,0192,02c6-02c7,02d8-02dd,2013-2014,2018-201e,2020-2022,2026,2030,2039-203a,20ac,2122,2212',
+  },
   {
     family: 'Inter',
     weight: 400,

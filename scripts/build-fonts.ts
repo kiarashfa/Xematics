@@ -59,7 +59,23 @@ const CJK = [
   { key: 'kr', family: 'Noto Sans KR', pkg: '@fontsource/noto-sans-kr' },
 ] as const;
 
+// Latin Modern (GUST Font License), vendored as OTF in packages/core/files: Roman and Sans, with
+// the bold cut standing in for weight 500. Characters outside these ranges fall back to Inter.
+const LATIN_MODERN_RANGES =
+  '0020-007e,00a0-017f,0192,02c6-02c7,02d8-02dd,2013-2014,2018-201e,2020-2022,2026,2030,2039-203a,20ac,2122,2212';
+const LATIN_MODERN = [
+  { family: 'Latin Modern Roman', files: ['lmroman10-regular.otf', 'lmroman10-bold.otf'] },
+  { family: 'Latin Modern Sans', files: ['lmsans10-regular.otf', 'lmsans10-bold.otf'] },
+] as const;
+
 const lines: string[] = [];
+for (const { family, files } of LATIN_MODERN) {
+  WEIGHTS.forEach((weight, i) =>
+    lines.push(
+      `  { family: '${family}', weight: ${weight}, package: '@xematics/core', file: '${files[i]}', ranges: '${LATIN_MODERN_RANGES}' },`,
+    ),
+  );
+}
 for (const { family, pkg, subsets } of SUBSET_FAMILIES) {
   for (const weight of WEIGHTS) {
     const all = await faces(pkg, weight);
@@ -78,6 +94,7 @@ for (const { family, pkg, subsets } of SUBSET_FAMILIES) {
 const versions = await Promise.all(
   [...SUBSET_FAMILIES, ...CJK].map(async (f) => `//   ${f.pkg} ${await version(f.pkg)}`),
 );
+versions.push('//   Latin Modern 2.005 (packages/core/files)');
 
 await writeFile(
   new URL('faces.ts', OUT),

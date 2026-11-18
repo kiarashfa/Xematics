@@ -6,6 +6,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import notices from '../../../THIRD_PARTY.md?raw';
+import latinModernLicense from '../../../packages/core/files/LATIN-MODERN-LICENSE.txt?raw';
 
 export interface CreditTable {
   readonly title: string;
@@ -125,5 +126,7 @@ export function fullNotices(): string {
       '',
     );
   }
+  // Latin Modern ships inside the core package rather than from npm.
+  parts.push('## Latin Modern fonts 2.005', '', latinModernLicense.trim(), '');
   return `${parts.join('\n')}\n`;
 }

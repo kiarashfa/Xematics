@@ -65,8 +65,12 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   };
   const roleOf = (item: SceneItem, prefix: string) =>
     item.classes?.find((c) => c.startsWith(`${prefix}-`))?.slice(prefix.length + 1) ?? 'other';
+  // Latin Modern labels are LaTeX's own fonts: the roman or sans family of lmodern.
+  const family = scene.items.find((i) => i.kind === 'text')?.font.family ?? 'Inter';
+  const latinModern = family.startsWith('Latin Modern');
+  const shape = family === 'Latin Modern Roman' ? '\\rmfamily' : '\\sffamily';
   const font = (size: number) =>
-    `font=\\sffamily\\fontsize{${n(size * PT_PER_PX)}}{${n(size * PT_PER_PX * 1.2)}}\\selectfont`;
+    `font=${shape}\\fontsize{${n(size * PT_PER_PX)}}{${n(size * PT_PER_PX * 1.2)}}\\selectfont`;
 
   /** Connections share one style; weighted ones (style.weights) add their width and opacity. */
   const edgeStyle = (item: SceneItem & { paint: Paint }) => {
@@ -290,7 +294,10 @@ export function renderTikz(scene: Scene, options: TikzOptions = {}): string {
   const unicodeSetup = unicode ? ['\\usepackage{fontspec}', ...scripts.preamble()] : [];
   const libraries = usesArrows ? ['\\usetikzlibrary{arrows.meta}'] : [];
   // MathJax accepts AMS macros (\mathbb, \boldsymbol, ...), so math labels need these packages.
-  const packages = usesMath ? ['\\usepackage{amsmath, amssymb}'] : [];
+  const packages = [
+    ...(latinModern && !unicode ? ['\\usepackage[T1]{fontenc}', '\\usepackage{lmodern}'] : []),
+    ...(usesMath ? ['\\usepackage{amsmath, amssymb}'] : []),
+  ];
   if (!standalone) {
     const needs = ['\\usepackage{tikz}', ...libraries, ...packages].join(' ');
     const setup = unicodeSetup.map((line) => `%   ${line}`);

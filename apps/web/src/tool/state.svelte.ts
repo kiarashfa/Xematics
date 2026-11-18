@@ -531,6 +531,13 @@ export class ToolState {
     this.edit((model) => patchStyle(model, { direction: on ? 'rtl' : undefined }));
   }
 
+  /** The label font: Inter (default) or Latin Modern Roman or Sans. */
+  font = $derived(this.model?.style?.font ?? 'inter');
+  setFont(font: string): void {
+    const value = font === 'latin-modern-roman' || font === 'latin-modern-sans' ? font : undefined;
+    this.edit((model) => patchStyle(model, { font: value }));
+  }
+
   setTransparent(on: boolean): void {
     this.edit((model) => patchStyle(model, { background: on ? 'transparent' : undefined }));
   }

@@ -419,7 +419,32 @@ function resolveRole(base: RolePaint, user: RoleStyle | undefined): RolePaint {
   return out;
 }
 
+/** Font families of the label font choices. */
+export const FONT_FAMILIES: Readonly<Record<string, string>> = {
+  inter: 'Inter',
+  'latin-modern-roman': 'Latin Modern Roman',
+  'latin-modern-sans': 'Latin Modern Sans',
+};
+
+/** The theme with every label in another font family. */
+function withFont(theme: Theme, family: string): Theme {
+  if (family === 'Inter') return theme;
+  return {
+    ...theme,
+    nameText: { ...theme.nameText, family },
+    sizeText: { ...theme.sizeText, family },
+    nodeText: { ...theme.nodeText, family },
+    maps: { ...theme.maps, opText: { ...theme.maps.opText, family } },
+    parts: { ...theme.parts, text: { ...theme.parts.text, family } },
+  };
+}
+
 export function resolveTheme(style: StyleOptions | undefined): Theme {
+  const theme = resolveStyle(style);
+  return style?.font ? withFont(theme, FONT_FAMILIES[style.font] ?? 'Inter') : theme;
+}
+
+function resolveStyle(style: StyleOptions | undefined): Theme {
   const base = PRESETS[style?.preset ?? 'classic'];
   if (!style) return base;
   let background = base.background;

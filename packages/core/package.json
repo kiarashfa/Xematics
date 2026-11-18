@@ -1,13 +1,14 @@
 {
   "name": "@xematics/core",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "license": "SEE LICENSE IN ../../LICENSE",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
-    "./node": "./src/node/index.ts"
+    "./node": "./src/node/index.ts",
+    "./files/*": "./files/*"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.test.json",
