@@ -18,6 +18,7 @@ import { layoutBoxes } from './boxes.ts';
 import { applyWeights } from '../animate/weights.ts';
 import { layoutCnn } from './cnn.ts';
 import { familyLayouts } from './families.ts';
+import { applyAnimationItems } from './animated.ts';
 import { applyParams } from './params.ts';
 import { buildLabel, labelItems, nodeLabelText, type Label, type LabelIssue } from './label.ts';
 
@@ -130,7 +131,10 @@ export function layoutModel(input: Model, engine: TextEngine): LayoutResult {
   const result = theme.labels.params
     ? { ...plain, scene: applyParams(plain.scene, input, theme, engine) }
     : plain;
-  return theme.weights ? { ...result, scene: applyWeights(result.scene, theme) } : result;
+  const weighted = theme.weights ? { ...result, scene: applyWeights(result.scene, theme) } : result;
+  return input.animation?.equations || input.animation?.loss
+    ? { ...weighted, scene: applyAnimationItems(weighted.scene, input, theme, engine) }
+    : weighted;
 }
 
 function layoutPlain(input: Model, theme: Theme, engine: TextEngine): LayoutResult {

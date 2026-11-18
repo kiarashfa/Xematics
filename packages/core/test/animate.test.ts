@@ -253,3 +253,59 @@ describe('GIF writer', () => {
     expect(decoded.frames[0]).toHaveLength(width * height);
   });
 });
+
+describe('animation extras', () => {
+  const EXTRAS =
+    'animation: { look: training, loss: true, equations: true }\nlayers:\n  - 3\n  - { units: 5, activation: relu }\n  - { units: 2, activation: softmax }';
+
+  test('the caption and loss curve show only in animated output', async () => {
+    const engine = await getEngine();
+    const model = parseModel(EXTRAS).model!;
+    await prepareModel(model, engine);
+    const scene = layoutModel(model, engine).scene;
+    expect(scene.items.some((i) => i.id.startsWith('equation-') || i.id.startsWith('loss'))).toBe(
+      false,
+    );
+    const ids = scene.animation!.items.map((i) => i.id);
+    expect(ids).toEqual(
+      expect.arrayContaining(['equation-1-box', 'equation-2-box', 'loss-line', 'loss-dot']),
+    );
+    expect(scene.animation!.height).toBeGreaterThan(scene.height);
+    const timeline = buildTimeline(scene, resolveTheme(undefined), model.animation);
+    const svg = renderAnimatedSvg(scene, timeline);
+    expect(svg).toContain('id="xm-loss-line"');
+    expect(svg).not.toMatch(/NaN|Infinity|undefined/);
+    await expect(svg).toMatchFileSnapshot('./golden/anim-extras.svg');
+    // Every track targets an item of the animated scene.
+    const all = new Set(
+      [...scene.items, ...scene.animation!.items, ...timeline.extras].map((i) => i.id),
+    );
+    for (const track of timeline.tracks) expect(all.has(track.target)).toBe(true);
+    // Only one caption is visible at a time.
+    for (const at of [0.1, 0.3, 0.5]) {
+      const frame = sampleScene(scene, timeline, at * timeline.duration);
+      const visible = frame.items.filter(
+        (i) =>
+          i.id.endsWith('-box') &&
+          i.id.startsWith('equation-') &&
+          'paint' in i &&
+          (i.paint.opacity ?? 1) > 0.5,
+      );
+      expect(visible.length).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('recurrent networks run step by step through time', async () => {
+    const { timeline } = await animated('seq(6x4)-rnn(8)-fc(2)', {
+      look: 'pulse',
+      scene: 'forward',
+    });
+    const firstLit = (id: string) => {
+      const frames = timeline.tracks.find((t) => t.target === id)!.keyframes;
+      return frames.find((f) => f.props.strokeWidth !== frames[0]!.props.strokeWidth)!.at;
+    };
+    expect(firstLit('box-1-0')).toBeLessThan(firstLit('box-1-1'));
+    expect(firstLit('node-0-1')).toBeLessThan(firstLit('box-1-1'));
+    expect(firstLit('box-1-0')).toBeLessThan(firstLit('node-0-1'));
+  });
+});

@@ -493,9 +493,24 @@ animation: { look: training, speed: 0.5, grayHidden: true, forward: '#009e73' }
 | `grayHidden` | `true` or `false`                               | `false`      |
 | `forward`    | a quoted color                                  | the preset's |
 | `backward`   | a quoted color                                  | the preset's |
+| `equations`  | `true` or `false`                               | `false`      |
+| `loss`       | `true` or `false` (with the training look)      | `false`      |
 
 With `grayHidden`, hidden layers keep their gray and only get a darker border when the signal
-reaches them. Save the animation from the Animate tab:
+reaches them.
+
+Each kind of network moves in its own way. Recurrent networks run step by step through time: the
+input of a step, its cell, then the state on to the next step and the step's output. Transformers
+go block by block and flash their residual connections; GANs make a sample, score it, then send
+the error back through both networks; autoencoders squeeze into the latent space and widen out.
+
+**Equations** (`equations: true`) shows the formula of the layer the forward pass is in, like
+h₁ = relu(W₁x + b₁), in a caption under fully connected and convolutional
+figures. **Loss curve** (`loss: true`, with the training look) draws the loss under the figure as
+training runs. Both appear only in the animation: the animated SVG, the GIF and the video, not in
+still images.
+
+Save the animation from the Animate tab:
 
 - **Animated SVG:** plays anywhere an image does, in a README, a slide or a web page, with no
   scripts. Viewers who ask for reduced motion see the still figure.

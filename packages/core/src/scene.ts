@@ -108,4 +108,9 @@ export interface Scene {
   readonly items: readonly SceneItem[];
   /** Set for recurrent, GAN and Transformer diagrams: exporters draw their items generically. */
   readonly family?: 'rnn' | 'gan' | 'transformer' | 'autoencoder';
+  /**
+   * Items only animated output shows (the equation caption, the loss curve) and the scene's
+   * height with them. Still exports ignore this.
+   */
+  readonly animation?: { readonly items: readonly SceneItem[]; readonly height: number };
 }

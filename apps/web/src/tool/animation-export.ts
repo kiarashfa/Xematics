@@ -1,6 +1,7 @@
 // Animation exports (animated SVG, GIF, video), loaded on first use by actions.ts.
 
 import {
+  animatedScene,
   buildTimeline,
   GifWriter,
   renderAnimatedSvg,
@@ -42,7 +43,7 @@ export async function exportAnimationNow(kind: AnimationExport): Promise<void> {
       downloadText(animatedName('svg'), renderAnimatedSvg(scene, timeline), 'image/svg+xml');
     } else if (kind === 'gif') {
       const fps = 12;
-      const size = frameSize(scene, 720, 1.5);
+      const size = frameSize(animatedScene(scene, timeline), 720, 1.5);
       const count = Math.max(1, Math.ceil((timeline.duration / 1000) * fps));
       const frame = (i: number) =>
         rasterizeRgba(
@@ -67,7 +68,7 @@ export async function exportAnimationNow(kind: AnimationExport): Promise<void> {
         tool.flash('This browser cannot record video. Try the GIF or the animated SVG.');
         return;
       }
-      const size = frameSize(scene, 1600, 2);
+      const size = frameSize(animatedScene(scene, timeline), 1600, 2);
       const seconds = Math.round(timeline.duration / 100) / 10;
       tool.flash(`Recording the video (${seconds} s)…`);
       const bytes = await recordVideo(

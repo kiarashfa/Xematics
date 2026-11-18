@@ -504,6 +504,17 @@ export class ToolState {
     this.edit((model) => patchAnimation(model, patch));
   }
 
+  /** The animation's caption and loss curve switches, as the source sets them. */
+  animationExtras = $derived({
+    equations: this.model?.animation?.equations === true,
+    loss: this.model?.animation?.loss === true && this.model?.animation?.look === 'training',
+  });
+
+  /** The loss curve belongs to the training look, so turning it on switches to that look. */
+  setLossCurve(on: boolean): void {
+    this.setAnimation(on ? { loss: true, look: 'training' } : { loss: undefined });
+  }
+
   setCollapse(key: 'above' | 'first' | 'last', value: number): void {
     this.edit((model) =>
       patchStyle(model, {

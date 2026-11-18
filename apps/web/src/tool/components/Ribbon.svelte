@@ -837,8 +837,12 @@
           tool.setAnimation({ grayHidden: on }),
         )}
         {@render toggle('Weight colors in still images', tool.weights, (on) => tool.setWeights(on))}
+        {@render toggle('Equations', tool.animationExtras.equations, (on) =>
+          tool.setAnimation({ equations: on || undefined }),
+        )}
+        {@render toggle('Loss curve', tool.animationExtras.loss, (on) => tool.setLossCurve(on))}
       {/snippet}
-      {@render group(3, 'Layers and weights', 'layers', 'Layers', 'Layers', 'stack', gAnimate3)}
+      {@render group(3, 'Layers and weights', 'layers', 'Layers', 'Layers', 'pairs', gAnimate3)}
       {#snippet gAnimate5()}
         <div class="stack">
           {@render colorButton(

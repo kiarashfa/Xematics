@@ -385,6 +385,12 @@
       {@render toggle('tag', 'Weight colors in still images', tool.weights, (on) =>
         tool.setWeights(on),
       )}
+      {@render toggle('tag', 'Equations', tool.animationExtras.equations, (on) =>
+        tool.setAnimation({ equations: on || undefined }),
+      )}
+      {@render toggle('tag', 'Loss curve', tool.animationExtras.loss, (on) =>
+        tool.setLossCurve(on),
+      )}
       {@render colorRow('forward', 'Forward color', tool.motionColors.forward, {
         kind: 'motion',
         key: 'forward',

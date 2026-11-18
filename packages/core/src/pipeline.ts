@@ -2,6 +2,7 @@ import type { Diagnostic } from './diagnostics.ts';
 import { splitMath, nodeLabelText } from './layout/label.ts';
 import { cnnLabels } from './layout/cnn.ts';
 import { cleanLabel, layoutModel, nameText, slotsOf } from './layout/mlp.ts';
+import { layerFormulas } from './layout/animated.ts';
 import { paramsStyle, paramsTexts } from './layout/params.ts';
 import { loadFamilyLayouts, needsFamilyLayouts } from './layout/families.ts';
 import { familyOf, isMlp, type MlpModel, type Model } from './model/schema.ts';
@@ -40,6 +41,12 @@ export function labelContent(model: Model): { text: TextRequest[]; math: string[
   const math: string[] = [];
   if (theme.labels.params) {
     for (const value of paramsTexts(model)) text.push({ text: value, font: paramsStyle(theme) });
+  }
+  if (model.animation?.equations) {
+    for (const tex of layerFormulas(model)) if (tex) math.push(tex);
+  }
+  if (model.animation?.loss) {
+    for (const word of ['loss', 'training']) text.push({ text: word, font: theme.sizeText });
   }
   const add = (label: string, style: TextStyle) => {
     for (const segment of splitMath(label)) {

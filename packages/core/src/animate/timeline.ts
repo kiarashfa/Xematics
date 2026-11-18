@@ -81,6 +81,35 @@ interface Part {
 
 const index = (id: string) => Number(id.split('-')[1]);
 
+/** Ids of lines that carry the signal, and of the paths that do (arrows with corners and arcs). */
+const LINK_LINE = /^(edge|fan|ray|arrow|link)-/;
+const LINK_PATH = /^(arrow|state|residual|flow|skip)-/;
+
+/**
+ * Recurrent diagrams run step by step through time: the input at a step, then its cell, then the
+ * state on to the next step (and the output). The order slot of a part replaces its row.
+ */
+function stepSlots(parts: Part[], rows: number): { parts: Part[]; layers: number } {
+  const step = (id: string) => {
+    const m = /^(?:node|box|arrow|state)-(\d+)-(\d+)/.exec(id);
+    return m ? Number(m[2]) : undefined;
+  };
+  const steps = [...new Set(parts.flatMap((p) => step(p.item.id) ?? []))].sort((a, b) => a - b);
+  if (steps.length < 2) return { parts, layers: rows };
+  const order = new Map(steps.map((t, k) => [t, k]));
+  let most = 0;
+  const out = parts.map((p) => {
+    const t = step(p.item.id);
+    const k = t === undefined ? -1 : order.get(t)!;
+    // The state leaves a step one slot after its cell, so the next cell lights as it arrives.
+    const state = p.item.id.startsWith('state-') ? 1 : 0;
+    const slot = Math.max(0, 2 * k + p.layer + state);
+    most = Math.max(most, slot);
+    return { ...p, layer: slot };
+  });
+  return { parts: out, layers: most + 1 };
+}
+
 /** The layer each animated item belongs to, and what kind of part it is. */
 function partsOf(scene: Scene): { parts: Part[]; layers: number } {
   const byId = new Map(scene.items.map((i) => [i.id, i]));
@@ -94,20 +123,23 @@ function partsOf(scene: Scene): { parts: Part[]; layers: number } {
     let role: Role | undefined;
     if (item.id.startsWith('node-') || item.id.startsWith('sheet-') || item.id.startsWith('box-'))
       role = 'node';
-    else if (/^(edge|fan|ray|arrow)-/.test(item.id) && item.kind === 'line') role = 'link';
+    else if (item.id.endsWith('-head') && LINK_PATH.test(item.id)) role = 'head';
+    else if (LINK_LINE.test(item.id) && item.kind === 'line') role = 'link';
+    else if (LINK_PATH.test(item.id) && item.kind === 'path') role = 'link';
     else if (item.id.startsWith('window-')) role = 'window';
-    else if (item.id.endsWith('-head') && item.id.startsWith('arrow-')) role = 'head';
     if (!role) continue;
     let layer: number | undefined;
     for (let cur: SceneItem | undefined = item; cur && layer === undefined;) {
       if (cur.id.startsWith('layer-')) layer = index(cur.id);
       else if (cur.id.startsWith('edges-')) layer = index(cur.id);
       else if (cur.id.startsWith('rays-')) layer = index(cur.id) - 1;
+      // A skip arc flashes as the signal reaches the layer it joins.
+      else if (/^skip-\d+/.test(cur.id)) layer = index(cur.id) - 1;
       cur = cur.parent ? byId.get(cur.parent) : undefined;
     }
     if (layer !== undefined) parts.push({ item, layer, role });
   }
-  return { parts, layers };
+  return scene.family === 'rnn' ? stepSlots(parts, layers) : { parts, layers };
 }
 
 const paintOf = (item: SceneItem): Paint => ('paint' in item ? item.paint : {});
@@ -150,7 +182,108 @@ export function buildTimeline(
       : anim.look === 'training'
         ? training(parts, layers, theme, anim.grayHidden)
         : signal(parts, layers, theme, anim);
-  return { ...built, duration: Math.round(built.duration / anim.speed), loop: anim.loop };
+  const own = scene.animation ? animationTracks(scene, layers, anim) : [];
+  return {
+    ...built,
+    tracks: [...built.tracks, ...own],
+    duration: Math.round(built.duration / anim.speed),
+    loop: anim.loop,
+  };
+}
+
+/** When the forward pass is in each layer, as parts of the loop (0 to 1). */
+function forwardWindows(
+  layer: number,
+  layers: number,
+  anim: ResolvedAnimation,
+): [number, number][] {
+  if (anim.look === 'training') {
+    const at = (e: number, f: number) => (e + f) / EXAMPLES;
+    const on = (k: number) => 0.05 + 0.09 * k;
+    return Array.from({ length: EXAMPLES }, (_, e): [number, number] => [
+      at(e, on(layer)),
+      at(e, on(layer + 1)),
+    ]);
+  }
+  if (anim.scene === 'backward' || anim.look === 'learning') return [];
+  const forwardEnd = layers * STEP;
+  const total = (anim.scene === 'both' ? 2 * forwardEnd : forwardEnd) + PAUSE;
+  return [[(layer * STEP) / total, ((layer + 1) * STEP) / total]];
+}
+
+/** Tracks for the scene's animation-only items: the caption of each layer, the loss curve. */
+function animationTracks(scene: Scene, layers: number, anim: ResolvedAnimation): Track[] {
+  const items = scene.animation!.items;
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const tracks: Track[] = [];
+  const captionOf = (item: SceneItem): number | undefined => {
+    for (
+      let cur: SceneItem | undefined = item;
+      cur;
+      cur = cur.parent ? byId.get(cur.parent) : undefined
+    ) {
+      const m = /^equation-(\d+)$/.exec(cur.id);
+      if (m) return Number(m[1]);
+    }
+    return undefined;
+  };
+  for (const item of items) {
+    if (item.kind === 'group') continue;
+    const layer = captionOf(item);
+    if (layer === undefined) continue;
+    const stops: [number, Props][] = [
+      [0, { opacity: 0 }],
+      [1, { opacity: 0 }],
+    ];
+    for (const [s, e] of forwardWindows(layer, layers, anim)) {
+      const fade = Math.min(0.004, (e - s) / 4);
+      stops.push(
+        [s, { opacity: 0 }],
+        [s + fade, { opacity: 1 }],
+        [e - fade, { opacity: 1 }],
+        [e, { opacity: 0 }],
+      );
+    }
+    tracks.push(track(item.id, stops));
+  }
+  // The loss curve draws itself over the loop; the dot rides on its end.
+  const line = byId.get('loss-line');
+  const dot = byId.get('loss-dot');
+  if (anim.look === 'training' && line?.kind === 'path' && dot?.kind === 'circle') {
+    const points = [...line.d.matchAll(/[ML](-?[\d.]+) (-?[\d.e-]+)/g)].map(
+      (m): [number, number] => [Number(m[1]), Number(m[2])],
+    );
+    const lengths = [0];
+    for (let i = 1; i < points.length; i++) {
+      const dx = points[i]![0] - points[i - 1]![0];
+      const dy = points[i]![1] - points[i - 1]![1];
+      lengths.push(lengths[i - 1]! + Math.sqrt(dx * dx + dy * dy));
+    }
+    const total = Math.ceil(lengths.at(-1)!) + 1;
+    const last = points.length - 1;
+    tracks.push(
+      track(
+        'loss-line',
+        points.map((_, i): [number, Props] => [
+          i / last,
+          { dash: [total, total], dashOffset: Math.round((total - lengths[i]!) * 100) / 100 },
+        ]),
+      ),
+    );
+    tracks.push(
+      track(
+        'loss-dot',
+        points.map(([x, y], i): [number, Props] => [
+          i / last,
+          {
+            tx: Math.round((x - points[0]![0]) * 100) / 100,
+            ty: Math.round((y - points[0]![1]) * 100) / 100,
+          },
+        ]),
+      ),
+    );
+  }
+  return tracks;
 }
 
 type Built = { duration: number; tracks: Track[]; extras: SceneItem[] };

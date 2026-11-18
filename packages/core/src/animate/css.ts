@@ -7,11 +7,18 @@ import type { Scene } from '../scene.ts';
 import { num } from '../util/format.ts';
 import type { Props, Timeline } from './timeline.ts';
 
-/** The scene with the animation's extra items (signal dots) added on top. */
+/**
+ * The scene as the animation shows it: its animation-only items (equation caption, loss curve)
+ * with the room they need, and the timeline's extra items (signal dots) on top.
+ */
 export function animatedScene(scene: Scene, timeline: Timeline): Scene {
-  return timeline.extras.length === 0
-    ? scene
-    : { ...scene, items: [...scene.items, ...timeline.extras] };
+  const own = scene.animation;
+  if (timeline.extras.length === 0 && !own) return scene;
+  return {
+    ...scene,
+    height: own ? Math.max(scene.height, own.height) : scene.height,
+    items: [...scene.items, ...(own?.items ?? []), ...timeline.extras],
+  };
 }
 
 function declarations(props: Props): string {

@@ -262,6 +262,19 @@ test.describe('desktop editor', () => {
     await expect(page.locator('#pv-box-1-0-b')).toBeAttached();
   });
 
+  test('Animate tab adds the equation caption and the loss curve', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('4-6:relu-3:softmax');
+    await page.getByRole('tab', { name: 'Animate' }).click();
+    await page.getByRole('switch', { name: 'Equations' }).check();
+    await expect(source(page)).toHaveValue(/equations: true/);
+    await expect(page.locator('#pv-equation-1-box')).toBeAttached();
+    await page.getByRole('switch', { name: 'Loss curve' }).check();
+    await expect(source(page)).toHaveValue(/look: training/);
+    await expect(source(page)).toHaveValue(/loss: true/);
+    await expect(page.locator('#pv-loss-line')).toBeAttached();
+  });
+
   test('Animate tab plays the preview and exports the same bytes as the Node golden', async ({
     page,
   }) => {

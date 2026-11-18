@@ -561,6 +561,10 @@ export const AnimationSchema = v.strictObject(
     loop: v.optional(flag()),
     /** Hidden layers keep their fill and only get a darker border when the flow reaches them. */
     grayHidden: v.optional(flag()),
+    /** Show the formula of the layer the forward pass is in, under the figure. */
+    equations: v.optional(flag()),
+    /** With the training look: a loss curve under the figure that draws itself as training runs. */
+    loss: v.optional(flag()),
     /** Colors of the forward signal and the backward error (default: the preset's). */
     forward: v.optional(color()),
     backward: v.optional(color()),
