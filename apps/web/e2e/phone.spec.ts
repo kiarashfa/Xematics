@@ -108,6 +108,20 @@ test('shorthand pad edits sizes without the keyboard and keeps names', async ({ 
   await expect(await sourceText(page)).toHaveValue(/- \{ units: 32, name: Digits \}/);
 });
 
+test('shorthand pad types groups and repeats', async ({ page }) => {
+  await openDocument(page);
+  await page.getByRole('button', { name: 'Shorthand pad' }).click();
+  await page.getByRole('button', { name: 'Backspace' }).click();
+  await page.getByRole('button', { name: 'Backspace' }).click();
+  for (const key of ['Open a group', '8', 'Hyphen, next layer', '4', 'Close the group']) {
+    await page.getByRole('button', { name: key, exact: true }).click();
+  }
+  await page.getByRole('button', { name: 'Times, repeat' }).click();
+  await page.getByRole('button', { name: '2', exact: true }).click();
+  await expect(page.getByLabel('Layer sizes')).toHaveText('784-16:relu-16:relu-(8-4)*2');
+  await expect(await sourceText(page)).toHaveValue(/units: 8[^]*units: 4[^]*units: 8[^]*units: 4/);
+});
+
 test('symbol bar types into the source', async ({ page }) => {
   await openDocument(page);
   const box = await sourceText(page);

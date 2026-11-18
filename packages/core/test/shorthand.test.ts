@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'vitest';
-import { formatShorthand, parseModel, parseShorthand, type Model } from '../src/index.ts';
+import fc from 'fast-check';
+import {
+  formatShorthand,
+  layerToken,
+  parseModel,
+  parseShorthand,
+  shorthandFormatOf,
+  structureOf,
+  type Model,
+} from '../src/index.ts';
 
 const sizes = (text: string) =>
   parseShorthand(text).layers.map((layer) => ('units' in layer ? layer.units : 0));
@@ -125,5 +134,80 @@ describe('repeats', () => {
     const model = parseModel('784-128*3-10-10:relu-10').model!;
     expect(formatShorthand(model)).toBe('784-128-128-128-10-10:relu-10');
     expect(formatShorthand(model, { repeat: true })).toBe('784-128*3-10-10:relu-10');
+  });
+});
+
+describe('groups', () => {
+  const tokens = (text: string) => parseShorthand(text).layers.map(layerToken).join('-');
+
+  test.each([
+    [
+      'in(28x28x1)-(conv(8,3x3)-pool(2))*2-flatten-fc(10)',
+      'in(28x28x1)-conv(8,3x3)-pool(2)-conv(8,3x3)-pool(2)-flatten-10',
+    ],
+    ['784-(128-64)*2-10', '784-128-64-128-64-10'],
+    ['(4)-2', '4-2'],
+    ['784 ( 128 , 64 ) * 2 - 10', '784-128-64-128-64-10'],
+    ['((8-4)*2-2)*2', '8-4-8-4-2-8-4-8-4-2'],
+    ['(16:relu*2-8)*2', '16:relu-16:relu-8-16:relu-16:relu-8'],
+    [
+      'in(32x32x3)-(conv(32,3x3)*2-pool(2))*3-gap-fc(10)',
+      'in(32x32x3)-conv(32,3x3)-conv(32,3x3)-pool(2)-conv(32,3x3)-conv(32,3x3)-pool(2)-conv(32,3x3)-conv(32,3x3)-pool(2)-gap-10',
+    ],
+  ])('%s', (text, expected) => {
+    expect(parseShorthand(text).diagnostics).toEqual([]);
+    expect(tokens(text)).toBe(expected);
+  });
+
+  test.each([
+    ['784-()-10', 'shorthand.empty-group', 6],
+    ['784-(128-64*2', 'shorthand.expected-paren', 5],
+    ['784-128)-10', 'shorthand.unexpected', 8],
+    ['784-(128-)*2', 'shorthand.trailing-separator', 9],
+    ['784-(128-64)*', 'shorthand.expected-count', 14],
+    ['784-(128-64):relu', 'shorthand.no-activation', 13],
+    ['(((((((((4)))))))))', 'shorthand.group-depth', 9],
+  ])('%s fails with %s', (text, code, column) => {
+    expect(parseShorthand(text).diagnostics[0]).toMatchObject({ code, column });
+  });
+
+  test('nested repeats count toward the layer limit before they expand', () => {
+    expect(parseShorthand('(2*16)*16').diagnostics).toEqual([]);
+    expect(parseShorthand('((2*16)*16)*256').diagnostics[0]?.code).toBe('shorthand.too-many');
+  });
+
+  test('groups fold back only when the source has one', () => {
+    const text = 'in(28x28x1)-(conv(8,3x3)-pool(2))*2-flatten-fc(10)';
+    const model = parseModel(text).model!;
+    expect(shorthandFormatOf(text)).toEqual({ repeat: true, groups: true });
+    expect(shorthandFormatOf('in(28x28)-conv(8,3x3)*2')).toEqual({ repeat: true, groups: false });
+    expect(formatShorthand(model, shorthandFormatOf(text))).toBe(
+      'in(28x28x1)-(conv(8,3x3)-pool(2))*2-flatten-10',
+    );
+    expect(formatShorthand(model, { repeat: true })).toBe(
+      'in(28x28x1)-conv(8,3x3)-pool(2)-conv(8,3x3)-pool(2)-flatten-10',
+    );
+  });
+
+  test('folding prefers the fold that covers the most layers, then the shorter one', () => {
+    const fold = (text: string) => structureOf(parseModel(text).model!, { groups: true });
+    expect(fold('128-128-128-128')).toBe('128*4');
+    expect(fold('8-4-8-4-8')).toBe('(8-4)*2-8');
+    expect(fold('2-16-16-8-16-16-8-1')).toBe('2-(16*2-8)*2-1');
+    expect(fold('3-5-7')).toBe('3-5-7');
+  });
+
+  test('folded groups read back as the same layers', () => {
+    const token = fc.constantFrom('16', '8:relu', 'conv(8,3x3)', 'pool(2)', 'flatten', '4');
+    fc.assert(
+      fc.property(fc.array(token, { minLength: 1, maxLength: 40 }), (parts) => {
+        const layers = parseShorthand(parts.join('-')).layers;
+        const model = { version: 1, layers } as Model;
+        const folded = structureOf(model, { repeat: true, groups: true });
+        const again = parseShorthand(folded);
+        expect(again.diagnostics).toEqual([]);
+        expect(again.layers).toEqual(layers);
+      }),
+    );
   });
 });

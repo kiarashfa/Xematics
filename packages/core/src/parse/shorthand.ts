@@ -1,9 +1,10 @@
 // Shorthand grammar (single line, whitespace allowed around tokens):
 //
-//   model      = layer { separator layer }
+//   model      = item { separator item }
 //   separator  = "-" | "," | whitespace
-//   layer      = ( size | call | word ) [ ":" activation ] [ "*" count ]
-//   count      = digit { digit }                      1 .. LIMITS.layers (repeats the layer)
+//   item       = ( layer | "(" model ")" ) [ "*" count ]   a group repeats its layers together
+//   layer      = ( size | call | word ) [ ":" activation ]
+//   count      = digit { digit }                      1 .. LIMITS.layers (repeats the item)
 //   size       = digit { digit }                      1 .. LIMITS.units
 //   call       = type "(" [ arg { "," arg } ] ")"  |  "gan(" model "|" model ")"
 //   word       = "flatten" | "gap"                    (a call without arguments, parentheses optional)
@@ -27,6 +28,7 @@
 //
 // Examples: 784-16-16-10   784-128*3-10   4-8:relu-3:softmax
 //           in(28x28x1)-conv(8,3x3):relu-pool(2)-flatten-fc(10)
+//           in(32x32x3)-(conv(32,3x3)*2-pool(2))*3-flatten-fc(10)
 //           seq(20x32)-lstm(64)-fc(10)   tokens(512)-embed(512)-encoder(6,8)-fc(2)
 //           gan(100-256-784:tanh | 784-256-1:sigmoid)
 
@@ -122,8 +124,10 @@ export function parseShorthand(source: string): ShorthandResult {
   }
 }
 
+/** How deep groups like ((a-b)*2-c)*3 may nest. */
+const MAX_GROUP_DEPTH = 8;
+
 function parseLayers(source: string): ShorthandLayer[] {
-  const layers: ShorthandLayer[] = [];
   let pos = 0;
 
   const peek = () => source[pos] ?? '';
@@ -539,139 +543,183 @@ function parseLayers(source: string): ShorthandLayer[] {
     };
   };
 
+  /** Layers up to the end, or up to the ')' that closes a group opened at `open`. */
+  const sequence = (depth: number, open: number): ShorthandLayer[] => {
+    const layers: ShorthandLayer[] = [];
+    skipSpace();
+    if (depth > 0 && peek() === ')') {
+      fail(
+        'shorthand.empty-group',
+        'Expected layers inside the parentheses, like (conv(8,3x3)-pool(2))*2.',
+      );
+    }
+    for (;;) {
+      const start = pos;
+      let items: readonly ShorthandLayer[];
+
+      if (peek() === '(') {
+        // A group of layers, usually repeated: (conv(8,3x3)-pool(2))*2.
+        if (depth >= MAX_GROUP_DEPTH) {
+          fail('shorthand.group-depth', `Groups can be nested at most ${MAX_GROUP_DEPTH} deep.`);
+        }
+        pos++;
+        items = sequence(depth + 1, start);
+        pos++;
+        if (peek() === ':') {
+          fail(
+            'shorthand.no-activation',
+            'Groups do not take an activation. Put it on the layers inside, like (16:relu-8)*2.',
+          );
+        }
+      } else {
+        let layer: Layer;
+        let kind: Kind = 'dense';
+        let word = '';
+
+        if (isDigit(peek())) {
+          const digits = source.slice(pos).match(/^\d+/)![0];
+          const units = readNumber(LIMITS.units, 'Layer size');
+          if (isIdentStart(peek())) {
+            fail(
+              'shorthand.unexpected',
+              `Unexpected ${shown(pos)} after ${digits}. Put a colon before an activation, like ${digits}:relu.`,
+            );
+          }
+          layer = { type: 'dense', units };
+        } else if (isIdentStart(peek())) {
+          word = readWhile(isIdentChar);
+          const found = TYPE_ALIASES[word.toLowerCase()];
+          const afterWord = pos;
+          skipSpace();
+          if (peek() !== '(') {
+            if (found === 'flatten' || found === 'gap') {
+              pos = afterWord;
+              kind = found;
+              layer = { type: found };
+            } else {
+              return fail(
+                found ? 'shorthand.expected-paren' : 'shorthand.unknown-word',
+                found
+                  ? `Expected '(' after ${word}, like ${example(found, word)}.`
+                  : `Unknown word '${word}'. Layers are sizes like 16, optionally with an activation like 16:relu.`,
+                found ? pos : start,
+              );
+            }
+          } else {
+            if (!found) {
+              return fail(
+                'shorthand.unknown-type',
+                `Layer type '${word}' is not supported. Use a number, dense, in, conv, pool, avgpool, gap, flatten, seq, rnn, lstm, gru, tokens, embed, encoder, decoder, gan or ae.`,
+                start,
+              );
+            }
+            kind = found;
+            if (kind === 'gan' || kind === 'autoencoder') {
+              layer = networksCall(word, pos, kind);
+            } else {
+              pos++;
+              const args = readArgs(word);
+              const close = pos;
+              pos++;
+              layer = typed(kind, word, args, close);
+            }
+          }
+        } else {
+          return fail(
+            'shorthand.expected-size',
+            `Expected a layer size like 16 but found ${shown(pos)}.`,
+          );
+        }
+
+        if (peek() === ':') {
+          const colon = pos;
+          pos++;
+          if (!isIdentStart(peek())) {
+            fail(
+              'shorthand.expected-activation',
+              'Expected an activation name after the colon, like relu.',
+            );
+          }
+          const actStart = pos;
+          const activation = readWhile(isIdentChar);
+          if (activation.length > LIMITS.activation) {
+            fail(
+              'shorthand.activation-length',
+              `Activation names can be at most ${LIMITS.activation} characters long.`,
+              actStart,
+            );
+          }
+          if (!TAKES_ACTIVATION.has(kind)) {
+            fail(
+              'shorthand.no-activation',
+              `${word || kind} layers do not take an activation.`,
+              colon,
+            );
+          }
+          layer = { ...layer, activation } as Layer;
+        }
+        items = [layer];
+      }
+
+      let count = 1;
+      const beforeCount = pos;
+      skipSpace();
+      if (peek() === '*') {
+        pos++;
+        skipSpace();
+        if (!isDigit(peek())) {
+          fail('shorthand.expected-count', `Expected a repeat count after '*', like 128*3.`);
+        }
+        count = readNumber(LIMITS.layers, 'Repeat count');
+        if (isIdentStart(peek())) fail('shorthand.unexpected', `Unexpected ${shown(pos)}.`);
+      } else {
+        pos = beforeCount;
+      }
+
+      // Checked before expanding, so nested repeats cannot build huge lists.
+      if (layers.length + items.length * count > LIMITS.layers) {
+        fail('shorthand.too-many', `Too many layers. The maximum is ${LIMITS.layers}.`, start);
+      }
+      for (let i = 0; i < count; i++) layers.push(...items);
+
+      const spaced = skipSpace();
+      if (pos >= source.length) {
+        if (depth > 0) {
+          fail('shorthand.expected-paren', `Expected ')' to close the group.`, open);
+        }
+        break;
+      }
+      if (peek() === ')') {
+        if (depth > 0) break;
+        fail('shorthand.unexpected', `Unexpected ')' without a matching '('.`);
+      }
+      const separator = peek();
+      if (separator === '-' || separator === ',') {
+        pos++;
+        skipSpace();
+        if (pos >= source.length || peek() === ')') {
+          fail(
+            'shorthand.trailing-separator',
+            `Expected another layer after '${separator}'.`,
+            pos - 1,
+          );
+        }
+        continue;
+      }
+      if (spaced) continue;
+      fail(
+        'shorthand.unexpected',
+        `Unexpected ${shown(pos)}. Separate layers with hyphens, like 784-16-10.`,
+      );
+    }
+    return layers;
+  };
+
   skipSpace();
   if (pos >= source.length) {
     fail('shorthand.empty', 'Type layer sizes separated by hyphens, for example 784-16-16-10.');
   }
-
-  for (;;) {
-    const start = pos;
-    let layer: Layer;
-    let kind: Kind = 'dense';
-    let word = '';
-
-    if (isDigit(peek())) {
-      const digits = source.slice(pos).match(/^\d+/)![0];
-      const units = readNumber(LIMITS.units, 'Layer size');
-      if (isIdentStart(peek())) {
-        fail(
-          'shorthand.unexpected',
-          `Unexpected ${shown(pos)} after ${digits}. Put a colon before an activation, like ${digits}:relu.`,
-        );
-      }
-      layer = { type: 'dense', units };
-    } else if (isIdentStart(peek())) {
-      word = readWhile(isIdentChar);
-      const found = TYPE_ALIASES[word.toLowerCase()];
-      const afterWord = pos;
-      skipSpace();
-      if (peek() !== '(') {
-        if (found === 'flatten' || found === 'gap') {
-          pos = afterWord;
-          kind = found;
-          layer = { type: found };
-        } else {
-          return fail(
-            found ? 'shorthand.expected-paren' : 'shorthand.unknown-word',
-            found
-              ? `Expected '(' after ${word}, like ${example(found, word)}.`
-              : `Unknown word '${word}'. Layers are sizes like 16, optionally with an activation like 16:relu.`,
-            found ? pos : start,
-          );
-        }
-      } else {
-        if (!found) {
-          return fail(
-            'shorthand.unknown-type',
-            `Layer type '${word}' is not supported. Use a number, dense, in, conv, pool, avgpool, gap, flatten, seq, rnn, lstm, gru, tokens, embed, encoder, decoder, gan or ae.`,
-            start,
-          );
-        }
-        kind = found;
-        if (kind === 'gan' || kind === 'autoencoder') {
-          layer = networksCall(word, pos, kind);
-        } else {
-          pos++;
-          const args = readArgs(word);
-          const close = pos;
-          pos++;
-          layer = typed(kind, word, args, close);
-        }
-      }
-    } else {
-      return fail(
-        'shorthand.expected-size',
-        `Expected a layer size like 16 but found ${shown(pos)}.`,
-      );
-    }
-
-    if (peek() === ':') {
-      const colon = pos;
-      pos++;
-      if (!isIdentStart(peek())) {
-        fail(
-          'shorthand.expected-activation',
-          'Expected an activation name after the colon, like relu.',
-        );
-      }
-      const actStart = pos;
-      const activation = readWhile(isIdentChar);
-      if (activation.length > LIMITS.activation) {
-        fail(
-          'shorthand.activation-length',
-          `Activation names can be at most ${LIMITS.activation} characters long.`,
-          actStart,
-        );
-      }
-      if (!TAKES_ACTIVATION.has(kind)) {
-        fail('shorthand.no-activation', `${word || kind} layers do not take an activation.`, colon);
-      }
-      layer = { ...layer, activation } as Layer;
-    }
-
-    let count = 1;
-    const beforeCount = pos;
-    skipSpace();
-    if (peek() === '*') {
-      pos++;
-      skipSpace();
-      if (!isDigit(peek())) {
-        fail('shorthand.expected-count', `Expected a repeat count after '*', like 128*3.`);
-      }
-      count = readNumber(LIMITS.layers, 'Repeat count');
-      if (isIdentStart(peek())) fail('shorthand.unexpected', `Unexpected ${shown(pos)}.`);
-    } else {
-      pos = beforeCount;
-    }
-
-    for (let i = 0; i < count; i++) layers.push(layer);
-    if (layers.length > LIMITS.layers) {
-      fail('shorthand.too-many', `Too many layers. The maximum is ${LIMITS.layers}.`, start);
-    }
-
-    const spaced = skipSpace();
-    if (pos >= source.length) break;
-    const separator = peek();
-    if (separator === '-' || separator === ',') {
-      pos++;
-      skipSpace();
-      if (pos >= source.length) {
-        fail(
-          'shorthand.trailing-separator',
-          `Expected another layer after '${separator}'.`,
-          pos - 1,
-        );
-      }
-      continue;
-    }
-    if (spaced) continue;
-    fail(
-      'shorthand.unexpected',
-      `Unexpected ${shown(pos)}. Separate layers with hyphens, like 784-16-10.`,
-    );
-  }
-
-  return layers;
+  return sequence(0, 0);
 }
 
 function example(kind: Kind, word: string): string {
@@ -753,6 +801,16 @@ export function layerToken(layer: Layer): string {
 export interface ShorthandFormat {
   /** Write runs of identical layers once with a count: 784-128*3-10. */
   readonly repeat?: boolean;
+  /** Also write repeated runs of several layers as a group: (conv(8,3x3)-pool(2))*2. */
+  readonly groups?: boolean;
+}
+
+/**
+ * How to write a model back into a source: with repeats when the source uses '*', and with groups
+ * when it has one (a '(' where a layer starts, not after a type word like conv).
+ */
+export function shorthandFormatOf(text: string): ShorthandFormat {
+  return { repeat: text.includes('*'), groups: /(?:^|[-,\s(])\(/.test(text) };
 }
 
 /** Returns the shorthand for a model, or undefined when the model uses options the shorthand cannot express. */
@@ -789,19 +847,45 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
   return joinTokens(parts, format);
 }
 
-/** Joins layer tokens with hyphens, folding runs of equal ones into 128*3 when asked. */
+/** Joins layer tokens with hyphens, folding repeats into 128*3 (and groups) when asked. */
 export function joinTokens(tokens: readonly string[], format: ShorthandFormat = {}): string {
-  return (format.repeat ? repeatRuns(tokens) : tokens).join('-');
+  if (!format.repeat && !format.groups) return tokens.join('-');
+  return foldRuns(tokens, format.groups ? MAX_GROUP_FOLD : 1).join('-');
 }
 
-/** Folds runs of equal tokens: [784, 128, 128, 128, 10] becomes [784, 128*3, 10]. */
-function repeatRuns(tokens: readonly string[]): string[] {
+/** The longest run of layers written as one group when folding. */
+const MAX_GROUP_FOLD = 12;
+
+/**
+ * Folds repeats: [784, 128, 128, 128, 10] becomes [784, 128*3, 10], and with groups
+ * [conv, pool, conv, pool] becomes [(conv-pool)*2]. At each place the fold covering the most
+ * layers wins; on a tie the shorter group, so 128-128-128-128 stays 128*4.
+ */
+function foldRuns(tokens: readonly string[], longest: number): string[] {
   const out: string[] = [];
+  const same = (a: number, b: number, length: number) => {
+    for (let k = 0; k < length; k++) if (tokens[a + k] !== tokens[b + k]) return false;
+    return true;
+  };
   for (let i = 0; i < tokens.length;) {
-    let end = i + 1;
-    while (tokens[end] === tokens[i]) end++;
-    out.push(end - i > 1 ? `${tokens[i]}*${end - i}` : tokens[i]!);
-    i = end;
+    let bestLength = 1;
+    let bestCount = 1;
+    const room = tokens.length - i;
+    for (let length = 1; length <= Math.min(longest, Math.floor(room / 2)); length++) {
+      let count = 1;
+      while ((count + 1) * length <= room && same(i, i + count * length, length)) count++;
+      if (count > 1 && length * count > bestLength * bestCount) {
+        bestLength = length;
+        bestCount = count;
+      }
+    }
+    if (bestCount === 1) out.push(tokens[i]!);
+    else if (bestLength === 1) out.push(`${tokens[i]}*${bestCount}`);
+    else {
+      const inner = foldRuns(tokens.slice(i, i + bestLength), longest).join('-');
+      out.push(`(${inner})*${bestCount}`);
+    }
+    i += bestLength * bestCount;
   }
   return out;
 }

@@ -21,7 +21,21 @@
     ['pad', 'keypad', 'Shorthand pad'],
   ];
   // Quick keys for YAML and shorthand, shown above the phone keyboard in the source view.
-  const SYMBOLS = ['-', ':', ', ', '{ ', ' }', '- { units: ', 'name: ', 'relu', 'tanh', 'softmax'];
+  const SYMBOLS = [
+    '-',
+    ':',
+    '*',
+    '(',
+    ')',
+    ', ',
+    '{ ',
+    ' }',
+    '- { units: ',
+    'name: ',
+    'relu',
+    'tanh',
+    'softmax',
+  ];
 
   let view = $state<View>('canvas');
   let sheet = $state<'commands' | 'details' | undefined>();

@@ -60,6 +60,12 @@
       It works for every layer type and can follow an activation, like
       <code>conv(16,3x3):relu*2</code>. The count can be 1 to 256.
     </p>
+    <p>
+      Parentheses repeat several layers together:
+      <code>in(28x28x1)-(conv(8,3x3)-pool(2))*2-flatten-fc(10)</code> has two convolution and
+      pooling pairs. Groups can hold repeats and other groups, like
+      <code>(conv(32,3x3)*2-pool(2))*3</code>.
+    </p>
     <h3>Good to know</h3>
     <p>
       The fx bar shows the current network as shorthand. Editing it changes sizes and activations

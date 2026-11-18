@@ -27,6 +27,9 @@ The quickest way to describe a network is one line of layer sizes:
 - Add an activation after a colon: `4-8:relu-3:softmax`.
 - Repeat a layer with `*` and a count: `784-128*3-10` has three hidden layers of 128. This works
   for every layer type, like `conv(16,3x3):relu*2`.
+- Repeat several layers together with parentheses: `in(28x28x1)-(conv(8,3x3)-pool(2))*2-flatten-fc(10)`
+  has two convolution and pooling pairs. Groups can contain groups and repeats, like
+  `(conv(32,3x3)*2-pool(2))*3`, and edits keep them.
 - `dense(64)`, `fc(64)` and `linear(64)` all mean a fully connected layer of 64 neurons.
 - Images, convolutions and pooling have their own words, like `in(28x28x1)-conv(8,3x3)-pool(2)`
   (see Convolutional networks).

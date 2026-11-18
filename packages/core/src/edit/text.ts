@@ -4,7 +4,7 @@
 import type { Document, Node } from 'yaml';
 import type { Model } from '../model/schema.ts';
 import type { InputFormat } from '../parse/parse.ts';
-import { formatShorthand } from '../parse/shorthand.ts';
+import { formatShorthand, shorthandFormatOf } from '../parse/shorthand.ts';
 import { yaml } from '../parse/yaml.ts';
 
 type Plain = null | boolean | number | string | Plain[] | { [key: string]: Plain };
@@ -105,7 +105,7 @@ export function updateText(
   after: Model,
 ): { text: string; format: InputFormat } {
   if (format === 'shorthand') {
-    const shorthand = formatShorthand(after, { repeat: text.includes('*') });
+    const shorthand = formatShorthand(after, shorthandFormatOf(text));
     return shorthand === undefined
       ? { text: toYaml(after), format: 'yaml' }
       : { text: shorthand, format };

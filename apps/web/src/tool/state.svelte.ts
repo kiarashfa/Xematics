@@ -11,6 +11,7 @@ import {
   patchAnimation,
   resolveAnimation,
   resolveTheme,
+  shorthandFormatOf,
   type AnimationPatch,
   type Timeline,
   autoNames,
@@ -212,9 +213,7 @@ export class ToolState {
       : '',
   );
   /** The shorthand bar keeps repeats like 128*3 while the source uses them. */
-  structure = $derived(
-    this.model ? structureOf(this.model, { repeat: this.text.includes('*') }) : '',
-  );
+  structure = $derived(this.model ? structureOf(this.model, shorthandFormatOf(this.text)) : '');
   /** What each layer outputs (28×28×8 for feature maps, 784 for vectors). */
   shapes = $derived(this.model ? inferShapes(this.model).shapes : []);
   autoNames = $derived(this.model ? autoNames(this.model) : []);

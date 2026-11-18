@@ -137,6 +137,16 @@ describe('updateText', () => {
     expect(edit('784-16-16-10', (m) => patchLayer(m, 0, { units: 8 })).text).toBe('8-16-16-10');
   });
 
+  test('shorthand keeps groups when the text has them', () => {
+    const text = 'in(28x28x1)-(conv(8,3x3)-pool(2))*2-flatten-fc(10)';
+    expect(edit(text, (m) => patchLayer(m, 6, { units: 2 })).text).toBe(
+      'in(28x28x1)-(conv(8,3x3)-pool(2))*2-flatten-2',
+    );
+    expect(edit(text, (m) => patchLayer(m, 3, { filters: 16 })).text).toBe(
+      'in(28x28x1)-conv(8,3x3)-pool(2)-conv(16,3x3)-pool(2)-flatten-10',
+    );
+  });
+
   test('shorthand becomes readable YAML when it cannot express the change', () => {
     const result = edit('784-16-10', (m) => patchLayer(m, 0, { name: 'Pixels' }));
     expect(result.format).toBe('yaml');

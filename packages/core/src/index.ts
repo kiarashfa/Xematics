@@ -92,6 +92,7 @@ export {
 export { isYamlLoaded, loadYaml, YamlNotLoadedError } from './parse/yaml.ts';
 export {
   formatShorthand,
+  shorthandFormatOf,
   layerToken,
   parseShorthand,
   type ShorthandFormat,

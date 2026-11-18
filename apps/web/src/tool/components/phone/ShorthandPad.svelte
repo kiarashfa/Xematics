@@ -2,6 +2,7 @@
   import { tool } from '../../state.svelte.ts';
 
   // A calculator-style pad for the layer sizes, so quick figures need no phone keyboard.
+  // * repeats the layer or group before it: 128*3, (64-32)*2.
   // Valid input applies at once (names and other settings are kept, like the shorthand bar).
   let draft = $state(tool.structure);
   let caret = $state(tool.structure.length);
@@ -36,6 +37,9 @@
     ['00', '00'],
     ['←', 'Move left'],
     ['→', 'Move right'],
+    ['(', 'Open a group'],
+    [')', 'Close the group'],
+    ['*', 'Times, repeat'],
   ] as const;
   const ACTIVATIONS = ['relu', 'tanh', 'sigmoid', 'softmax', 'gelu'];
 
@@ -88,8 +92,12 @@
   </div>
   <div class="keys">
     {#each KEYS as [key, label] (key)}
-      <button type="button" class:op={!/\d/.test(key)} aria-label={label} onclick={() => press(key)}
-        >{key}</button
+      <button
+        type="button"
+        class:op={!/\d/.test(key)}
+        class:wide={key === '*'}
+        aria-label={label}
+        onclick={() => press(key)}>{key}</button
       >
     {/each}
   </div>
@@ -156,6 +164,10 @@
     color: var(--ink);
     font: 600 1.3rem var(--font-mono);
     cursor: pointer;
+  }
+
+  .keys button.wide {
+    grid-column: span 2;
   }
 
   .keys button.op {
