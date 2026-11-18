@@ -6,11 +6,12 @@
 // Pure and deterministic: only + - * / and sqrt.
 
 import { mixColor } from '../animate/random.ts';
-import type { DenseLayer, GanLayer, Model } from '../model/schema.ts';
+import type { DenseLayer, GanLayer, Layer, Model } from '../model/schema.ts';
+import { inferShapes, shapeText, type Shape } from '../model/shapes.ts';
 import type { Paint } from '../scene.ts';
 import { roleStroke, type TextStyle, type Theme } from '../style/theme.ts';
 import type { TextEngine } from '../text/engine.ts';
-import { Painter, type Point } from './draw.ts';
+import { HEAD_LENGTH, Painter, type Point } from './draw.ts';
 import type { Label } from './label.ts';
 import { cleanLabel, slotsOf, type LayoutResult, type Slot } from './mlp.ts';
 
@@ -22,10 +23,39 @@ const NOISE_LEVELS = [0.3, 0.62, 0.4, 0.78, 0.5, 0.34, 0.68, 0.46];
 const BOX_H = 30;
 const GAP = 34;
 const SCORE_R = 14;
+/** Feature maps inside the funnels (DCGAN): the largest map's side, sheets drawn, their offset. */
+const MAP_FACE = 58;
+const MAP_MIN = 10;
+const MAP_SHEETS = 5;
+const MAP_GAP = 3.5;
+/** Loss arrows (style.training): their distance below the labels and between the two lines. */
+const TRAIN_GAP = 14;
+
+/** One step inside a funnel: a column of neurons, or a feature map drawn as stacked sheets. */
+type Item =
+  | {
+      readonly kind: 'column';
+      readonly slots: readonly Slot[];
+      readonly extent: number;
+      readonly height: number;
+    }
+  | {
+      readonly kind: 'map';
+      readonly w: number;
+      readonly h: number;
+      readonly sx: number;
+      readonly sy: number;
+      readonly count: number;
+      readonly extent: number;
+      readonly height: number;
+    };
 
 interface Funnel {
-  readonly layers: readonly DenseLayer[];
-  readonly slots: readonly (readonly Slot[])[];
+  readonly layers: readonly Layer[];
+  readonly shapes: readonly Shape[];
+  readonly items: readonly Item[];
+  /** Item centers from the funnel's left end. */
+  readonly xs: readonly number[];
   readonly width: number;
   /** Height at the left and right ends. */
   readonly left: number;
@@ -45,40 +75,93 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
 
   const generator = gan.generator;
   const discriminator = gan.discriminator;
-  const funnelOf = (layers: readonly DenseLayer[], word: string, widening: boolean): Funnel => {
+  const gShapes = inferShapes({ layers: [...generator] }).shapes;
+  const dShapes = inferShapes({ layers: [...discriminator] }).shapes;
+  // Maps share one scale, so the generator's last map and the discriminator's first match.
+  const largest = Math.max(
+    1,
+    ...[...gShapes, ...dShapes].flatMap((s) => (s.kind === 'map' ? [Math.max(s.h, s.w)] : [])),
+  );
+  const side = (n: number) => Math.max(MAP_MIN, (MAP_FACE * Math.sqrt(n)) / Math.sqrt(largest));
+  const funnelOf = (
+    layers: readonly Layer[],
+    shapes: readonly Shape[],
+    word: string,
+    widening: boolean,
+  ): Funnel => {
     // Collapsed columns draw fewer neurons toward the narrow end, so the funnel keeps its shape.
     const most = theme.collapse.first + theme.collapse.last + 1;
-    const slots = layers.map((layer, j) => {
-      const full = slotsOf(layer, theme).slots;
-      if (!full.includes('ellipsis')) return full;
-      const along = layers.length === 1 ? 1 : j / (layers.length - 1);
-      const t = widening ? along : 1 - along;
-      const cap = Math.min(full.length, Math.max(3, 3 + Math.round((most - 3) * t)));
-      const first = Math.floor((cap - 1) / 2);
-      const last = cap - 1 - first;
-      const units = layer.units;
-      return [
-        ...Array.from({ length: first }, (_, i) => i),
-        'ellipsis' as const,
-        ...Array.from({ length: last }, (_, i) => units - last + i),
-      ];
+    const items = layers.map((layer, j): Item => {
+      const shape = shapes[j]!;
+      if (shape.kind === 'map') {
+        const w = side(shape.w);
+        const h = side(shape.h);
+        const count = Math.min(shape.c, MAP_SHEETS);
+        const sx = 0.42 * w;
+        const sy = 0.26 * w;
+        return {
+          kind: 'map',
+          w,
+          h,
+          sx,
+          sy,
+          count,
+          extent: sx + (count - 1) * MAP_GAP,
+          height: h + sy,
+        };
+      }
+      const units = shape.kind === 'vector' ? shape.n : 1;
+      const dense: DenseLayer = layer.type === 'dense' ? layer : { type: 'dense', units };
+      const full = slotsOf(dense, theme).slots;
+      let slots = full;
+      if (full.includes('ellipsis')) {
+        const along = layers.length === 1 ? 1 : j / (layers.length - 1);
+        const t = widening ? along : 1 - along;
+        const cap = Math.min(full.length, Math.max(3, 3 + Math.round((most - 3) * t)));
+        const first = Math.floor((cap - 1) / 2);
+        const last = cap - 1 - first;
+        slots = [
+          ...Array.from({ length: first }, (_, i) => i),
+          'ellipsis' as const,
+          ...Array.from({ length: last }, (_, i) => units - last + i),
+        ];
+      }
+      return { kind: 'column', slots, extent: 2 * r, height: (slots.length - 1) * pitch + 2 * r };
     });
-    const columnHeight = (s: readonly Slot[]) => (s.length - 1) * pitch + 2 * r;
+    const hasMaps = items.some((it) => it.kind === 'map');
     const name = theme.labels.names
       ? painter.measure(word, {
           ...nameStyle,
           color: (widening ? theme.parts.generator : theme.parts.discriminator).text,
         })
       : undefined;
-    const width = neurons
-      ? Math.max(150, 44 + (layers.length - 1) * 46)
-      : Math.max(150, (name?.width ?? 0) + 44);
-    let wide = neurons ? Math.max(110, ...slots.map((s) => columnHeight(s) + 20)) : 116;
+    // Item centers: evenly spaced columns, or maps and columns side by side with room between.
+    let xs: number[];
+    let width: number;
+    if (!hasMaps) {
+      width = neurons
+        ? Math.max(150, 44 + (layers.length - 1) * 46)
+        : Math.max(150, (name?.width ?? 0) + 44);
+      xs = columnXs(layers.length, width);
+    } else {
+      xs = [];
+      let x = 22;
+      items.forEach((it, j) => {
+        if (j > 0) x += 26;
+        xs.push(x + it.extent / 2);
+        x += it.extent;
+      });
+      width = neurons ? Math.max(150, x + 22) : Math.max(150, (name?.width ?? 0) + 44);
+      if (width > x + 22) {
+        const shift = (width - (x + 22)) / 2;
+        xs = xs.map((v) => v + shift);
+      }
+    }
+    let wide = neurons ? Math.max(110, ...items.map((it) => it.height + 20)) : 116;
     let narrow = neurons ? Math.max(46, wide * 0.42) : 52;
     if (neurons) {
-      // Grow both ends until every column fits inside the slanted edges.
-      const need = slots.map((s) => columnHeight(s) + 20);
-      const xs = columnXs(layers.length, width);
+      // Grow both ends until every item fits inside the slanted edges.
+      const need = items.map((it) => it.height + 20);
       let scale = 1;
       need.forEach((h, j) => {
         const t = xs[j]! / width;
@@ -90,15 +173,17 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
     }
     return {
       layers,
-      slots,
+      shapes,
+      items,
+      xs,
       width,
       left: widening ? narrow : wide,
       right: widening ? wide : narrow,
       name,
     };
   };
-  const G = funnelOf(generator.slice(1), 'Generator', true);
-  const D = funnelOf(discriminator.slice(0, -1), 'Discriminator', false);
+  const G = funnelOf(generator.slice(1), gShapes.slice(1), 'Generator', true);
+  const D = funnelOf(discriminator.slice(0, -1), dShapes.slice(0, -1), 'Discriminator', false);
 
   // Text.
   const realStyle = partText(theme.roles.input.text);
@@ -116,15 +201,20 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
     size: 12,
     color: theme.roles.output.text,
   });
-  const sizes = (layers: readonly DenseLayer[]) => layers.map((l) => l.units).join(' · ');
+  // Sizes under a funnel; with feature maps, only where it starts and ends (4×4×512 to 32×32×3).
+  const sizes = (f: Funnel) =>
+    f.shapes.some((s) => s.kind === 'map')
+      ? `${shapeText(f.shapes[0]!)} to ${shapeText(f.shapes.at(-1)!)}`
+      : f.shapes.map(shapeText).join(' · ');
+  const unitsOf = (layer: Layer | undefined) => (layer?.type === 'dense' ? layer.units : 1);
   const under = (name: string | undefined, size: string | undefined) => ({
     name: theme.labels.names && name ? painter.measure(name, theme.nameText) : undefined,
     size: theme.labels.sizes && size ? painter.measure(size, theme.sizeText) : undefined,
   });
-  const noiseLabels = under('Noise', String(generator[0]!.units));
-  const gLabels = under(neurons ? 'Generator' : undefined, sizes(G.layers));
-  const dLabels = under(neurons ? 'Discriminator' : undefined, sizes(D.layers));
-  const scoreLabels = under('Score', String(discriminator.at(-1)!.units));
+  const noiseLabels = under('Noise', String(unitsOf(generator[0])));
+  const gLabels = under(neurons ? 'Generator' : undefined, sizes(G));
+  const dLabels = under(neurons ? 'Discriminator' : undefined, sizes(D));
+  const scoreLabels = under('Score', String(unitsOf(discriminator.at(-1))));
   type Under = { name: Label | undefined; size: Label | undefined };
   const half = (l: Under) => Math.max(l.name?.width ?? 0, l.size?.width ?? 0) / 2;
 
@@ -176,11 +266,18 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
     sizeBaseline = cursor + sizeLine.ascent;
     cursor = sizeBaseline + sizeLine.descent;
   }
-  const height = (anyName || anySize ? cursor : layersBottom) + theme.margin;
+  const labelsBottom = anyName || anySize ? cursor : layersBottom;
+  const lossStyle: TextStyle = { ...theme.sizeText, color: theme.motion.backward };
+  const dLoss = theme.training ? painter.measure('D loss', lossStyle) : undefined;
+  const gLoss = theme.training ? painter.measure('G loss, through D', lossStyle) : undefined;
+  const lossY = labelsBottom + TRAIN_GAP;
+  const lossLabelY = lossY + 4 + (dLoss?.ascent ?? 0);
+  const height =
+    (theme.training ? lossLabelY + (dLoss?.descent ?? 0) : labelsBottom) + theme.margin;
 
   // Layer numbering for the animation: noise, generator columns, samples, discriminator columns, score.
-  const gLayers = neurons ? G.layers.length : 1;
-  const dLayers = neurons ? D.layers.length : 1;
+  const gLayers = neurons ? G.items.length : 1;
+  const dLayers = neurons ? D.items.length : 1;
   const sampleLayer = 1 + gLayers;
   const dFirst = sampleLayer + 1;
   const scoreLayer = dFirst + dLayers;
@@ -249,16 +346,61 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
     [scoreX - SCORE_R - 4, cy],
   ]);
 
-  // Neurons inside the funnels, with their connections.
-  const columns = (f: Funnel, x0: number, y: number, firstLayer: number) => {
-    const xs = columnXs(f.layers.length, f.width).map((x) => x0 + x);
+  // Neurons and feature maps inside the funnels, with their connections.
+  const columns = (
+    f: Funnel,
+    x0: number,
+    y: number,
+    firstLayer: number,
+    paints: { first?: Paint; last?: Paint } = {},
+  ) => {
+    const xs = f.xs.map((x) => x0 + x);
     const ys = (s: readonly Slot[]) => s.map((_, j) => y + (j - (s.length - 1) / 2) * pitch);
     const edgePaint: Paint = { stroke: theme.edge.color, strokeWidth: theme.edge.width * 0.8 };
-    for (let c = 1; c < f.layers.length; c++) {
+    /** Points of a column's drawn neurons, or a map's side at its middle (front sheet on the right). */
+    const ends = (c: number, side: 'in' | 'out'): Point[] => {
+      const it = f.items[c]!;
+      if (it.kind === 'column') {
+        return it.slots.flatMap((slot, j) =>
+          slot === 'ellipsis' ? [] : [[xs[c]!, ys(it.slots)[j]!] as Point],
+        );
+      }
+      const left = xs[c]! - it.extent / 2;
+      return side === 'in'
+        ? [[left, y]]
+        : [[left + (it.count - 1) * MAP_GAP + it.sx, y - it.sy / 2]];
+    };
+    for (let c = 1; c < f.items.length; c++) {
       const group = `edges-${firstLayer + c - 1}`;
       painter.group(group, ['edges']);
-      const a = f.slots[c - 1]!;
-      const b = f.slots[c]!;
+      const ia = f.items[c - 1]!;
+      const ib = f.items[c]!;
+      if (ia.kind === 'map' || ib.kind === 'map') {
+        // Lines from every neuron (or the map's side) to the next map (or every neuron).
+        const from = ends(c - 1, 'out');
+        const to = ends(c, 'in');
+        from.forEach(([ax, ay], i) =>
+          to.forEach(([bx, by], j) => {
+            const dx = bx - ax;
+            const dy = by - ay;
+            const length = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ra = ia.kind === 'column' ? r : 0;
+            const rb = ib.kind === 'column' ? r : 0;
+            painter.line(
+              `link-${firstLayer + c - 1}-${i}-${j}`,
+              ax + (dx / length) * ra,
+              ay + (dy / length) * ra,
+              bx - (dx / length) * rb,
+              by - (dy / length) * rb,
+              edgePaint,
+              { parent: group, classes: ['edge'] },
+            );
+          }),
+        );
+        continue;
+      }
+      const a = ia.slots;
+      const b = ib.slots;
       const ya = ys(a);
       const yb = ys(b);
       a.forEach((sa, i) => {
@@ -281,9 +423,35 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
       });
     }
     const paint = theme.roles.hidden;
-    f.slots.forEach((s, c) => {
+    f.items.forEach((it, c) => {
       const group = `layer-${firstLayer + c}`;
       painter.group(group, ['layer', 'layer-hidden']);
+      if (it.kind === 'map') {
+        const own = c === 0 ? paints.first : c === f.items.length - 1 ? paints.last : undefined;
+        const sheet: Paint = own ?? {
+          fill: paint.fill,
+          ...roleStroke(theme, 'hidden', theme.maps.strokeWidth),
+        };
+        const left = xs[c]! - it.extent / 2;
+        const top = y - it.h / 2 + it.sy / 2;
+        for (let s = 0; s < it.count; s++) {
+          const x = left + s * MAP_GAP;
+          const front = s === it.count - 1;
+          painter.polygon(
+            `sheet-${firstLayer + c}-${s}`,
+            [
+              [x, top],
+              [x + it.sx, top - it.sy],
+              [x + it.sx, top - it.sy + it.h],
+              [x, top + it.h],
+            ],
+            front ? sheet : { ...sheet, strokeWidth: (sheet.strokeWidth ?? 1) * 0.75 },
+            { parent: group, classes: ['sheet'] },
+          );
+        }
+        return;
+      }
+      const s = it.slots;
       ys(s).forEach((yy, j) => {
         const slot = s[j]!;
         if (slot === 'ellipsis') {
@@ -335,8 +503,19 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
     );
   }
 
+  // A generator that ends in an image shows it as the fake sample's color; the discriminator's
+  // first map reads it like an input.
+  const fakeMap: Paint = {
+    fill: theme.parts.generator.fill,
+    stroke: theme.parts.generator.stroke,
+    strokeWidth: theme.maps.strokeWidth,
+  };
+  const inputMap: Paint = {
+    fill: theme.roles.input.fill,
+    ...roleStroke(theme, 'input', theme.maps.strokeWidth),
+  };
   if (neurons) {
-    columns(G, gX, gy, 1);
+    columns(G, gX, gy, 1, { last: fakeMap });
   } else {
     painter.group('layer-1', ['layer', 'layer-hidden']);
     painter.polygon('box-1-funnel', gPoints, funnelPaint(theme.parts.generator), {
@@ -368,7 +547,7 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
   });
 
   if (neurons) {
-    columns(D, dX, cy, dFirst);
+    columns(D, dX, cy, dFirst, { first: inputMap });
   } else {
     painter.group(`layer-${dFirst}`, ['layer', 'layer-hidden']);
     painter.polygon(`box-${dFirst}-funnel`, dPoints, funnelPaint(theme.parts.discriminator), {
@@ -419,8 +598,48 @@ export function layoutGan(model: Model, theme: Theme, engine: TextEngine): Layou
     { parent: 'marks', classes: ['mark'] },
   );
 
+  // Training: dashed loss arrows under the labels, from the score back to D and on to G.
+  if (dLoss && gLoss) {
+    painter.group('training', ['training']);
+    const color = theme.motion.backward;
+    const paint: Paint = { stroke: color, strokeWidth: 1.4, dash: [5, 4], fill: 'none' };
+    const tip = labelsBottom + 4;
+    const gc = gX + G.width / 2;
+    const dc = dX + D.width / 2;
+    painter.path(
+      'train-d',
+      `M${scoreX} ${tip}L${scoreX} ${lossY}L${dc} ${lossY}L${dc} ${tip + HEAD_LENGTH - 1}`,
+      paint,
+      { parent: 'training', classes: ['loss', 'loss-d'] },
+    );
+    painter.head('train-d-head', dc, tip, 0, -1, color, { parent: 'training', classes: ['loss'] });
+    painter.path(
+      'train-g',
+      `M${dc} ${lossY}L${gc} ${lossY}L${gc} ${tip + HEAD_LENGTH - 1}`,
+      paint,
+      {
+        parent: 'training',
+        classes: ['loss', 'loss-g'],
+      },
+    );
+    painter.head('train-g-head', gc, tip, 0, -1, color, { parent: 'training', classes: ['loss'] });
+  }
+
   // Labels.
   painter.group('labels', ['labels']);
+  if (dLoss && gLoss) {
+    painter.label('train-d-label', dLoss, (scoreX + dX + D.width / 2) / 2, lossLabelY, lossStyle, {
+      classes: ['label', 'label-loss'],
+    });
+    painter.label(
+      'train-g-label',
+      gLoss,
+      (gX + G.width / 2 + dX + D.width / 2) / 2,
+      lossLabelY,
+      lossStyle,
+      { classes: ['label', 'label-loss'] },
+    );
+  }
   painter.centered('sample-real-label', realWord, bX + boxW / 2, ry, realStyle, {
     classes: ['label', 'label-box'],
   });
@@ -496,6 +715,9 @@ function columnXs(count: number, width: number): number[] {
 }
 
 export function describeGan(gan: GanLayer): string {
-  const sizes = (layers: readonly DenseLayer[]) => layers.map((l) => l.units).join(', ');
+  const sizes = (layers: readonly Layer[]) =>
+    inferShapes({ layers: [...layers] })
+      .shapes.map(shapeText)
+      .join(', ');
   return `Generative adversarial network: a generator (${sizes(gan.generator)}) turns noise into fake samples; a discriminator (${sizes(gan.discriminator)}) scores real and fake samples.`;
 }

@@ -394,6 +394,7 @@ export class ToolState {
     cell: this.model?.style?.cell === true,
     steps: this.model?.style?.steps ?? 4,
     plainFunnel: this.model?.style?.funnel === 'plain',
+    training: this.model?.style?.training === true,
     autoencoder: this.model?.style?.autoencoder === true,
   });
   preset = $derived<PresetId>(this.model?.style?.preset ?? 'classic');

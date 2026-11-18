@@ -148,7 +148,10 @@
     <h3>GANs</h3>
     <p>
       <code>gan(100-256-784 | 784-256-1)</code>: the generator before the bar, starting with the
-      noise size, and the discriminator after it, ending with the score.
+      noise size, and the discriminator after it, ending with the score. Either can hold feature
+      maps for a convolutional GAN:
+      <code>gan(100-reshape(4x4x256)-deconv(3,4x4,s2) | in(8x8x3)-conv(64,4x4,s2)-flatten-1)</code>.
+      Training arrows on the Home tab draws the losses.
     </p>
     <h3>Autoencoders</h3>
     <p>

@@ -313,6 +313,24 @@ gan(100-256-512-784:tanh | 784-512-256-1:sigmoid)
 Each network is a funnel with its neurons inside; Neurons in funnels on the Home tab (or
 `style: { funnel: plain }`) shows only their names.
 
+A convolutional GAN (DCGAN) uses feature maps inside the funnels. After the noise size, the
+generator can reshape the noise into a small map and grow it with `deconv( )` or `up( )`; the
+discriminator can start with an image and end with `flatten` and the score:
+
+```text
+gan(100-reshape(4x4x256)-deconv(128,4x4,s2):relu-deconv(64,4x4,s2):relu-deconv(3,4x4,s2):tanh | in(32x32x3)-conv(64,4x4,s2):relu-conv(128,4x4,s2):relu-flatten-1:sigmoid)
+```
+
+<Figure
+  id="g-dcgan"
+  source="gan(100-reshape(4x4x256)-deconv(128,4x4,s2):relu-deconv(64,4x4,s2):relu-deconv(3,4x4,s2):tanh | in(32x32x3)-conv(64,4x4,s2):relu-conv(128,4x4,s2):relu-flatten-1:sigmoid)"
+  caption="A convolutional GAN: the generator's maps grow to an image"
+/>
+
+**Training arrows** on the Home tab (`style: { training: true }`) adds the losses under the
+figure: dashed arrows from the score back to the discriminator, and on through it to the
+generator.
+
 An autoencoder narrows its input to a latent space and widens it back out. Write the encoder;
 the decoder mirrors it, or give your own after a bar: `ae(784-256-32 | 32-128-784)`.
 `vae(784-256-32)` draws a variational autoencoder, with a mean and a spread before the sampled

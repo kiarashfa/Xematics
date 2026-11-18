@@ -98,6 +98,8 @@ export interface Theme {
   readonly funnel: FunnelLook;
   /** Fully connected networks drawn as an autoencoder (funnels meeting at the smallest layer). */
   readonly autoencoder: boolean;
+  /** GANs: dashed loss arrows from the score back to both networks. */
+  readonly training: boolean;
   /** Convolutional models: feature maps drawn as stacks of sheets, one per channel. */
   readonly maps: {
     /** Pooling layers get their own tint; other maps use the role paints. */
@@ -181,6 +183,7 @@ const CLASSIC: Theme = {
   cell: false,
   funnel: 'neurons',
   autoencoder: false,
+  training: false,
   maps: {
     pool: { fill: '#dfe3e8', stroke: '#4b5563' },
     window: '#aeb3b9',
@@ -443,6 +446,7 @@ export function resolveTheme(style: StyleOptions | undefined): Theme {
     cell: style.cell ?? base.cell,
     funnel: style.funnel ?? base.funnel,
     autoencoder: style.autoencoder ?? base.autoencoder,
+    training: style.training ?? base.training,
     maps: {
       ...base.maps,
       nodeRadius: style.nodeRadius ?? base.maps.nodeRadius,

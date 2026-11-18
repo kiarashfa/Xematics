@@ -1,0 +1,2 @@
+style: { training: true }
+layers: 'gan(100-256-512-784:tanh | 784-512-256-1:sigmoid)'

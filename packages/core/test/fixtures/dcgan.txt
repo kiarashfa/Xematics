@@ -1,0 +1,1 @@
+gan(100-reshape(4x4x256)-deconv(128,4x4,s2):relu-deconv(64,4x4,s2):relu-deconv(3,4x4,s2):tanh | in(32x32x3)-conv(64,4x4,s2):relu-conv(128,4x4,s2):relu-flatten-1:sigmoid)

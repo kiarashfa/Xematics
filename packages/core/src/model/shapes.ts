@@ -88,7 +88,7 @@ function shapeOf(
     }
     case 'gan': {
       const out = layer.discriminator.at(-1);
-      return { kind: 'vector', n: out?.units ?? 1 };
+      return { kind: 'vector', n: out?.type === 'dense' ? out.units : 1 };
     }
     case 'autoencoder': {
       const out = (layer.decoder ?? layer.encoder).at(-1);
@@ -320,6 +320,20 @@ export function orderDiagnostics(model: Pick<Model, 'layers'>): Diagnostic[] {
         'model.input-not-first',
         `Layer ${index + 1} is ${what}. Only the first layer can be an input.`,
       );
+    }
+    if (layer.type === 'gan') {
+      const noise = layer.generator[0];
+      const score = layer.discriminator.at(-1);
+      if (noise && noise.type !== 'dense') {
+        error(
+          index,
+          'model.gan-noise',
+          'The generator starts with the noise size, like gan(100-reshape(4x4x128)-deconv(3,4x4,s2) | ...).',
+        );
+      }
+      if (score && score.type !== 'dense') {
+        error(index, 'model.gan-score', 'The discriminator ends in the score, like ...-flatten-1.');
+      }
     }
     if (layer.type === 'gan' && layers.length > 1) {
       error(

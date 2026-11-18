@@ -53,6 +53,7 @@ export {
   type SequenceLayer,
   type TokensLayer,
   LAYER_TYPES,
+  GAN_NETWORK_TYPES,
   LIMITS,
   parseDrawnShape,
   MODEL_VERSION,

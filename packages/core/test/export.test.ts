@@ -77,6 +77,8 @@ describe('TikZ export', () => {
     'resnet.txt',
     'upsample.yaml',
     'unet.yaml',
+    'dcgan.txt',
+    'gan-training.yaml',
     'params.yaml',
     'weights.yaml',
     'rnn-lstm.txt',

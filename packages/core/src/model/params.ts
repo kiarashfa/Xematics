@@ -95,8 +95,15 @@ function layerParams(
       if (cross) block = add(block, add(attention, norm));
       return { weights: layer.blocks * block.weights, biases: layer.blocks * block.biases };
     }
-    case 'gan':
-      return add(chain(layer.generator), chain(layer.discriminator));
+    case 'gan': {
+      // Each network counted like a model of its own (its first layer is its input).
+      const net = (layers: readonly Layer[]) =>
+        layerParamCounts({ layers: [...layers] }).reduce<LayerParams>(
+          (sum, p) => (p ? add(sum, p) : sum),
+          NONE,
+        );
+      return add(net(layer.generator), net(layer.discriminator));
+    }
     case 'autoencoder': {
       const encoder = chain(layer.encoder);
       // A VAE's last encoder layer gives both the mean and the spread.

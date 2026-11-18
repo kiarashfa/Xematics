@@ -172,6 +172,19 @@ test.describe('desktop editor', () => {
     await expect(source(page)).toHaveValue('in(8x8x3)-deconv(4,4x4,s2)-up(3x2)');
   });
 
+  test('GAN training arrows and a convolutional generator', async ({ page }) => {
+    await openEditor(page);
+    await source(page).fill('gan(100-256-784 | 784-256-1)');
+    await page.getByRole('tab', { name: 'Home' }).click();
+    await page.getByRole('switch', { name: 'Training arrows' }).check();
+    await expect(source(page)).toHaveValue(/training: true/);
+    await expect(page.locator('#pv-train-g')).toBeAttached();
+    await source(page).fill(
+      'gan(100-reshape(4x4x8)-deconv(3,4x4,s2) | in(8x8x3)-conv(8,4x4,s2)-flatten-1)',
+    );
+    await expect(page.locator('#pv-sheet-1-0')).toBeAttached();
+  });
+
   test('recurrent, GAN, Transformer and autoencoder figures match the Node goldens', async ({
     page,
   }) => {

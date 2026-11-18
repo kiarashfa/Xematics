@@ -653,6 +653,9 @@
             {@render toggle('Neurons in funnels', !tool.network.plainFunnel, (on) =>
               tool.setNetwork({ funnel: on ? undefined : 'plain' }),
             )}
+            {@render toggle('Training arrows', tool.network.training, (on) =>
+              tool.setNetwork({ training: on || undefined }),
+            )}
           {:else}
             {@render toggle('Draw as autoencoder', tool.network.autoencoder, (on) =>
               tool.setNetwork({ autoencoder: on || undefined }),

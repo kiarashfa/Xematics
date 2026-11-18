@@ -374,12 +374,52 @@ const ganNetwork = (example: string) =>
     v.maxLength(LIMITS.ganLayers, `must have at most ${LIMITS.ganLayers} layers.`),
   );
 
-/** A generative adversarial network: a generator and a discriminator, both fully connected. */
+/** Layers inside a GAN's networks: fully connected, and map layers for a convolutional GAN (DCGAN). */
+export const GAN_NETWORK_TYPES = [
+  'dense',
+  'input',
+  'conv',
+  'pool',
+  'deconv',
+  'up',
+  'reshape',
+  'flatten',
+  'gap',
+] as const;
+
+const ganLayers = (example: string) =>
+  v.pipe(
+    v.array(
+      v.variant(
+        'type',
+        [
+          DenseLayerSchema,
+          InputLayerSchema,
+          ConvLayerSchema,
+          PoolLayerSchema,
+          DeconvLayerSchema,
+          UpLayerSchema,
+          ReshapeLayerSchema,
+          FlattenLayerSchema,
+          GapLayerSchema,
+        ],
+        `must be a layer size or one of: ${GAN_NETWORK_TYPES.join(', ')}.`,
+      ),
+      `must be a list of layers, like ${example}.`,
+    ),
+    v.minLength(2, 'must have at least two layers.'),
+    v.maxLength(LIMITS.ganLayers, `must have at most ${LIMITS.ganLayers} layers.`),
+  );
+
+/**
+ * A generative adversarial network: a generator and a discriminator, fully connected or with
+ * feature maps (DCGAN). The generator starts with the noise size; the discriminator ends in the score.
+ */
 export const GanLayerSchema = v.strictObject(
   {
     type: v.literal('gan'),
-    generator: ganNetwork('[100, 256, 784]'),
-    discriminator: ganNetwork('[784, 256, 1]'),
+    generator: ganLayers('[100, 256, 784]'),
+    discriminator: ganLayers('[784, 256, 1]'),
     name: name(),
   },
   'must be an object like { type: gan, generator: [100, 256, 784], discriminator: [784, 256, 1] }.',
@@ -490,6 +530,8 @@ export const StyleSchema = v.strictObject(
     cell: v.optional(flag()),
     /** GANs: draw each network's neurons inside its funnel, or only its name. */
     funnel: v.optional(v.picklist(FUNNEL_LOOKS, `must be one of: ${FUNNEL_LOOKS.join(', ')}.`)),
+    /** GANs: dashed loss arrows from the score back to the discriminator and the generator. */
+    training: v.optional(flag()),
     /** Draw a fully connected network as an autoencoder: funnels meeting at its smallest layer. */
     autoencoder: v.optional(flag()),
     /** Colors and outlines of the input, hidden and output layers, over the preset's. */

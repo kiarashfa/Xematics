@@ -101,7 +101,8 @@ describe('shorthand', () => {
   test.each([
     ['gan(100-784)', 'shorthand.expected-gan'],
     ['gan(100-784 | 784-1 | 1-2)', 'shorthand.unexpected'],
-    ['gan(in(28x28)-784 | 784-1)', 'shorthand.gan-dense'],
+    ['gan(100-lstm(4) | 784-1)', 'shorthand.gan-dense'],
+    ['ae(784-conv(8,3x3)-16)', 'shorthand.gan-dense'],
     ['gan(100 | 784-1)', 'shorthand.gan-short'],
     ['gan(100-784 | 784-1', 'shorthand.expected-paren'],
     ['ae(784)', 'shorthand.gan-short'],

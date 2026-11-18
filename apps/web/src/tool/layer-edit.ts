@@ -4,13 +4,13 @@
 
 import {
   changeLayerType,
+  GAN_NETWORK_TYPES,
   layerToken,
   LIMITS,
   pair,
   parseDrawnShape,
   parseShorthand,
   patchLayer,
-  type DenseLayer,
   type Layer,
   type LayerPatch,
   type LayerType,
@@ -118,13 +118,20 @@ export function setNetwork(
     return;
   }
   const parsed = parseShorthand(trimmed);
-  const dense = parsed.layers.filter((l): l is DenseLayer => l.type === 'dense');
-  if (parsed.diagnostics.length > 0 || dense.length !== parsed.layers.length || dense.length < 2) {
-    fail(key, 'Write at least two layer sizes, like 784-256-32 (activations as 784:relu).');
+  const gan = key === 'generator' || key === 'discriminator';
+  const allowed: readonly string[] = gan ? GAN_NETWORK_TYPES : ['dense'];
+  const fits = parsed.layers.every((l) => allowed.includes(l.type) && !('skip' in l));
+  if (parsed.diagnostics.length > 0 || !fits || parsed.layers.length < 2) {
+    fail(
+      key,
+      gan
+        ? 'Write at least two layers, like 784-256-1 or in(32x32x3)-conv(64,4x4,s2)-flatten-1.'
+        : 'Write at least two layer sizes, like 784-256-32 (activations as 784:relu).',
+    );
     return;
   }
   ok();
-  patch({ [key]: dense } as LayerPatch);
+  patch({ [key]: parsed.layers } as LayerPatch);
 }
 
 /** Kernel, pool window or stride: one number when square, [height, width] otherwise. */

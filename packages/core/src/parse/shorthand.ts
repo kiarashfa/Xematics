@@ -33,7 +33,13 @@
 //           gan(100-256-784:tanh | 784-256-1:sigmoid)
 
 import { diagnostic, type Diagnostic } from '../diagnostics.ts';
-import { LIMITS, type DenseLayer, type Layer, type Model } from '../model/schema.ts';
+import {
+  GAN_NETWORK_TYPES,
+  LIMITS,
+  type DenseLayer,
+  type Layer,
+  type Model,
+} from '../model/schema.ts';
 
 /** A layer as the shorthand describes it: structure only (no names, labels or collapse rules). */
 export type ShorthandLayer = Layer;
@@ -595,11 +601,15 @@ function parseLayers(source: string): ShorthandLayer[] {
           ],
         });
       }
-      const typedLayer = result.layers.find((l) => l.type !== 'dense' || 'skip' in l);
+      // GAN networks may hold feature maps (DCGAN); autoencoder networks are sizes only.
+      const allowed: readonly string[] = kind === 'gan' ? GAN_NETWORK_TYPES : ['dense'];
+      const typedLayer = result.layers.find((l) => !allowed.includes(l.type) || 'skip' in l);
       if (typedLayer) {
         fail(
           'shorthand.gan-dense',
-          `The ${role} takes layer sizes only, like ${usage}.`,
+          kind === 'gan'
+            ? `The ${role} takes sizes and map layers (${GAN_NETWORK_TYPES.slice(1).join(', ')}), like ${usage}.`
+            : `The ${role} takes layer sizes only, like ${usage}.`,
           from + lead,
         );
       }
@@ -954,8 +964,12 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
 
   for (const layer of model.layers) {
     if (layer.name !== undefined) return undefined;
-    if ((layer.type === 'conv' || layer.type === 'pool') && layer.shape !== undefined)
-      return undefined;
+    const drawnSize =
+      layer.type === 'conv' ||
+      layer.type === 'pool' ||
+      layer.type === 'deconv' ||
+      layer.type === 'up';
+    if (drawnSize && layer.shape !== undefined) return undefined;
     if (layer.type === 'dense' && (layer.collapse !== undefined || layer.nodeLabel !== undefined)) {
       return undefined;
     }
@@ -965,13 +979,13 @@ export function formatShorthand(model: Model, format: ShorthandFormat = {}): str
         : layer.type === 'autoencoder'
           ? [...layer.encoder, ...(layer.decoder ?? [])]
           : [];
-    if (
-      inner.some(
-        (l) => l.name !== undefined || l.collapse !== undefined || l.nodeLabel !== undefined,
-      )
-    ) {
-      return undefined;
-    }
+    const extra = (l: Layer) =>
+      l.name !== undefined ||
+      ('skip' in l && l.skip !== undefined) ||
+      (l.type === 'dense' && (l.collapse !== undefined || l.nodeLabel !== undefined)) ||
+      ((l.type === 'conv' || l.type === 'pool' || l.type === 'deconv' || l.type === 'up') &&
+        l.shape !== undefined);
+    if (inner.some(extra)) return undefined;
   }
   const tokens = layerTokens(model.layers, format);
   return tokens ? joinTokens(tokens, format) : undefined;
